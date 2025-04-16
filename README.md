@@ -1,7 +1,5 @@
 # OS-Doom
 
-### There is currently no implementation in main. We will either select Dr. Gheith's if he allows us to, or use one of the class' working implementation. I would advise not starting writing code until we have a common code base we can use, but you should be researching your project and have a plan on how to tackle it.
-
 ## Logistics
 - Each group should have their own branch onto which they write their feature
   ```bash
