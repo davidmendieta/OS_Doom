@@ -9,12 +9,23 @@ struct IPPacket {
 	char HeaderChecksum[2];
 	char SourceIP[4];
 	char DestinationIP[4];
-};
+}; // 20 bytes
 
 struct UDPPacket {
 	char SourcePort[2];
 	char DestinationPort[2];
 	char Length[2];
 	char Checksum[2];
-};
+	void* payload;
+}; // 8 bytes + payload
 
+struct FullPacket {
+	IPPacket;
+	UDPPacket;
+}
+
+namespace Parser {
+
+	extern void* Parse(void* buffer);
+
+}
