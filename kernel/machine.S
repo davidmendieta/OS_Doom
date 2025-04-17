@@ -11,10 +11,20 @@ outb:
 	# outl(int port, int val)
         .global outl
 outl:
-        mov 4(%esp),%dx
-        mov 8(%esp),%eax
-        outl %eax,%dx
-        ret
+    mov 4(%esp),%dx
+    mov 8(%esp),%eax
+    outl %eax,%dx
+    ret
+
+	# outs(int port, int val)
+        .global outs
+outs:
+    push %edx
+    mov 4(%esp),%dx
+    mov 8(%esp),%ax
+    outw %ax,%dx
+    pop %edx
+    ret
 
 	# int inb(int port)
 	.global inb
@@ -33,6 +43,16 @@ inl:
 	mov 8(%esp),%dx
 	inl %dx,%eax
 	pop %edx
+	ret
+
+	# unsigned long inl(int port)
+	.global ins
+ins:
+	push %edx
+	mov 8(%esp),%dx
+	inw %dx,%ax
+	pop %edx
+    and $0xffff, %eax
 	ret
 
     .globl rdmsr
@@ -214,6 +234,14 @@ switchToUser:
     pushl %ecx              # user EIP
     iret
     
+
+    /* NETWORKING */
+    .global RTL8139Handler_
+RTL8139Handler_:
+    .extern RTL8139Handler
+    call RTL8139Handler
+    iret
+
     .global sysHandler_
 sysHandler_:
     push %esp
@@ -224,4 +252,3 @@ sysHandler_:
     iret
 
     .section .note.GNU-stack,"",@progbits
-
