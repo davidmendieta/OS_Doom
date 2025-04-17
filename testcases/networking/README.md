@@ -11,6 +11,9 @@
     - uses ifconfig to bring an interface down
 
 
+### Thoughts:
+While we theoretically don't need this to be on the user side, it would be easier to integrate if we ever build a shell
+
 - ifupdown service:
     - uses ifconfig
 - ifconfig
