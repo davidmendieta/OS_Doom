@@ -18,24 +18,49 @@ uint16_t pciConfigRead(uint8_t bus, uint8_t slot, uint8_t function, uint8_t regi
     return (uint16_t)((data >> ((register_offset & 2) * 8)) & 0xFFFF);
 }
 
+// write to PCI config space
+void pciConfigWrite(uint8_t bus, uint8_t slot, uint8_t function, uint8_t register_offset, uint16_t value) {
+    uint32_t address = ((uint32_t)bus         << 16) |      // bus number 16-23
+                       ((uint32_t)slot        << 11) |      // slot number 11-15
+                       ((uint32_t)function    << 8)  |      // function 8-10
+                       (register_offset & 0xFC)       |     // register offset
+                       0x80000000;                          // enable bit in bit 31
+
+    outl(CONFIG_ADDRESS, address);
+    uint32_t old_data = inl(CONFIG_DATA);
+    uint32_t new_data = (old_data & ~(0xFFFF << ((register_offset & 2) * 8))) | ((uint32_t)value << ((register_offset & 2) * 8));
+
+    outl(CONFIG_DATA, new_data);
+}
+
+
 // stores device
-// TODO: Store BARs?
 static void storePciDevice(uint8_t bus, uint8_t slot, uint8_t function) {
     if (pciDeviceCount >= NUM_BUS) {
         return;
     }
 
-    pciDevices[pciDeviceCount].bus = bus;
-    pciDevices[pciDeviceCount].slot = slot;
-    pciDevices[pciDeviceCount].function = function;
-    pciDevices[pciDeviceCount].vendor_id = pciConfigRead(bus, slot, function, 0);
-    pciDevices[pciDeviceCount].device_id = pciConfigRead(bus, slot, function, 2);
-    pciDevices[pciDeviceCount].header = (uint8_t)(pciConfigRead(bus, slot, function, 0xE) & 0xFF);
+    PciDevice* device = &pciDevices[pciDeviceCount];
+    device->bus = bus;
+    device->slot = slot;
+    device->function = function;
+    device->vendor_id = pciConfigRead(bus, slot, function, 0);
+    device->device_id = pciConfigRead(bus, slot, function, 2);
+    device->header = (uint8_t)(pciConfigRead(bus, slot, function, 0xE) & 0xFF);
+
+    // read bars
+    int max_bars = (device->header & 0x7F) == 1 ? 2 : 6;
+    for (int i = 0; i < max_bars; i++) {
+        device->bars[i] = pciConfigRead(bus, slot, function, 0x10 + (i * 4));
+    }
 
     Debug::printf("NEW DEVICE STORED: Bus %d, Slot %d, Function %d: Vendor 0x%x, Device ID = 0x%x\n", 
-        pciDevices[pciDeviceCount].bus, pciDevices[pciDeviceCount].slot, pciDevices[pciDeviceCount].function,  
-        pciDevices[pciDeviceCount].vendor_id, pciDevices[pciDeviceCount].device_id);
-    
+        device->bus, device->slot, device->function, device->vendor_id, device->device_id);
+
+    for (int i = 0; i < max_bars; i++) {
+        Debug::printf("  BAR[%d] = 0x%x\n", i, device->bars[i]);
+    }
+
     pciDeviceCount++;
 }
 
