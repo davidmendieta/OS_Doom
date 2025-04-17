@@ -20,8 +20,8 @@ outl:
         .global outw
 outw:
     push %edx
-    mov 4(%esp),%dx
-    mov 8(%esp),%ax
+    mov 8(%esp),%dx
+    mov 12(%esp),%ax
     outw %ax,%dx
     pop %edx
     ret

@@ -5,6 +5,7 @@
 #include "../../heap.h"
 #include "../../idt.h"
 #include "../networking.h"
+#include "../../physmem.h"
 #include "../../pci.h"
 
 PciDevice* device;
@@ -24,7 +25,6 @@ alignas(16) uint8_t tx_buf[4][60];
 RTL8139::RTL8139(){
     // First get the network device using PCI
     device = findDeviceVD(RTL8139_VENDOR_ID, RTL8139_DEVICE_ID);
-    // uint32_t ret = pci_read(rtl8139_device, PCI_BAR0);
     uint32_t ret = pciConfigRead(device->bus, device->slot, device->function, PCI_BAR0);
 
 
@@ -49,36 +49,50 @@ RTL8139::RTL8139(){
 
     // Soft reset
     outb(io_base + 0x37, 0x10);
-    
     while( (inb(io_base + 0x37) & 0x10) != 0) { }
     
     Debug::printf("val: %x\n", inb(io_base + 0x37));
     // Allocate receive buffer
-    rx_buffer = (char*)malloc(8192 + 16 + 1500);
+
+    // Might be overkill
+    void* raw_buf = malloc(8192 + 16 + 4096 + 1500); // overallocate
+    uintptr_t raw_addr = (uintptr_t)raw_buf;
+    uintptr_t aligned_addr = (raw_addr + 4095) & ~((uintptr_t)4095); // round up
+    rx_buffer = (char*)aligned_addr;
+
     bzero(rx_buffer, 8192 + 16 + 1500);
     outl(io_base + 0x30, (uint32_t)rx_buffer);
-    
-    outw(io_base + 0x3C, 0x0005);
+
+    // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
+    outl(io_base + 0x44, 0xf | (1 << 7));
+    uint32_t rcr_val = inl(io_base + 0x44);
+    Debug::printf("RCR: %x\n", rcr_val);
+
+    outw(io_base + 0x3E, 0xFFFF);
+
+    outw(io_base + 0x3C, TOK | ROK);
     uint16_t mask = inw(io_base + 0x3C);
     Debug::printf("Interrupt Mask Register: %x\n", mask);
     
-    // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
-    outl(io_base + 0x44, 0xf | (1 << 7));
-
     // Sets the RE and TE bits high
     outb(io_base + 0x37, 0x0C);
+    
+    
+    
+
+    Debug::printf("IO BASE: %d\n", io_base);
     
     // Sets the TOK and ROK bits high)    
     uint8_t cmd = inb(io_base + 0x37);
     Debug::printf("Command Register: %x\n", cmd);
     
     
-
+    
     // Register and enable network interrupts
     uint16_t irq_num = pciConfigRead(device->bus, device->slot, device->function, PCI_INTERRUPT_LINE) & 0xFF; 
     IDT::interrupt(32 + irq_num, (uint32_t)RTL8139Handler_);
     Debug::printf("Registered irq interrupt for rtl8139, irq num = %d\n", irq_num);
-
+    
     read_mac_addr();
 
 }
