@@ -15,6 +15,7 @@
 #include "vmm.h"
 #include "sys.h"
 #include "tss.h"
+#include "pci.h"
 
 struct Stack {
     static constexpr int BYTES = 4096;
@@ -101,7 +102,7 @@ extern "C" void kernelInit(void) {
 
         /* initialize VMM */
         VMM::global_init();
-
+       
         /* running global constructors */
         CRT::init();
 
@@ -112,6 +113,10 @@ extern "C" void kernelInit(void) {
         /* initialize IDT */
         IDT::init();
         Pit::calibrate(1000);
+        
+        /* Enumerate Devices */
+        Debug::printf("| ENUMERATING DEVICES\n");
+        pciEnumDevices();
 
 	/* sys calls */
 	SYS::init();
