@@ -26,6 +26,9 @@ extern size_t deviceCount;
 // register_offset = the offset in the configuration space
 extern uint16_t pciConfigRead(uint8_t bus, uint8_t slot, uint8_t function, uint8_t register_offset);
 
+// writes to a config space, similar to read above.
+extern void pciConfigWrite(uint8_t bus, uint8_t slot, uint8_t function, uint8_t register_offset, uint16_t value);
+
 // checks if a PCI device exists at the given bus and slot
 // returns the vendor ID
 extern uint16_t checkVendor(uint8_t bus, uint8_t slot);
