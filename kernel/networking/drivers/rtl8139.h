@@ -79,4 +79,4 @@ struct RTL8139 {
     void get_mac_addr(uint8_t* src_mac_addr);
 };
 
-void RTL8139Handler();
+extern "C" void RTL8139Handler();

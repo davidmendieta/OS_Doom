@@ -6,6 +6,7 @@
 #include "libk.h"
 #include "config.h"
 #include "shared.h"
+#include "networking/networking.h"
 
 StrongPtr<Ext2> fs{};
 

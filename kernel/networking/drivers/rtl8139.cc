@@ -1,13 +1,13 @@
 // Adapted from https://github.com/szhou42/osdev/blob/master/src/kernel/drivers/rtl8139.c
 
-#include <rtl8139.h>
-#include <string.h>
+#include "rtl8139.h"
 #include "../../machine.h"
 #include "../../heap.h"
 #include "../../idt.h"
 #include "../networking.h"
+#include "../../pci.h"
 
-pci_dev_t pci_rtl8139_device;
+PciDevice* device;
 
 uint32_t current_packet_ptr;
 
@@ -21,8 +21,11 @@ uint8_t TSD_array[4] = {0x10, 0x14, 0x18, 0x1C};
  * */
 RTL8139::RTL8139(){
     // First get the network device using PCI
-    pci_rtl8139_device = pci_get_device(RTL8139_VENDOR_ID, RTL8139_DEVICE_ID, -1);
-    uint32_t ret = pci_read(pci_rtl8139_device, PCI_BAR0);
+    device = findDeviceVD(RTL8139_VENDOR_ID, RTL8139_DEVICE_ID);
+    // uint32_t ret = pci_read(rtl8139_device, PCI_BAR0);
+    uint32_t ret = pciConfigRead(device->bus, device->slot, device->function, PCI_BAR0);
+
+
     bar_type = ret & 0x1;
     // Get io base or mem base by extracting the high 28/30 bits
     io_base = ret & (~0x3);
@@ -33,10 +36,10 @@ RTL8139::RTL8139(){
     tx_cur = 0;
 
     // Enable PCI Bus Mastering
-    uint32_t pci_command_reg = pci_read(pci_rtl8139_device, PCI_COMMAND);
+    uint32_t pci_command_reg = pciConfigRead(device->bus, device->slot, device->function, PCI_COMMAND); 
     if(!(pci_command_reg & (1 << 2))) {
         pci_command_reg |= (1 << 2);
-        pci_write(pci_rtl8139_device, PCI_COMMAND, pci_command_reg);
+        pciConfigWrite(device->bus, device->slot, device->function, PCI_COMMAND, pci_command_reg);
     }
 
     // Send 0x00 to the CONFIG_1 register (0x52) to set the LWAKE + LWPTN to active high. this should essentially *power on* the device.
@@ -63,7 +66,7 @@ RTL8139::RTL8139(){
     outb(io_base + 0x37, 0x0C);
 
     // Register and enable network interrupts
-    uint32_t irq_num = pci_read(pci_rtl8139_device, PCI_INTERRUPT_LINE);
+    uint32_t irq_num = pciConfigRead(device->bus, device->slot, device->function, PCI_INTERRUPT_LINE); 
     IDT::trap(32 + irq_num, (uint32_t)RTL8139Handler_,3);
     Debug::printf("Registered irq interrupt for rtl8139, irq num = %d\n", irq_num);
 
@@ -85,7 +88,7 @@ void RTL8139::receive_packet() {
     void * packet = malloc(packet_length);
     memcpy(packet, t, packet_length);
 
-    ethernet_handle_packet(packet, packet_length);
+    // ethernet_handle_packet(packet, packet_length);
 
     current_packet_ptr = (current_packet_ptr + packet_length + 4 + 3) & RX_READ_POINTER_MASK;
 
@@ -125,7 +128,7 @@ void RTL8139::send_packet(void * data, uint32_t len) {
         tx_cur = 0;
 }
 
-void RTL8139Handler() {
+extern "C" void RTL8139Handler() {
     Debug::printf("RTL8139 interrupt was fired !!!! \n");
     uint16_t status = inw(rtl8139->io_base + 0x3e);
 
@@ -137,6 +140,5 @@ void RTL8139Handler() {
         rtl8139->receive_packet();
     }
 
-
-    outw(rtl8139->io_base + 0x3E, 0x5);
+    outw(rtl8139->io_base + 0x3E, 0x5); // clear interrupt
 }

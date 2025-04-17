@@ -2,6 +2,10 @@
 
 #include "debug.h"
 
+#define PCI_INTERRUPT_LINE 0x3C
+#define PCI_COMMAND 0x04
+#define PCI_BAR0 0x10
+
 #define CONFIG_ADDRESS 0xCF8
 #define CONFIG_DATA    0xCFC
 #define NUM_BARS 6 // FIXME : is 6 correct?

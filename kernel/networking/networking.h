@@ -1,3 +1,5 @@
+#pragma once
+
 #include "drivers/rtl8139.h"
 #include "../shared.h"
 

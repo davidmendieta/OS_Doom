@@ -1,7 +1,7 @@
-namespace Parser {
-	void* Parse(char* buffer) {
-		IPPacket ip;
+// namespace Parser {
+// 	void* Parse(char* buffer) {
+// 		IPPacket ip;
 
-		ip.VersionIHL = buffer[0];
-	}
-}
+// 		ip.VersionIHL = buffer[0];
+// 	}
+// }
