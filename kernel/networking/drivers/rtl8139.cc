@@ -50,9 +50,7 @@ RTL8139::RTL8139(){
     // Soft reset
     outb(io_base + 0x37, 0x10);
     
-    while ((inb(io_base + 0x37) & 0x10) || (inb(io_base + 0x37) & 0x04)) {
-        // Wait for both bit 4 and bit 2 to clear
-    }
+    while( (inb(io_base + 0x37) & 0x10) != 0) { }
     
     Debug::printf("val: %x\n", inb(io_base + 0x37));
     // Allocate receive buffer
@@ -60,25 +58,22 @@ RTL8139::RTL8139(){
     bzero(rx_buffer, 8192 + 16 + 1500);
     outl(io_base + 0x30, (uint32_t)rx_buffer);
     
-    
-    // Sets the RE and TE bits high
-    outb(io_base + 0x37, 0x0C);
-
-    uint8_t cmd = inb(io_base + 0x37);
-    Debug::printf("Command Register: %x\n", cmd);
-    
-    // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
-    outl(io_base + 0x44, 0xf | (1 << 7));
-    
-
-    // Sets the TOK and ROK bits high)
     outw(io_base + 0x3C, 0x0005);
     uint16_t mask = inw(io_base + 0x3C);
     Debug::printf("Interrupt Mask Register: %x\n", mask);
-    //! PROBLEM IS THAT MASK IS 0
+    
+    // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
+    outl(io_base + 0x44, 0xf | (1 << 7));
 
+    // Sets the RE and TE bits high
+    outb(io_base + 0x37, 0x0C);
+    
+    // Sets the TOK and ROK bits high)    
+    uint8_t cmd = inb(io_base + 0x37);
+    Debug::printf("Command Register: %x\n", cmd);
     
     
+
     // Register and enable network interrupts
     uint16_t irq_num = pciConfigRead(device->bus, device->slot, device->function, PCI_INTERRUPT_LINE) & 0xFF; 
     IDT::interrupt(32 + irq_num, (uint32_t)RTL8139Handler_);
