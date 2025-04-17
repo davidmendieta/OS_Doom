@@ -28,7 +28,7 @@ QEMU_ACCEL ?= tcg,thread=multi
 QEMU_CPU ?= max
 QEMU_SMP ?= 4
 QEMU_MEM ?= 128m
-QEMU_TIMEOUT ?= 0 #! CHANGED
+QEMU_TIMEOUT ?= 10 #! CHANGED
 QEMU_TIMEOUT_CMD ?= timeout
 QEMU_DEBUG ?=  # e.g -d guest_errors
 
@@ -51,9 +51,9 @@ QEMU_FLAGS = -no-reboot \
 	-device isa-debug-exit,iobase=0xf4,iosize=0x04
 
 # ----- NETWORKING START ------
-NETWORK_MODE= CLIENT #  HOST or CLIENT
+NETWORK_MODE=CLIENT #  HOST or CLIENT
 
-HOST_IP = 127.0.0.1 # Change to actual Host IP, only needed for client mode
+HOST_IP = 128.83.139.56 # Change to actual Host IP, only needed for client mode
 
 QEMU_FLAGS_NETWORKING_HOST = -netdev socket,id=net0,listen=:1234 \
     -device rtl8139,netdev=net0

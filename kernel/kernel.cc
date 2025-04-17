@@ -39,6 +39,8 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
 }
 
 void kernelMain(void) {
+    networkingMain();
+
     auto d = StrongPtr<Ide>::make(1,0);
     fs = StrongPtr<Ext2>::make(d);
     auto init = fs->find(fs->root, "/sbin/init");

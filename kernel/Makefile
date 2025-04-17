@@ -29,8 +29,8 @@ $B/%.o :  Makefile %.c
 
 $B/%.o :  Makefile %.cc
 	@echo "compiling  $*.cc"
-	@mkdir -p build
-	g++ -I. -c -MD $ -MF $B/$*.d -o $B/$*.o $(CCFLAGS) $*.cc
+	@mkdir -p $(dir $B/$*)
+	g++ -I. -c -MD -MF $B/$*.d -o $B/$*.o $(CCFLAGS) $*.cc
 
 $B/%.o :  Makefile ${TESTS_DIR}/%.cc
 	@echo "compiling  ${TESTS_DIR}/$*.cc"

@@ -47,9 +47,11 @@ RTL8139::RTL8139(){
 
     // Soft reset
     outb(io_base + 0x37, 0x10);
-    while((inb(io_base + 0x37) & 0x10) != 0) {
-        // Do nothibg here...
+    int timeout = 100000; // arbitrarily high count
+    while ((inb(io_base + 0x37) & 0x10) && timeout-- > 0) {
+        // optionally: pause CPU for a few cycles
     }
+    Debug::printf("HERE\n");
 
     // Allocate receive buffer
     rx_buffer = (char*)malloc(8192 + 16 + 1500);
@@ -117,12 +119,11 @@ void RTL8139::get_mac_addr(uint8_t* src_mac_addr) {
 
 void RTL8139::send_packet(void * data, uint32_t len) {
     // First, copy the data to a physically contiguous chunk of memory
-    void * transfer_data = malloc(len); //! WAS ORIGINALLY ALIGNED - MIGHT CAUSE ISSUES
-    void * phys_addr = transfer_data; //! Used to be v2p, but we're 1-1 in the kernel
+    void* transfer_data = malloc(len); //! WAS ORIGINALLY ALIGNED - MIGHT CAUSE ISSUES
     memcpy(transfer_data, data, len);
-
+    Debug::printf("Sending Data\n");
     // Second, fill in physical address of data, and length
-    outl(io_base + TSAD_array[tx_cur], (uint32_t)phys_addr);
+    outl(io_base + TSAD_array[tx_cur], (uint32_t)transfer_data);
     outl(io_base + TSD_array[tx_cur++], len);
     if(tx_cur > 3)
         tx_cur = 0;
