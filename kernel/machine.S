@@ -16,9 +16,9 @@ outl:
     outl %eax,%dx
     ret
 
-	# outs(int port, int val)
-        .global outs
-outs:
+	# outw(int port, int val)
+        .global outw
+outw:
     push %edx
     mov 4(%esp),%dx
     mov 8(%esp),%ax
@@ -46,8 +46,8 @@ inl:
 	ret
 
 	# unsigned long inl(int port)
-	.global ins
-ins:
+	.global inw
+inw:
 	push %edx
 	mov 8(%esp),%dx
 	inw %dx,%ax

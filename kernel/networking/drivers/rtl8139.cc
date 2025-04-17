@@ -51,10 +51,10 @@ RTL8139::RTL8139(){
     // Allocate receive buffer
     rx_buffer = (char*)malloc(8192 + 16 + 1500);
     bzero(rx_buffer, 8192 + 16 + 1500);
-    outl(io_base + 0x30, (uint32_t)rx_buffer); //! Used to be v2p, but we're 1-1 in the kernel
+    outl(io_base + 0x30, (uint32_t)rx_buffer);
 
     // Sets the TOK and ROK bits high
-    outs(io_base + 0x3C, 0x0005);
+    outw(io_base + 0x3C, 0x0005);
 
     // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
     outl(io_base + 0x44, 0xf | (1 << 7));
@@ -92,12 +92,12 @@ void RTL8139::receive_packet() {
     if(current_packet_ptr > RX_BUF_SIZE)
         current_packet_ptr -= RX_BUF_SIZE;
 
-    outs(io_base + CAPR, current_packet_ptr - 0x10);
+    outw(io_base + CAPR, current_packet_ptr - 0x10);
 }
 
 void RTL8139::read_mac_addr() {
     uint32_t mac_part1 = inl(io_base + 0x00);
-    uint16_t mac_part2 = ins(io_base + 0x04);
+    uint16_t mac_part2 = inw(io_base + 0x04);
     mac_addr[0] = mac_part1 >> 0;
     mac_addr[1] = mac_part1 >> 8;
     mac_addr[2] = mac_part1 >> 16;
@@ -127,7 +127,7 @@ void RTL8139::send_packet(void * data, uint32_t len) {
 
 void RTL8139Handler() {
     Debug::printf("RTL8139 interrupt was fired !!!! \n");
-    uint16_t status = ins(rtl8139->io_base + 0x3e);
+    uint16_t status = inw(rtl8139->io_base + 0x3e);
 
     if(status & TOK) {
         Debug::printf("Packet sent\n");
@@ -138,5 +138,5 @@ void RTL8139Handler() {
     }
 
 
-    outs(rtl8139->io_base + 0x3E, 0x5);
+    outw(rtl8139->io_base + 0x3E, 0x5);
 }
