@@ -15,6 +15,8 @@ uint32_t current_packet_ptr;
 uint8_t TSAD_array[4] = {0x20, 0x24, 0x28, 0x2C};
 uint8_t TSD_array[4] = {0x10, 0x14, 0x18, 0x1C};
 
+alignas(16) uint8_t tx_buf[4][60];
+
 
 /*
  * Initialize the rtl8139 card driver
@@ -47,32 +49,43 @@ RTL8139::RTL8139(){
 
     // Soft reset
     outb(io_base + 0x37, 0x10);
-    int timeout = 100000; // arbitrarily high count
-    while ((inb(io_base + 0x37) & 0x10) && timeout-- > 0) {
-        // optionally: pause CPU for a few cycles
+    
+    while ((inb(io_base + 0x37) & 0x10) || (inb(io_base + 0x37) & 0x04)) {
+        // Wait for both bit 4 and bit 2 to clear
     }
-    Debug::printf("HERE\n");
-
+    
+    Debug::printf("val: %x\n", inb(io_base + 0x37));
     // Allocate receive buffer
     rx_buffer = (char*)malloc(8192 + 16 + 1500);
     bzero(rx_buffer, 8192 + 16 + 1500);
     outl(io_base + 0x30, (uint32_t)rx_buffer);
-
-    // Sets the TOK and ROK bits high
-    outw(io_base + 0x3C, 0x0005);
-
-    // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
-    outl(io_base + 0x44, 0xf | (1 << 7));
-
+    
+    
     // Sets the RE and TE bits high
     outb(io_base + 0x37, 0x0C);
 
+    uint8_t cmd = inb(io_base + 0x37);
+    Debug::printf("Command Register: %x\n", cmd);
+    
+    // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
+    outl(io_base + 0x44, 0xf | (1 << 7));
+    
+
+    // Sets the TOK and ROK bits high)
+    outw(io_base + 0x3C, 0x0005);
+    uint16_t mask = inw(io_base + 0x3C);
+    Debug::printf("Interrupt Mask Register: %x\n", mask);
+    //! PROBLEM IS THAT MASK IS 0
+
+    
+    
     // Register and enable network interrupts
-    uint32_t irq_num = pciConfigRead(device->bus, device->slot, device->function, PCI_INTERRUPT_LINE); 
-    IDT::trap(32 + irq_num, (uint32_t)RTL8139Handler_,3);
+    uint16_t irq_num = pciConfigRead(device->bus, device->slot, device->function, PCI_INTERRUPT_LINE) & 0xFF; 
+    IDT::interrupt(32 + irq_num, (uint32_t)RTL8139Handler_);
     Debug::printf("Registered irq interrupt for rtl8139, irq num = %d\n", irq_num);
 
     read_mac_addr();
+
 }
 
 void RTL8139::receive_packet() {
