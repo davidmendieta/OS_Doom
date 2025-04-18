@@ -29,11 +29,9 @@ RTL8139::RTL8139(){
 
 
     bar_type = ret & 0x1;
-    Debug::printf("BAR TYPE: %d\n", bar_type);
     // Get io base or mem base by extracting the high 28/30 bits
     io_base = ret & (~0x3);
     mem_base = ret & (~0xf);
-    Debug::printf("MEM BASE: %x\n", mem_base);
     Debug::printf("rtl8139 use %s access (base: %x)\n", (bar_type == 0)? "mem based":"port based", (bar_type != 0)?io_base:mem_base);
 
     // Set current TSAD
@@ -52,43 +50,33 @@ RTL8139::RTL8139(){
     // Soft reset
     outb(io_base + 0x37, 0x10);
     while( (inb(io_base + 0x37) & 0x10) != 0) { }
-    
     Debug::printf("val: %x\n", inb(io_base + 0x37));
-    // Allocate receive buffer
 
-    // Might be overkill
+    // Might be overkill, but we're 4096 aligning it - Allocate receive buffer
     void* raw_buf = malloc(8192 + 16 + 4096 + 1500); // overallocate
     uintptr_t raw_addr = (uintptr_t)raw_buf;
     uintptr_t aligned_addr = (raw_addr + 4095) & ~((uintptr_t)4095); // round up
     rx_buffer = (char*)aligned_addr;
 
     bzero(rx_buffer, 8192 + 16 + 1500);
-    outl(io_base + 0x30, (uint32_t)rx_buffer);
+    outl(io_base + 0x30, (uint32_t)rx_buffer); // We are telling the NIC where to write data it receives
 
-    // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP
+    // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP. This tells us what type of broadcasts we want to accept
     outl(io_base + 0x44, 0xf | (1 << 7));
     uint32_t rcr_val = inl(io_base + 0x44);
     Debug::printf("RCR: %x\n", rcr_val);
 
-    outw(io_base + 0x3E, 0xFFFF);
+    outw(io_base + 0x3E, 0xFFFF); // This resets interrupts
 
-    outw(io_base + 0x3C, TOK | ROK);
+    outw(io_base + 0x3C, TOK | ROK); // We are telling the NIC that we want to trigger interrupts when we receive a transfer OK signal and a receive OK signal
     uint16_t mask = inw(io_base + 0x3C);
     Debug::printf("Interrupt Mask Register: %x\n", mask);
     
     // Sets the RE and TE bits high
-    outb(io_base + 0x37, 0x0C);
+    outb(io_base + 0x37, 0x0C); // We are allowing transfering and receiving on the NIC
     
-
-    Debug::printf("IO BASE: %d\n", io_base);
     
-    // Sets the TOK and ROK bits high)    
-    uint8_t cmd = inb(io_base + 0x37);
-    Debug::printf("Command Register: %x\n", cmd);
-    
-    // Register and enable network interrupts
     uint16_t irq_num = pciConfigRead(device->bus, device->slot, device->function, PCI_INTERRUPT_LINE) & 0xFF; 
-
 
 
 
@@ -185,6 +173,7 @@ void RTL8139::send_packet(void * data, uint32_t len) {
         tx_cur = 0;
 }
 
+// TODO Properly clear interrupts
 extern "C" void RTL8139Handler() {
     Debug::printf("RTL8139 interrupt was fired !!!! \n");
     uint16_t status = inw(rtl8139->io_base + 0x3e);
