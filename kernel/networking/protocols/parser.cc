@@ -2,7 +2,7 @@
 #include "../heap.h"
 #include "../machine.h"
 #include "./drivers/rtl8139.h" // to access ip address
-#include "networking.h"
+#include "networking.h" // to get the driver device
 
 namespace Parser {
 
