@@ -4,8 +4,9 @@
 
 #define CONFIG_ADDRESS 0xCF8
 #define CONFIG_DATA    0xCFC
-#define NUM_BARS 6 // FIXME : is 6 correct?
+#define NUM_BARS 6
 #define NUM_BUS 256
+#define MAX_DEVICES 20
 
 typedef struct {
     uint8_t bus;
@@ -17,8 +18,14 @@ typedef struct {
     uint32_t bars[NUM_BARS];
 } PciDevice;
 
+typedef struct {
+    uint16_t vendor;
+    uint16_t device;
+} VendorDevice;
+
+extern VendorDevice extectedDevices[];
 extern PciDevice pciDevices[NUM_BUS];
-extern size_t deviceCount;
+extern size_t pciDeviceCount;
 
 // bus = the PCI bus number
 // slot (device) = the PCI slot number
@@ -39,3 +46,5 @@ extern PciDevice* findDeviceVD(uint16_t vendor_id, uint16_t device_id);
 // enumerates all PCI devices
 extern void pciEnumDevices();
 
+// verify we find all of our expected devices
+extern void verifyDevices();
