@@ -3,13 +3,9 @@
 #include <cstdint>
 #include <cstddef>
 
-Framebuffer screen;
+Framebuffer screen; //320x200
 
-void framebuffer_init(uintptr_t phys_addr,
-                      uint32_t width,
-                      uint32_t height,
-                      uint32_t pitch,
-                      uint32_t bpp) {
+void framebuffer_init(uintptr_t phys_addr, uint32_t width, uint32_t height, uint32_t pitch, uint32_t bpp) {
     screen.width  = width;
     screen.height = height;
     screen.bytes_per_line  = pitch;
@@ -27,11 +23,11 @@ void framebuffer_init(uintptr_t phys_addr,
  }
 
 void framebuffer_draw_pixel(uint32_t x, uint32_t y, uint32_t color) {
-    if (x >= screen_fb.width || y >= screen_fb.height) return;
+    if (x >= screen.width || y >= screen.height) return;
 
     // byte offset
-    uint8_t *pixel = screen_fb.base + y * screen_fb.pitch + x * (screen_fb.bits_per_pixel / 8);
+    uint8_t *pixel = (uint8_t*) screen.base + y * screen.bytes_per_line + x * (screen.bits_per_pixel / 8);
     // write pixel (assuming 32bpp)
-    pixel = color;
+    pixel = (uint8_t*) color;
 }
 
