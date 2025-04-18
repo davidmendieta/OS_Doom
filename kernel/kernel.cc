@@ -66,9 +66,12 @@ void kernelMain(void) {
 
     // char** argv = (char**)((uint32_t*)userEsp)[1];
 
-    // Debug::printf("HERE %s\n", argv[0]);
+    Debug::printf("HERE %s\n", argv[0]);
 
 
+    while (true) {
+
+    }
 
     ASSERT(userEsp % 16 == 0);
 
