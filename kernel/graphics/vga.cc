@@ -4,6 +4,12 @@
 #define COLOR_GREEN 0x2
 #define COLOR_PURPLE 0xf
 
+// packed list of VGA register values used to program the hardware into Mode 13h
+// Mode 13h classic 320×200 resolution with 256 colors.
+// WHAT THIS DOES (maybe): kernel will loop over this array and write each byte 
+// to the cooresponding VGA I/O port to switch into graphics mode. Once these are 
+// set, we can draw pixels. TURNS OUT WE MIGHT NOT NEED THIS SINCE CHOCOLATE DOOM 
+// SUPPOSEDLY WRITES DIRECTLY TO THE BUFFER??
 unsigned char g_320x200x256[] =
 {
     0x63,
