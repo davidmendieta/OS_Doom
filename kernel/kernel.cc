@@ -6,6 +6,7 @@
 #include "libk.h"
 #include "config.h"
 #include "shared.h"
+#include "ps2.h"
 
 StrongPtr<Ext2> fs{};
 
@@ -68,10 +69,9 @@ void kernelMain(void) {
 
     Debug::printf("HERE %s\n", argv[0]);
 
+    // while (true) {
 
-    while (true) {
-
-    }
+    // }
 
     ASSERT(userEsp % 16 == 0);
 
