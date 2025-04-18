@@ -15,8 +15,9 @@ void framebuffer_init(uintptr_t phys_addr,
     screen.bytes_per_line  = pitch;
     screen.bits_per_pixel    = bpp;
 
-    // Calculate total buffer size
+    // total buffer size
     size_t size = (size_t)(height) * pitch;
+
     // call VMMnaive mmap to map physical framebuffer into virtual memory
 //     screen_fb.base = VMM::naive_mmap(size,
 //                                      /*shared=*/false,
@@ -26,7 +27,6 @@ void framebuffer_init(uintptr_t phys_addr,
  }
 
 void framebuffer_draw_pixel(uint32_t x, uint32_t y, uint32_t color) {
-    // Bounds check (optional in performance-critical code)
     if (x >= screen_fb.width || y >= screen_fb.height) return;
 
     // byte offset
