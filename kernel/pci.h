@@ -28,6 +28,8 @@ extern size_t deviceCount;
 // slot (device) = the PCI slot number
 // function = is the function number
 // register_offset = the offset in the configuration space
+extern uint8_t pciConfigRead8(uint8_t bus, uint8_t slot, uint8_t function, uint8_t register_offset);
+
 extern uint16_t pciConfigRead(uint8_t bus, uint8_t slot, uint8_t function, uint8_t register_offset);
 
 // writes to a config space, similar to read above.

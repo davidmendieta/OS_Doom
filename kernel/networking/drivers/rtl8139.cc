@@ -29,9 +29,11 @@ RTL8139::RTL8139(){
 
 
     bar_type = ret & 0x1;
+    Debug::printf("BAR TYPE: %d\n", bar_type);
     // Get io base or mem base by extracting the high 28/30 bits
     io_base = ret & (~0x3);
     mem_base = ret & (~0xf);
+    Debug::printf("MEM BASE: %x\n", mem_base);
     Debug::printf("rtl8139 use %s access (base: %x)\n", (bar_type == 0)? "mem based":"port based", (bar_type != 0)?io_base:mem_base);
 
     // Set current TSAD
@@ -77,8 +79,6 @@ RTL8139::RTL8139(){
     // Sets the RE and TE bits high
     outb(io_base + 0x37, 0x0C);
     
-    
-    
 
     Debug::printf("IO BASE: %d\n", io_base);
     
@@ -86,15 +86,45 @@ RTL8139::RTL8139(){
     uint8_t cmd = inb(io_base + 0x37);
     Debug::printf("Command Register: %x\n", cmd);
     
-    
-    
     // Register and enable network interrupts
     uint16_t irq_num = pciConfigRead(device->bus, device->slot, device->function, PCI_INTERRUPT_LINE) & 0xFF; 
-    IDT::interrupt(32 + irq_num, (uint32_t)RTL8139Handler_);
+
+
+
+
+    // APIC Config
+    IDT::interrupt(32 + irq_num, (uint32_t)RTL8139Handler_); // We're telling the CPU which function to call whenever it receives a signal at its IDT #32 + irq_num
     Debug::printf("Registered irq interrupt for rtl8139, irq num = %d\n", irq_num);
+
+    #define IOAPIC_REGSEL  0xFEC00000
+    #define IOAPIC_WINDOW  0xFEC00010
+    #define REDIR_BASE     0x10
+
+    uint32_t irq = irq_num;
+    // We want to map the irq route #11 (or whatever irq is: this is on which line our NIC sends signals). From what I understand, REDIR_BASE is the start of the redirection table (mapping interrupt requests to an index in the IDT). There are 2 entries per IRQ (one low and one high), which explains why we add 2*irq.
+    uint32_t redir_low = REDIR_BASE + 2 * irq;
+    uint32_t redir_high = redir_low + 1;
+    uint8_t vector = 32 + irq_num; // If we keep it this way for all devices, we shouldn't run into conflicts
+    uint8_t dest_apic_id = 0; // This corresponds to which CPU is going to handle our NIC interrupts
+
+    volatile uint32_t* sel = (volatile uint32_t*)IOAPIC_REGSEL;
+    volatile uint32_t* win = (volatile uint32_t*)IOAPIC_WINDOW;
+
+    // Set destination CPU
+    *sel = redir_high;
+    *win = ((uint32_t)dest_apic_id) << 24;
+
+    // Unmask and set vector
+    uint32_t flags = vector & 0xFF; // bits 0-7 = vector
+    *sel = redir_low;
+    *win = flags;
+
     
     read_mac_addr();
 
+    uint8_t int_pin  = pciConfigRead8(device->bus, device->slot, device->function, 0x3D);
+    uint8_t irq_line = pciConfigRead8(device->bus, device->slot, device->function, 0x3C);
+    Debug::printf("PCI interrupt pin = %u, line = %u\n", int_pin, irq_line);
 }
 
 void RTL8139::receive_packet() {
@@ -139,10 +169,14 @@ void RTL8139::get_mac_addr(uint8_t* src_mac_addr) {
     memcpy(src_mac_addr, mac_addr, 6);
 }
 
-void RTL8139::send_packet(void * data, uint32_t len) {
+void RTL8139::send_packet(void * data, uint32_t len) {    
     // First, copy the data to a physically contiguous chunk of memory
-    void* transfer_data = malloc(len); //! WAS ORIGINALLY ALIGNED - MIGHT CAUSE ISSUES
-    memcpy(transfer_data, data, len);
+    void* raw_buf = malloc(len + 4096); // overallocate
+    uintptr_t raw_addr = (uintptr_t)raw_buf;
+    uintptr_t aligned_addr = (raw_addr + 4095) & ~((uintptr_t)4095); // round up
+    char* transfer_data = (char*)aligned_addr;
+
+    memcpy((void*)transfer_data, data, len);
     Debug::printf("Sending Data\n");
     // Second, fill in physical address of data, and length
     outl(io_base + TSAD_array[tx_cur], (uint32_t)transfer_data);
@@ -163,5 +197,5 @@ extern "C" void RTL8139Handler() {
         rtl8139->receive_packet();
     }
 
-    outw(rtl8139->io_base + 0x3E, 0x5); // clear interrupt
+    outw(rtl8139->io_base + 0x3E, status); // clear interrupt
 }

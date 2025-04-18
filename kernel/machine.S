@@ -238,8 +238,9 @@ switchToUser:
     /* NETWORKING */
     .global RTL8139Handler_
 RTL8139Handler_:
-    .extern RTL8139Handler
+    pusha
     call RTL8139Handler
+    popa
     iret
 
     .global sysHandler_

@@ -4,6 +4,21 @@
 PciDevice pciDevices[NUM_BUS];
 size_t pciDeviceCount = 0;
 
+uint8_t pciConfigRead8(uint8_t bus, uint8_t slot, uint8_t function, uint8_t register_offset) {
+    uint32_t address = (1U << 31)                  // enable bit
+                     | ((uint32_t)bus << 16)
+                     | ((uint32_t)slot << 11)
+                     | ((uint32_t)function << 8)
+                     | (register_offset & 0xFC);   // aligned offset
+
+    outl(CONFIG_ADDRESS, address);
+    uint32_t data = inl(CONFIG_DATA);
+
+    uint8_t shift = (register_offset & 0x3) * 8;
+    return (uint8_t)((data >> shift) & 0xFF);
+}
+
+
 // reads from PCI config space
 uint16_t pciConfigRead(uint8_t bus, uint8_t slot, uint8_t function, uint8_t register_offset) {
     uint32_t address = ((uint32_t)bus         << 16) |      // bus number 16-23
@@ -17,6 +32,7 @@ uint16_t pciConfigRead(uint8_t bus, uint8_t slot, uint8_t function, uint8_t regi
     
     return (uint16_t)((data >> ((register_offset & 2) * 8)) & 0xFFFF);
 }
+
 
 // write to PCI config space
 void pciConfigWrite(uint8_t bus, uint8_t slot, uint8_t function, uint8_t register_offset, uint16_t value) {
