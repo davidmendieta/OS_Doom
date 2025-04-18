@@ -1,6 +1,8 @@
 #include "parser.h"
 #include "../heap.h"
 #include "../machine.h"
+#include "./drivers/rtl8139.h" // to access ip address
+#include "networking.h"
 
 namespace Parser {
 
@@ -65,8 +67,9 @@ void* receive(const void* packet, size_t packet_len, size_t* out_payload_len) {
     return payload;
 }
 
-bool verify_receiver(const IPv4Header* /*ip_hdr*/) { 
-	return true; 
+bool verify_receiver(const IPv4Header* /*ip_hdr*/ ip_hdr) {
+    return ip_hdr->dest_ip == rtl8139->my_ip;
+	// return true; 
 }
 
 uint16_t checksum(const void* /*data*/, size_t /*len*/) {
