@@ -1,41 +1,40 @@
-// #pragma pack(push, 1)
-// struct IPv4Header {
-//     uint8_t version_ihl;       // Version (4 bits) + IHL (4 bits)
-//     uint8_t type_of_service;   // Type of service (usually 0)
-//     uint16_t total_length;     // Total length (header + data 2 bytes)
+#pragma once
 
-//     uint16_t identification;   // Identification
-//     uint16_t flags_fragment;   // Flags (3 bits) + Fragment offset (13 bits)
+#include <stdint.h>
+#include <stddef.h>
 
-//     uint8_t ttl;               // Time to live
-//     uint8_t protocol;          // Protocol (17 = UDP)
-//     uint16_t header_checksum;  // Header checksum
+#pragma pack(push, 1)
+struct IPv4Header {
+    uint8_t  version_ihl;
+    uint8_t  type_of_service;
+    uint16_t total_length;
+    uint16_t identification;
+    uint16_t flags_fragment;
+    uint8_t  ttl;
+    uint8_t  protocol;
+    uint16_t header_checksum;
+    uint32_t src_ip;
+    uint32_t dest_ip;
+};
+#pragma pack(pop)
 
-//     uint32_t src_ip;           // Source IP address
-//     uint32_t dest_ip;          // Destination IP address
-// }; // 20 bytes
-// #pragma pack(pop)
+#pragma pack(push, 1)
+struct UDPHeader {
+    uint16_t src_port;
+    uint16_t dest_port;
+    uint16_t length;
+    uint16_t checksum; 
+};
+#pragma pack(pop)
 
-// #pragma pack(push, 1)
-// struct UDPPacket {
-// 	uint16_t src_port[2];         // Source Port
-// 	uint16_t dest_port[2];		  // Destination Port
+namespace Parser {
 
-// 	uint16_t total_length[2];     // Length
-// 	uint16_t header_checksum[2];  // Checksum
-								  
-// 	void* payload;                // Payload
-// }; // 8 bytes + payload
-// #pragma pack(pop)
+	void* send(const void* payload, size_t payload_len, size_t* out_packet_len);
 
-// struct FullPacket {
-// 	IPPacket;
-// 	UDPPacket;
-// }
+	void* receive(const void* packet, size_t packet_len, size_t* out_payload_len);
 
-// namespace Parser {
+	bool verify_receiver(const IPv4Header* ip_hdr);
+	uint16_t checksum(const void* data, size_t len);
+	void decrement_ttl(IPv4Header* ip_hdr);
 
-// 	extern void* Parse(void* buffer);
-
-// }
-
+} // namespace Parser
