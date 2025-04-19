@@ -1,0 +1,110 @@
+c[?7l[2J[0mSeaBIOS (version rel-1.16.3-0-ga6ed6b701f0a-prebuilt.qemu.org)
+
+
+iPXE (http://ipxe.org) 00:03.0 CA00 PCI2.10 PnP PMM+06FD0FC0+06F30FC0 CA00
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
+
+
+Booting from Hard Disk..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+xxxxxxxxxxxxxxxxxxxxxxxxx
+| What just happened? Why am I here?
+| Discovering my identity and features
+|     CPUID: AuthenticAMD
+|     has SSE3
+|     has MONITOR/MWAIT
+|     running on hypervisor
+| totalProcs 4
+| memSize 0x7fe0000 127MB
+| localAPIC fee00000
+| ioAPIC fec00000
+| heap range 0x100000 0x600000
+| switched to new UART
+| physical range 0x600000 0x7fe0000
+| pitInit freq 1000Hz
+| pitInit divider 59659
+| APIT running at 1000068689Hz
+| APIT counter=1000068 for 1000Hz
+PS2 OK IF 0x55: 0x55
+disable ports
+flush buffer
+read config
+modify config
+write modified config
+reenable ports
+| ENUMERATING DEVICES
+NEW DEVICE STORED: Bus 0, Slot 0, Function 0: Vendor 0x8086, Device ID = 0x1237
+  BAR[0] = 0x0
+  BAR[1] = 0x0
+  BAR[2] = 0x0
+  BAR[3] = 0x0
+  BAR[4] = 0x0
+  BAR[5] = 0x0
+NEW DEVICE STORED: Bus 0, Slot 1, Function 0: Vendor 0x8086, Device ID = 0x7000
+  BAR[0] = 0x0
+  BAR[1] = 0x0
+  BAR[2] = 0x0
+  BAR[3] = 0x0
+  BAR[4] = 0x0
+  BAR[5] = 0x0
+NEW DEVICE STORED: Bus 0, Slot 1, Function 1: Vendor 0x8086, Device ID = 0x7010
+  BAR[0] = 0x0
+  BAR[1] = 0x0
+  BAR[2] = 0x0
+  BAR[3] = 0x0
+  BAR[4] = 0xc041
+  BAR[5] = 0x0
+NEW DEVICE STORED: Bus 0, Slot 1, Function 3: Vendor 0x8086, Device ID = 0x7113
+  BAR[0] = 0x0
+  BAR[1] = 0x0
+  BAR[2] = 0x0
+  BAR[3] = 0x0
+  BAR[4] = 0x0
+  BAR[5] = 0x0
+NEW DEVICE STORED: Bus 0, Slot 2, Function 0: Vendor 0x1234, Device ID = 0x1111
+  BAR[0] = 0x8
+  BAR[1] = 0x0
+  BAR[2] = 0x0
+  BAR[3] = 0x0
+  BAR[4] = 0x0
+  BAR[5] = 0x0
+NEW DEVICE STORED: Bus 0, Slot 3, Function 0: Vendor 0x8086, Device ID = 0x100e
+  BAR[0] = 0x0
+  BAR[1] = 0xc001
+  BAR[2] = 0x0
+  BAR[3] = 0x0
+  BAR[4] = 0x0
+  BAR[5] = 0x0
+| initialize 1
+| reset 1
+|      eip:0x8000
+| initialize 2
+| reset 2
+|      eip:0x8000
+| initializing TSS:ss0 for 1
+| initializing TSS:ss0 for 2
+| 2 enabling interrupts, I'm scared
+| initialize 3
+| 1 enabling interrupts, I'm scared
+| reset 3
+|      eip:0x8000
+| initializing TSS:ss0 for 3
+| initializing TSS:ss0 for 0
+| 3 enabling interrupts, I'm scared
+| 0 enabling interrupts, I'm scared
+vaddr:80000000 memsz:0x401d40 filesz:0x1d04 fileoff:80
+HERE init
+0x1d
+0xf0
+0x1d
+0x1b
+0xf0
+0x1b
+0x5
+0xf0
+0x5
+0x4b
+0xf0
+0x4b
+0x1d
+0xf0
+0x1d

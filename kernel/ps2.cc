@@ -4,6 +4,14 @@ namespace PS2 {
 volatile bool debug_on = true;
 
 void init() {
+
+	// checking if ps2 controller is ok
+	outb(0x64, 0xAA);         
+	while (!(inb(0x64) & 1)); 
+	uint8_t result = inb(0x60);
+
+	if(debug_on) Debug::printf("PS2 OK IF 0x55: 0x%x\n", result);
+
 	// disable PS/2 port 1 and 2 so they don't send data while we configure the controller
 	if(debug_on) Debug::printf("disable ports\n");
 	outb(0x64, 0xAD);
@@ -43,5 +51,11 @@ void init() {
 
 }
 
+
+// read a byte from data port
+uint8_t read_ps2_data() {
+    while (!(inb(0x64) & 1));
+    return inb(0x60);
+}
 
 }

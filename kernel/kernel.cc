@@ -69,9 +69,9 @@ void kernelMain(void) {
 
     Debug::printf("HERE %s\n", argv[0]);
 
-    // while (true) {
-
-    // }
+    while (true) {
+        Debug::printf("0X%x\n", PS2::read_ps2_data());
+    }
 
     ASSERT(userEsp % 16 == 0);
 
