@@ -117,7 +117,7 @@ extern "C" void kernelInit(void) {
         
         /* initialize PS2 controller */
         PS2::init();
-        PS2::setup_ps2_irqs();
+        //PS2::setup_ps2_irqs();
 
 
         /* Enumerate Devices */

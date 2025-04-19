@@ -39,21 +39,21 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
 }
 
 void kernelMain(void) {
-    //ADDED
-    PS2::init();
-    PS2::setup_ps2_irqs();
+    // //ADDED
+    // PS2::init();
+    // PS2::setup_ps2_irqs();
 
-    uint8_t mask = inb(0x21);
-    mask &= ~(1 << 1); // enable IRQ1
-    outb(0x21, mask);
+    // uint8_t mask = inb(0x21);
+    // mask &= ~(1 << 1); // enable IRQ1
+    // outb(0x21, mask);
 
-    sti();
-    Debug::printf("Waiting for keyboard input...\n");
+    // sti();
+    // Debug::printf("Waiting for keyboard input...\n");
 
-    // TEMPORARY LOOP FOR TESTING
-    while (true) {
-        asm volatile ("hlt");
-    }
+    // // TEMPORARY LOOP FOR TESTING
+    // while (true) {
+    //     asm volatile ("hlt");
+    // }
 
     auto d = StrongPtr<Ide>::make(1,0);
     fs = StrongPtr<Ext2>::make(d);
@@ -86,7 +86,8 @@ void kernelMain(void) {
     Debug::printf("HERE %s\n", argv[0]);
 
     while (true) {
-        Debug::printf("0X%x\n", PS2::read_ps2_data());
+        PS2::read_ps2_data();
+        //Debug::printf("0X%x\n", PS2::read_ps2_data());
     }
 
     ASSERT(userEsp % 16 == 0);

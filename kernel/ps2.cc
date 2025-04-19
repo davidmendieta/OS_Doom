@@ -53,22 +53,22 @@ void init() {
 
 }
 
-// ADDED
-extern "C" void keyboard_interrupt() {
-    Debug::printf("*** Keyboard interrupt!\n");
-    outb(0x20, 0x20); // acknowledge PIC
-}
+// // ADDED
+// extern "C" void keyboard_interrupt() {
+//     Debug::printf("*** Keyboard interrupt!\n");
+//     outb(0x20, 0x20); // acknowledge PIC
+// }
 
-extern "C" void mouse_interrupt() {
-    Debug::printf("*** Mouse interrupt!\n");
-    outb(0xA0, 0x20); // acknowledge slave PIC first
-    outb(0x20, 0x20); // then master PIC
-}
+// extern "C" void mouse_interrupt() {
+//     Debug::printf("*** Mouse interrupt!\n");
+//     outb(0xA0, 0x20); // acknowledge slave PIC first
+//     outb(0x20, 0x20); // then master PIC
+// }
 
-void setup_ps2_irqs() {
-    IDT::interrupt(0x21, (uint32_t) keyboard_interrupt);
-    IDT::interrupt(0x2C, (uint32_t) mouse_interrupt);
-}
+// void setup_ps2_irqs() {
+//     IDT::interrupt(0x21, (uint32_t) keyboard_interrupt);
+//     IDT::interrupt(0x2C, (uint32_t) mouse_interrupt);
+// }
 
 
 char scancode_to_ascii(uint8_t scancode) {
@@ -145,7 +145,12 @@ char scancode_to_ascii(uint8_t scancode) {
 // read a byte from data port
 uint8_t read_ps2_data() {
 	while (!(inb(0x64) & 1));
-	return inb(0x60);
+	uint8_t scancode = inb(0x60);
+    if (scancode != 0xF0) {
+        Debug::printf("Scancode: 0x%x\n", scancode);
+        Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
+    }
+	return scancode;
 }
 
 }
