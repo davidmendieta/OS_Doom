@@ -7,6 +7,8 @@ typedef struct Tokenized {
     int argc;
 } Tokenized;
 
-int increase_index_and_copy_into_temp_array(char *temp_array, char *from_array, int index, int *strlen);
+int count_argc(char *input);
+
+char* iterate_and_fill (char* dst, char* src);
 
 Tokenized *tokenize(char *input);

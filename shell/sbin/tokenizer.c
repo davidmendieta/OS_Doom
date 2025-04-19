@@ -2,48 +2,58 @@
 #include "libc.h"
 #include "tokenizer.h"
 
-int increase_index_and_copy_into_temp_array(char *temp_array, char *from_array, int index, int *strlen) {
-    if (index == '\0') {
-        return -1;
-    }
-    int temp_array_index = 0;
-    char curr_char = from_array[index];
-    while (curr_char != '\0' && curr_char != ' ') { // while it doesn't equal null or space
-        temp_array[temp_array_index] = from_array[index];
+int count_argc(char *input) {
+    int ret = 0;
+    int index = 0;
+    while (input[index] != '\0') {
+        if (input[index] == ' ') {
+            ret++;
+        }
         index++;
-        temp_array_index++;
-        curr_char = from_array[index];
     }
-    *strlen = temp_array_index;
-    if (curr_char == '\0') {
-        return -2; // end of input
+    return ret;
+}
+
+char* iterate_and_fill (char* dst, char* src) {
+    int i = 0;
+    char c = *(src + i);
+    while (c && c != '\n') {
+        dst[i] = c;
+        i++;
+        c = *(src + i);
     }
-    return index + 1; // go past the bad char
+    dst[i] = 0;
+    return (src + i);
 }
 
 Tokenized *tokenize(char *input)
 {
+    printf("called ");
     if (input[0] == 0)
     {
         // empty line, return
         return 0;
     }
     Tokenized *token = (Tokenized *) malloc(sizeof(Tokenized));
-    token->argv = (char **) malloc(sizeof(char *) * MAX_ARG_LEN);
-    token->argc = 0;
-    char *temp_array = (char *) malloc(MAX_ARG_LEN);
+    token->argc = count_argc(input);
+    printf("ARGC: %d\n", token->argc);
+    token->argv = (char **) malloc(sizeof(char *) * (token->argc + 1));
+    printf("MADE it here");
+    token->argv[token->argc] = 0;
+
     int index = 0;
-    int str_len = 0;
-    index = increase_index_and_copy_into_temp_array(temp_array, input, index, &str_len);
-
-    while (index != -2) {
-        //temp_array contains the command
-        token->argv[token->argc] = malloc(str_len + 1); // for null terminated
-        token->argv[token->argc][str_len] = '\0';
-        memcpy((void *) token->argv[token->argc], (void *)temp_array, str_len);
-        token->argc++;
-        index = increase_index_and_copy_into_temp_array(temp_array, input, index, &str_len);
+    while (index < token->argc) {
+        char *temp_buffer = malloc(4096);
+        printf("INPUT NOT NULL TERMINATED\n");
+        printf("INPUT %s\n", input);
+        input = iterate_and_fill(temp_buffer, input);
+        printf("temp_buffer: %s\n", temp_buffer);
+        int len = strlen(temp_buffer);
+        token->argv[index] = malloc(len + 1);
+        memcpy((void *)token->argv[index], (void *)temp_buffer, len + 1);
+        free(temp_buffer);
+        index++;
     }
-
+    printf("RETURNING FROM TOKENIZE");
     return token;
 }
