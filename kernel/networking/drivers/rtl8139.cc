@@ -7,6 +7,7 @@
 #include "../networking.h"
 #include "../../physmem.h"
 #include "../../pci.h"
+#include "../../smp.h"
 
 PciDevice* device;
 
@@ -178,6 +179,11 @@ extern "C" void RTL8139Handler() {
     Debug::printf("RTL8139 interrupt was fired !!!! \n");
     uint16_t status = inw(rtl8139->io_base + 0x3e);
 
+    SMP::eoi();
+    outw(rtl8139->io_base + 0x3E, status); // clear interrupt
+
+    Debug::printf("STATUS: %d", status);
+
     if(status & TOK) {
         Debug::printf("Packet sent\n");
     }
@@ -186,5 +192,4 @@ extern "C" void RTL8139Handler() {
         rtl8139->receive_packet();
     }
 
-    outw(rtl8139->io_base + 0x3E, status); // clear interrupt
 }
