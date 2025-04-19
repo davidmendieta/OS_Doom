@@ -118,14 +118,24 @@ char scancode_to_ascii(uint8_t scancode) {
         case 0x29: return ' ';  // spacebar
         case 0x5A: return '\n'; // enter
         case 0x66: return '\b'; // backspace
-		case 0x14: Debug::printf("left control"); // left control
+		case 0x14: 
+            Debug::printf("left control"); // left control
+            return '_';
         case 0x0D: return '\t'; // tab
 		case 0x49: return '.'; // period
 		case 0x41: return ','; // comma
-        case 0x76: Debug::printf("escape"); // escape
-		case 0x12: Debug::printf("left shift"); // left shift
-        case 0x59: Debug::printf("right shift"); // right shift
-		case 0x11: Debug::printf("alt"); // alt
+        case 0x76: 
+            Debug::printf("escape"); // escape
+            return '_';
+		case 0x12:
+            Debug::printf("left shift"); // left shift
+            return '_';
+        case 0x59: 
+			Debug::printf("right shift"); // right shift
+			return '_';
+		case 0x11: 
+			Debug::printf("alt"); // alt
+			return '_';
 
 		// default
         default: return 0; // unhandled key
