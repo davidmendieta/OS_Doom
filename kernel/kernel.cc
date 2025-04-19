@@ -6,6 +6,8 @@
 #include "libk.h"
 #include "config.h"
 #include "shared.h"
+#include "peripherals/mouse.h" 
+#include "idt.h"
 
 StrongPtr<Ext2> fs{};
 
@@ -38,6 +40,12 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
 }
 
 void kernelMain(void) {
+
+
+    IDT::interrupt(IRQ12, (uint32_t)mouse::irq12_handler); //to test the mouse
+    mouse::test_mouse();
+
+
     auto d = StrongPtr<Ide>::make(1,0);
     fs = StrongPtr<Ext2>::make(d);
     auto init = fs->find(fs->root, "/sbin/init");
