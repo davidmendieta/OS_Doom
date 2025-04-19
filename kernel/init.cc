@@ -115,7 +115,9 @@ extern "C" void kernelInit(void) {
         IDT::init();
         Pit::calibrate(1000);
         
+        /* initialize PS2 controller */
         PS2::init();
+        PS2::setup_ps2_irqs();
 
 
         /* Enumerate Devices */
