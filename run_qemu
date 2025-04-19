@@ -10,3 +10,4 @@ time `make qemu_cmd` `make qemu_config_flags` \
              -drive file=kernel/build/kernel.img,index=0,media=disk,format=raw \
              -drive file=$*.data,index=1,media=disk,format=raw,file.locking=off \
              -device isa-debug-exit,iobase=0xf4,iosize=0x04 || true
+             -device isa-debug-exit,iobase=0xf4,iosize=0x04 || true

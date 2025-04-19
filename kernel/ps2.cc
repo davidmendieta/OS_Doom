@@ -1,3 +1,4 @@
+#include "idt.h"
 #include "ps2.h"
 
 namespace PS2 {
@@ -36,7 +37,8 @@ void init() {
 		Bit 6: Translation (we want raw scancodes, not translated ones)
 	*/
 	if(debug_on) Debug::printf("modify config\n");
-	config &= ~0x43; 
+	// config &= ~0x43;
+	config = (config | 0x03) & ~0x40; 
     
 	// prepares controller for a config byte, then wait for buffer to be empty, then write modified config back to Data Port
     if(debug_on) Debug::printf("write modified config\n");
@@ -45,17 +47,95 @@ void init() {
 	outb(0x60, config);
 
 	// enable port 1 and 2
-	if(debug_on) Debug::printf("reenable ports\n");
-	outb(0x64, 0xAE);
-	outb(0x64, 0xA8);
+	if(debug_on) Debug::printf("reenabled ports\n");
+	outb(0x64, 0xAE); // keyboard
+	outb(0x64, 0xA8); // mouse
 
 }
 
+// ADDED
+extern "C" void keyboard_interrupt() {
+    Debug::printf("*** Keyboard interrupt!\n");
+    outb(0x20, 0x20); // acknowledge PIC
+}
+
+extern "C" void mouse_interrupt() {
+    Debug::printf("*** Mouse interrupt!\n");
+    outb(0xA0, 0x20); // acknowledge slave PIC first
+    outb(0x20, 0x20); // then master PIC
+}
+
+void setup_ps2_irqs() {
+    IDT::interrupt(0x21, (uint32_t) keyboard_interrupt);
+    IDT::interrupt(0x2C, (uint32_t) mouse_interrupt);
+}
+
+
+char scancode_to_ascii(uint8_t scancode) {
+	switch (scancode) {
+
+        // numbers (top row)
+        case 0x16: return '1';
+        case 0x1E: return '2';
+        case 0x26: return '3';
+        case 0x25: return '4';
+        case 0x2E: return '5';
+        case 0x36: return '6';
+        case 0x3D: return '7';
+        case 0x3E: return '8';
+        case 0x46: return '9';
+        case 0x45: return '0';
+
+        // letters
+        case 0x1C: return 'a';
+        case 0x32: return 'b';
+        case 0x21: return 'c';
+        case 0x23: return 'd';
+        case 0x24: return 'e';
+        case 0x2B: return 'f';
+        case 0x34: return 'g';
+        case 0x33: return 'h';
+        case 0x43: return 'i';
+        case 0x3B: return 'j';
+        case 0x42: return 'k';
+        case 0x4B: return 'l';
+        case 0x3A: return 'm';
+        case 0x31: return 'n';
+        case 0x44: return 'o';
+        case 0x4D: return 'p';
+        case 0x15: return 'q';
+        case 0x2D: return 'r';
+        case 0x1B: return 's';
+        case 0x2C: return 't';
+        case 0x3C: return 'u';
+        case 0x2A: return 'v';
+        case 0x1D: return 'w';
+        case 0x22: return 'x';
+        case 0x35: return 'y';
+        case 0x1A: return 'z';
+
+        // others
+        case 0x29: return ' ';  // spacebar
+        case 0x5A: return '\n'; // enter
+        case 0x66: return '\b'; // backspace
+		case 0x14: return Debug::printf("left control"); // left control
+        case 0x0D: return '\t'; // tab
+		case 0x49: return '.'; // period
+		case 0x41: return ','; // comma
+        case 0x76: return Debug::printf("escape"); // escape
+		case 0x12: return Debug::printf("left shift"); // left shift
+        case 0x59: return Debug::printf("right shift"); // right shift
+		case 0x11: return Debug::printf("alt"); // alt
+
+		// default
+        default: return 0; // unhandled key
+    }
+}
 
 // read a byte from data port
 uint8_t read_ps2_data() {
-    while (!(inb(0x64) & 1));
-    return inb(0x60);
+	while (!(inb(0x64) & 1));
+	return inb(0x60);
 }
 
 }
