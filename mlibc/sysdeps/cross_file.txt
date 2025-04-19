@@ -1,0 +1,26 @@
+# cross_file.txt for cross-compiling to a 32-bit x86 Linux system (example)
+
+[host_machine]
+system = 'darwin'  # Host system (macOS)
+cpu_family = 'x86'
+cpu = 'x86'
+endian = 'little'
+
+[build_machine]
+system = 'linux'  # Build system (Linux)
+cpu_family = 'x86'
+cpu = 'x86'
+endian = 'little'
+
+[target_machine]
+system = 'linux'  # Target system (Linux, the system you are compiling for)
+cpu_family = 'x86'
+cpu = 'x86'
+endian = 'little'
+
+[binaries]
+c = '/path/to/your/target-gcc'      # Path to your target C compiler (cross-compiler)
+cpp = '/path/to/your/target-g++'    # Path to your target C++ compiler (cross-compiler)
+ar = '/path/to/your/target-ar'      # Path to your target archiver
+strip = '/path/to/your/target-strip' # Path to your target strip tool
+pkgconfig = '/path/to/your/target-pkg-config'  # Path to your target pkg-config tool
