@@ -1,0 +1,25 @@
+#!/bin/bash
+
+ORIGINAL_DIR="$(pwd)"
+THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# cd into /shell/tests
+cd $THIS_DIR
+cd ../tests
+
+# count how many .ok files
+COUNT=$(ls -1 *.ok 2>/dev/null | wc -l)
+TESTDIR_NAME="t${COUNT}.dir"
+
+echo "creating ${TESTDIR_NAME} ${TESTDIR_NAME}/sbin t${COUNT}.ok"
+
+mkdir -p "$TESTDIR_NAME"/sbin
+touch "t${COUNT}.ok"
+
+# copy the test environment
+cp -l ./env/* "$TESTDIR_NAME/sbin/"
+
+echo "fill out input.txt and .ok file"
+echo "do TESTS_DIR=shell/tests make t##.test"
+
+cd $ORIGINAL_DIR
