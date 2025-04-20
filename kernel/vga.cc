@@ -119,7 +119,7 @@ void vga_test() {
     vga_clear_screen();
 
     draw_rectangle(150, 10, 100, 50);
-	// draw some faces
+	// // draw some faces
 	draw_happy_face(10,10);
 	draw_happy_face(100,100);
 	draw_happy_face(300,150);
@@ -132,6 +132,12 @@ void vga_test() {
 			vga_plot_pixel(i, 50+j, i);
 		}
 	}
+    for (int i = 16; i < 31; i++) {
+		for (int j = 0; j < 100; j++) {
+			vga_plot_pixel(i, 50+j, i);
+		}
+	}
+
 }
 
 
