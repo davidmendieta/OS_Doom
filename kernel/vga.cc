@@ -6,6 +6,11 @@
 #define COLOR_BLACK 0x0
 #define COLOR_GREEN 0x2
 #define COLOR_PURPLE 0xf
+#define COLOR_SONIC_BLUE 0x1F  // bright blue
+#define COLOR_SONIC_TAN  0x36  // tan/peach
+#define COLOR_SONIC_WHITE 0x3F // white
+#define COLOR_SONIC_RED   0x4C // red
+#define COLOR_SONIC_GREY  0x08 // grey
 
 unsigned char g_320x200x256[] =
 {
@@ -46,13 +51,60 @@ void vga_display_image(const unsigned char* image, size_t width, size_t height) 
     }
 }
 
-void draw_rectangle(int x, int y, int width, int height) {
-	for (int i = 0; i < width; i++) {
-		for (int j = 0; j < height; j++) {
-			vga_plot_pixel(x+i, y+j, COLOR_GREEN);
-		}
-	}
+void draw_rectangle(int x, int y, int width, int height, unsigned short color) {
+    for (int i = 0; i < width; i++) {
+        for (int j = 0; j < height; j++) {
+            vga_plot_pixel(x+i, y+j, color);
+        }
+    }
 }
+
+// draw Sonic the Hedgehog at (x, y)
+void draw_sonic(int x, int y) {
+    // head (blue)
+    draw_rectangle(x+6, y+4, 16, 16, COLOR_SONIC_BLUE);
+    // face (tan)
+    draw_rectangle(x+10, y+10, 8, 8, COLOR_SONIC_TAN);
+    // left ear (blue)
+    draw_rectangle(x+6, y+2, 4, 4, COLOR_SONIC_BLUE);
+    // right ear (blue)
+    draw_rectangle(x+18, y+2, 4, 4, COLOR_SONIC_BLUE);
+    // spikes (blue, left and right)
+    draw_rectangle(x+2, y+10, 4, 6, COLOR_SONIC_BLUE);
+    draw_rectangle(x+22, y+10, 4, 6, COLOR_SONIC_BLUE);
+    // eyes (white)
+    draw_rectangle(x+12, y+12, 2, 3, COLOR_SONIC_WHITE);
+    draw_rectangle(x+16, y+12, 2, 3, COLOR_SONIC_WHITE);
+    // pupils (black)
+    vga_plot_pixel(x+13, y+13, COLOR_BLACK);
+    vga_plot_pixel(x+17, y+13, COLOR_BLACK);
+    // nose (black)
+    vga_plot_pixel(x+15, y+16, COLOR_BLACK);
+    // smile (black)
+    vga_plot_pixel(x+14, y+17, COLOR_BLACK);
+    vga_plot_pixel(x+15, y+18, COLOR_BLACK);
+    vga_plot_pixel(x+16, y+17, COLOR_BLACK);
+    // body (blue)
+    draw_rectangle(x+12, y+20, 8, 8, COLOR_SONIC_BLUE);
+    // belly (tan)
+    draw_rectangle(x+14, y+22, 4, 4, COLOR_SONIC_TAN);
+    // left arm (tan)
+    draw_rectangle(x+8, y+22, 4, 2, COLOR_SONIC_TAN);
+    // right arm (tan)
+    draw_rectangle(x+20, y+22, 4, 2, COLOR_SONIC_TAN);
+    // left leg (blue)
+    draw_rectangle(x+12, y+28, 2, 4, COLOR_SONIC_BLUE);
+    // right leg (blue)
+    draw_rectangle(x+18, y+28, 2, 4, COLOR_SONIC_BLUE);
+    // left shoe (red)
+    draw_rectangle(x+11, y+32, 4, 2, COLOR_SONIC_RED);
+    // right shoe (red)
+    draw_rectangle(x+17, y+32, 4, 2, COLOR_SONIC_RED);
+    // gloves (white)
+    vga_plot_pixel(x+9, y+23, COLOR_SONIC_WHITE);
+    vga_plot_pixel(x+23, y+23, COLOR_SONIC_WHITE);
+}
+
 
 void draw_happy_face(int x, int y) {
 	// eye
@@ -105,7 +157,7 @@ void write_regs(const unsigned char* regs) {
 
     // write attribute controller registers
     for (i = 0; i < VGA_NUM_AC_REGS; i++) {
-        inb(VGA_INSTAT_READ);               // reset flip-flop
+        inb(VGA_INSTAT_READ); // reset flip-flop
         outb(VGA_AC_INDEX, i);
         outb(VGA_AC_WRITE, *regs++);
     }
@@ -118,8 +170,7 @@ void write_regs(const unsigned char* regs) {
 void vga_test() {
     vga_clear_screen();
 
-    draw_rectangle(150, 10, 100, 50);
-	// // draw some faces
+	// draw some faces
 	draw_happy_face(10,10);
 	draw_happy_face(100,100);
 	draw_happy_face(300,150);
@@ -138,6 +189,7 @@ void vga_test() {
 		}
 	}
 
+    draw_sonic(146, 83);
 }
 
 
