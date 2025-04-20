@@ -141,14 +141,16 @@ void vga_init() {
 
     // 3. Set up legacy VGA mode 
     // write_regs(g_320x200x256);
+    // vga_test();
 
     // 4. Other option for Bochs SVGA, set registers via MMIO
-    // volatile uint32_t* svga = (volatile uint32_t*)mmio_base;
-    // svga[0x1] = 640;   // X resolution
-    // svga[0x2] = 480;   // Y resolution
-    // svga[0x3] = 32;    // Bits per pixel
-    // svga[0x4] = 0x41;  // Enable | LFB enabled
+    // volatile uint32_t* svga = (volatile uint32_t*) mmio_base;
+    // svga[0] = 0x900000;    // ID
+    // svga[1] = 640;         // X
+    // svga[2] = 480;         // Y
+    // svga[3] = 32;          // BPP
+    // svga[4] = 0x41;        // ENABLE | LFB
 
     // 5. Save fb_base somewhere for your drawing code (e.g., as a global or in a struct)
-    // Example: framebuffer = (uint8_t*)fb_base;
+    // framebuffer = (uint8_t*)fb_base;
 }
