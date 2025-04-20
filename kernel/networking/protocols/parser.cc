@@ -80,6 +80,10 @@ uint16_t fold_checksum(uint32_t sum) {
 //    return buf;
 //}
 
+
+//
+// send output (void* buf) is IPV4 + UDP (no ethernet header)
+//
 void* send(const void* payload, size_t payload_len, size_t* out_packet_len) {
     size_t udp_len = sizeof(UDPHeader) + payload_len;
     size_t ip_len  = sizeof(IPv4Header) + udp_len;
