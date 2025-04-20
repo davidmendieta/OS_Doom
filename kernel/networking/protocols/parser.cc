@@ -12,7 +12,7 @@
 #include "../../machine.h"
 #include "../../debug.h"
 
-const uint32_t src_ip = 0x0A000001;  // 10.0.0.1
+const uint32_t my_ip = 0x0A000001;  // 10.0.0.1
 const uint32_t dest_ip = 0x0A000002;  // 10.0.0.2
 const uint16_t src_port = 1234;  // source udp port
 const uint16_t dest_port = 5678;  // dest udp port
@@ -80,7 +80,6 @@ uint16_t fold_checksum(uint32_t sum) {
 //    return buf;
 //}
 
-
 //
 // send output (void* buf) is IPV4 + UDP (no ethernet header)
 //
@@ -100,7 +99,7 @@ void* send(const void* payload, size_t payload_len, size_t* out_packet_len) {
     ip->ttl             = 64;
     ip->protocol        = 17;                   // UDP
     ip->header_checksum = 0;                    // MUST zero before computing
-    ip->src_ip          = htonl(src_ip);
+    ip->src_ip          = htonl(my_ip);
     ip->dest_ip         = htonl(dest_ip);
 
     // compute IPv4 header checksum over just the header
@@ -212,10 +211,7 @@ bool verify_receiver(const IPv4Header* ip_hdr) {
     uint32_t src_ip = ntohl(ip_hdr->src_ip);
     uint32_t dst_ip = ntohl(ip_hdr->dest_ip);
     uint8_t proto = ip_hdr->protocol;
-//    uint16_t chksum = ip_hdr->header_checksum;
 
-    // validate checksum
-//    uint16_t checksum(const void* data, size_t len);
 
     // udp = 17
     if (proto != 17) {
@@ -223,7 +219,7 @@ bool verify_receiver(const IPv4Header* ip_hdr) {
     }
 
     // not my ip
-    if (dst_ip != src_ip) {
+    if (dst_ip != my_ip) {
         return false;
     }
 
