@@ -39,3 +39,20 @@ void cp(int from, int to) {
         }
     }
 }
+
+int streq(const char* s1, const char* s2) {
+    while (*s1 && *s2) {
+        if (*s1 != *s2) return 0;
+        s1++;
+        s2++;
+    }
+    return *s1 == *s2;
+}
+
+int strlen(const char *str) {
+    int index = 0;
+    while (str[index]) {
+        index++;
+    }
+    return index;
+}

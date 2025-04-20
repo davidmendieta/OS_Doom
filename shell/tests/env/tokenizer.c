@@ -1,4 +1,3 @@
-#define MAX_ARG_LEN 100
 #include "libc.h"
 #include "tokenizer.h"
 
@@ -26,14 +25,6 @@ char* iterate_and_fill (char* dst, char* src) {
     return (src + i + 1);
 }
 
-int my_strlen(char *str) {
-    int index = 0;
-    while (str[index] != '\0') {
-        index++;
-    }
-    return index;
-}
-
 Tokenized *tokenize(char *input)
 {
     if (input[0] == 0)
@@ -51,7 +42,7 @@ Tokenized *tokenize(char *input)
     while (index < token->argc) {
         char *temp_buffer = malloc(4096);
         input = iterate_and_fill(temp_buffer, input);
-        int len = my_strlen(temp_buffer);
+        int len = strlen(temp_buffer);
         token->argv[index] = malloc(len + 1);
         memcpy((void *)token->argv[index], (void *)temp_buffer, len + 1);
         free(temp_buffer);

@@ -1,25 +1,16 @@
 #include <stdbool.h>
 #include "sys.h"
 #include "tokenizer.c"
+#include "libc.h"
 
 // Built in commands 
 // - cd (one arg)
 // - path (any num args)
 // - exit (no args)
 
-int streq(const char* s1, const char* s2) {
-    while (*s1 && *s2) {
-        if (*s1 != *s2) return 0;
-        s1++;
-        s2++;
-    }
-    return *s1 == *s2;
-}
-
 void output_prompt() {
     printf("$ ");
 }
-
 
 // read form fd into buffer the next line
 char* input_line (char* dst, char* src) {

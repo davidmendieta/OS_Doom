@@ -24,4 +24,7 @@ extern int printf(const char* fmt, ...);
 
 extern void cp(int from, int to);
 
+extern int streq(const char*, const char*);
+extern int strlen(const char*);
+
 #endif
