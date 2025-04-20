@@ -40,71 +40,154 @@ static inline uint32_t htonl(uint32_t hostlong) {
 
 namespace Parser {
 
+// simple 16‑bit ones‑complement adder/fold
+uint16_t fold_checksum(uint32_t sum) {
+    while (sum >> 16) sum = (sum & 0xffff) + (sum >> 16);
+    return (uint16_t)~sum;
+}
+
+
+//void* send(const void* payload, size_t payload_len, size_t* out_packet_len) {
+//    size_t udp_len = sizeof(UDPHeader) + payload_len;
+//    size_t ip_len  = sizeof(IPv4Header) + udp_len;
+
+//    auto* buf = (uint8_t*) malloc(ip_len);
+//    auto* ip = (IPv4Header*)buf;
+
+//    ip->version_ihl     = (4 << 4) | (sizeof(IPv4Header)/4);
+//    ip->type_of_service = 0;
+//    ip->total_length    = (uint16_t)ip_len;
+//    ip->identification  = 0;
+//    ip->flags_fragment  = 0x4000;
+//    ip->ttl             = 64;
+//    ip->protocol        = 17;
+//    ip->header_checksum = 0;
+//    ip->src_ip          = 0;
+//    ip->dest_ip         = 0;
+
+//    UDPHeader* udp = (UDPHeader*)(buf + sizeof(IPv4Header));
+//    udp->src_port   = 0;
+//    udp->dest_port  = 0;
+//    udp->length     = (uint16_t)udp_len;
+//    udp->checksum   = 0;
+
+//    memcpy(buf + sizeof(IPv4Header) + sizeof(UDPHeader), payload, payload_len);
+
+//    *out_packet_len = ip_len;
+//    return buf;
+//}
 
 void* send(const void* payload, size_t payload_len, size_t* out_packet_len) {
     size_t udp_len = sizeof(UDPHeader) + payload_len;
     size_t ip_len  = sizeof(IPv4Header) + udp_len;
 
-    uint8_t* buf = (uint8_t*) malloc(ip_len);
+    auto* buf = (uint8_t*)malloc(ip_len);
+    auto* ip  = (IPv4Header*)buf;
 
-    IPv4Header* ip = (IPv4Header*)buf;
+    // --- fill IPv4 header (all multi‑byte fields in network order) ---
     ip->version_ihl     = (4 << 4) | (sizeof(IPv4Header)/4);
     ip->type_of_service = 0;
-    ip->total_length    = (uint16_t)ip_len;
-    ip->identification  = 0;
-    ip->flags_fragment  = 0x4000;
+    ip->total_length    = htons((uint16_t)ip_len);
+    ip->identification  = htons(0);
+    ip->flags_fragment  = htons(0x4000);
     ip->ttl             = 64;
-    ip->protocol        = 17;
-    ip->header_checksum = 0;
-    ip->src_ip          = 0;
-    ip->dest_ip         = 0;
+    ip->protocol        = 17;                   // UDP
+    ip->header_checksum = 0;                    // MUST zero before computing
+    ip->src_ip          = htonl(my_ip);
+    ip->dest_ip         = htonl(/* your dest */ 0x0A000002);
 
-    UDPHeader* udp = (UDPHeader*)(buf + sizeof(IPv4Header));
-    udp->src_port   = 0;
-    udp->dest_port  = 0;
-    udp->length     = (uint16_t)udp_len;
-    udp->checksum   = 0;
+    // compute IPv4 header checksum over just the header
+    ip->header_checksum = checksum(ip, sizeof(IPv4Header));
 
-    memcpy(buf + sizeof(IPv4Header) + sizeof(UDPHeader), payload, payload_len);
+    // --- fill UDP header ---
+    auto* udp = (UDPHeader*)(buf + sizeof(IPv4Header));
+    udp->src_port  = htons(/* your src port */ 1234);
+    udp->dest_port = htons(/* your dst port */ 5678);
+    udp->length    = htons((uint16_t)udp_len);
+    udp->checksum  = 0;                          // zero before computing
+
+    // copy payload
+    memcpy(buf + sizeof(IPv4Header) + sizeof(UDPHeader),
+           payload, payload_len);
+
+    // compute UDP checksum (including pseudo‑header)
+    udp->checksum = udp_checksum(ip, udp,
+                                 buf + sizeof(IPv4Header) + sizeof(UDPHeader),
+                                 payload_len);
 
     *out_packet_len = ip_len;
     return buf;
 }
 
 
+
 //
+// packet is ethernet packet: ethernet header + IPv4 + UDP 
 //
 void* receive(const void* packet, size_t packet_len, size_t* out_payload_len) {
-    if (packet_len < sizeof(IPv4Header) + sizeof(UDPHeader)) {
-        return 0;
-	}
 
-    const IPv4Header* ip = (const IPv4Header*)packet;
+    if (packet_len < sizeof(struct EthernetHeader) + sizeof(struct IPv4Header) + sizeof(UDPHeader)) {
+        // Too small to contain Ethernet + IPv4
+        return 0;
+    }
+
+    uint8_t* eth_frame = (uint8_t*)packet;
+    const struct EthernetHeader *eth = (const struct EthernetHeader *)eth_frame;
+
+    uint16_t ethertype = ntohs(eth->ethertype);
+    if (ethertype != 0x0800) {
+        // Not IPv4
+        return 0;
+    }
+
+    const IPv4Header *ip = (const IPv4Header *)(eth_frame + sizeof(EthernetHeader));
+    size_t ihl_bytes = (ip->version_ihl & 0x0F) * 4;
+
+
+    // 1) verify IPv4 header checksum
+    if (checksum(ip, ihl_bytes) != 0) {
+        return 0;
+    }
+
+    // 2) protocol & IP‑dest checks
     if (!verify_receiver(ip)) {
         return 0;
 	}
 
-    size_t ihl_bytes = (ip->version_ihl & 0x0F) * 4;
-    if (packet_len < ihl_bytes + sizeof(UDPHeader)) {
-        return 0;
-	}
+//    if (packet_len < sizeof(IPv4Header) + sizeof(UDPHeader)) {
+//        return 0;
+//	}
 
-    const UDPHeader* udp = (const UDPHeader*) ((const uint8_t*)packet + ihl_bytes);
+//    const IPv4Header* ip = (const IPv4Header*)packet;
+//    if (!verify_receiver(ip)) {
+//        return 0;
+//	}
 
-    size_t udp_len = udp->length;
+//    if (packet_len < ihl_bytes + sizeof(UDPHeader)) {
+//        return 0;
+//	}
+
+    // 3) locate UDP header and bounds‑check
+    const UDPHeader* udp = (const UDPHeader*) ((const uint8_t*)ip + ihl_bytes);
+    size_t udp_len = ntohs(udp->length);
     if (packet_len < ihl_bytes + udp_len) {
         return 0;
 	}
 
     size_t payload_len = udp_len - sizeof(UDPHeader);
+    const uint8_t* payload_ptr = (const uint8_t*)udp + sizeof(UDPHeader);
+
+    // 4) verify UDP checksum
+    if (udp_checksum(ip, udp, payload_ptr, payload_len) != 0) {
+        return 0;
+    }
+
+    // 5) finally, extract payload
     void* payload = malloc(payload_len);
-
-    memcpy(payload, (const uint8_t*)packet + ihl_bytes + sizeof(UDPHeader), payload_len);
-
+    memcpy(payload, payload_ptr, payload_len);
     *out_payload_len = payload_len;
     return payload;
 }
-
 
 
 bool verify_receiver(const IPv4Header* ip_hdr) { 
@@ -122,6 +205,10 @@ bool verify_receiver(const IPv4Header* ip_hdr) {
     uint32_t src_ip = ntohl(ip_hdr->src_ip);
     uint32_t dst_ip = ntohl(ip_hdr->dest_ip);
     uint8_t proto = ip_hdr->protocol;
+//    uint16_t chksum = ip_hdr->header_checksum;
+
+    // validate checksum
+//    uint16_t checksum(const void* data, size_t len);
 
     // udp = 17
     if (proto != 17) {
@@ -133,36 +220,28 @@ bool verify_receiver(const IPv4Header* ip_hdr) {
         return false;
     }
 
-//    Debug::printf("IPv4: %d.%d.%d.%d -> %d.%d.%d.%d, proto=%d\n",  
-//        (src_ip >> 24) & 0xFF, (src_ip >> 16) & 0xFF,  
-//        (src_ip >> 8) & 0xFF, src_ip & 0xFF,
-//        (dst_ip >> 24) & 0xFF, (dst_ip >> 16) & 0xFF,
-//        (dst_ip >> 8) & 0xFF, dst_ip & 0xFF,
-//        proto
-//    );
+    Debug::printf("IPv4: %d.%d.%d.%d -> %d.%d.%d.%d, len=%d, proto=%d\n",  
+        (src_ip >> 24) & 0xFF, (src_ip >> 16) & 0xFF,  
+        (src_ip >> 8) & 0xFF, src_ip & 0xFF,
+        (dst_ip >> 24) & 0xFF, (dst_ip >> 16) & 0xFF,
+        (dst_ip >> 8) & 0xFF, dst_ip & 0xFF,
+        total_len, proto
+    );
 
 	return true; 
 }
 
 uint16_t checksum(const void* data, size_t len) {
-
     uint32_t acc = 0;
-    const  uint16_t *ptr = (const uint16_t *)data;
-    
+    const uint16_t* ptr = (const uint16_t*)data;
     while (len > 1) {
         acc += *ptr++;
         len -= 2;
     }
-    
-    if (len > 0) {
-        acc += *((const uint8_t *)ptr);
+    if (len) {
+        acc += *(const uint8_t*)ptr;
     }
-    
-    // Fold 32-bit sum to 16 bits
-    while (acc >> 16)
-        acc = (acc & 0xFFFF) + (acc >> 16);
-    
-    return ~((uint16_t)acc);
+    return fold_checksum(acc);
 }
 
 void decrement_ttl(IPv4Header* ip_hdr) {
@@ -171,37 +250,29 @@ void decrement_ttl(IPv4Header* ip_hdr) {
 	}
 }
 
+// build and checksum the UDP packet (pseudo‑header + UDP header + payload)
+uint16_t udp_checksum(const IPv4Header* ip, const UDPHeader* udp,
+    const uint8_t* payload, size_t payload_len) {
 
+    PseudoHeader ph = {};
+    ph.src_ip     = ip->src_ip;                  // already in network byte order
+    ph.dst_ip     = ip->dest_ip;                 // ditto
+    ph.zero       = 0;
+    ph.protocol   = ip->protocol;                // usually 17
+    ph.udp_length = udp->length;                 // network byte order
 
-//
-//void* ethernet_handle_packet(void * packet, size_t packet_length) {
-//    if (packet_length < sizeof(struct EthernetHeader) + sizeof(struct IPv4Header)) {
-        // Too small to contain Ethernet + IPv4
-//        return nullptr;
-//    }
+    // sum pseudo‑header
+    uint32_t sum = 0;
+    sum += checksum(&ph, sizeof(ph));            // fold inside
 
-//    uint8_t* eth_frame = (uint8_t*)packet;
-//    const struct EthernetHeader *eth = (const struct EthernetHeader *)eth_frame;
+    // sum UDP header
+    sum += checksum(udp, sizeof(UDPHeader));
 
-//    uint16_t ethertype = ntohs(eth->ethertype);
-//    if (ethertype != 0x0800) {
-        // Not IPv4
-//        return nullptr;
-//    }
+    // sum payload (and pad if odd)
+    sum += checksum(payload, payload_len);
 
-
-//    const struct IPv4Header *ip = (const struct IPv4Header *)(eth_frame + sizeof(struct EthernetHeader));
-//    size_t payload_len = 0;
-//    void* receive( (const void*) ip, size_t packet_len, size_t* out_payload_len) {
-
-//}
-
-
-
-
-
-
-
+    return fold_checksum(sum);
+}
 
 
 } // parser

@@ -1,5 +1,4 @@
 
-
 #pragma once
 
 #include <stdint.h>
@@ -38,6 +37,16 @@ struct EthernetHeader {
 };
 #pragma pack(pop)
 
+#pragma pack(push, 1)
+struct PseudoHeader {
+    uint32_t src_ip;
+    uint32_t dst_ip;
+    uint8_t  zero;
+    uint8_t  protocol;
+    uint16_t udp_length;
+};
+#pragma pack(pop)
+
 
 namespace Parser {
 
@@ -49,7 +58,8 @@ namespace Parser {
 	uint16_t checksum(const void* data, size_t len);
 	void decrement_ttl(IPv4Header* ip_hdr);
 
-//    void* ethernet_handle_packet(void * packet, uint32_t packet_length);
-
+    uint16_t fold_checksum(uint32_t sum);
+    uint16_t udp_checksum(const IPv4Header* ip, const UDPHeader* udp, const uint8_t* payload, size_t payload_len);
+    
 
 } // namespace Parser
