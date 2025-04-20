@@ -17,9 +17,16 @@ mkdir -p "$TESTDIR_NAME"/sbin
 touch "t${COUNT}.ok"
 
 # copy the test environment
+# everything here is hard linked
 cp -l ./env/* "$TESTDIR_NAME/sbin/"
 
-echo "fill out input.txt and .ok file"
-echo "do TESTS_DIR=shell/tests make t##.test"
+# compile the test
+cd "$TESTDIR_NAME/sbin"
+echo exit > input
+make clean
+make -s
+
+echo "*** fill out input.txt and .ok file"
+echo "*** do TESTS_DIR=shell/tests make t##.test"
 
 cd $ORIGINAL_DIR

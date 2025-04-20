@@ -1,19 +1,14 @@
-#include <stdbool.h>
-#include "sys.h"
+#include "shell.h"
 #include "tokenizer.c"
-#include "libc.h"
-
-// Built in commands 
-// - cd (one arg)
-// - path (any num args)
-// - exit (no args)
 
 void output_prompt() {
     printf("$ ");
 }
 
-// read form fd into buffer the next line
-char* input_line (char* dst, char* src) {
+// for testing purposes only
+// read a line from a file into the destination buffer
+// advance the source buffer
+char* input_line(char* dst, char* src) {
     int i = 0;
     char c = *(src + i);
     while (c && c != '\n') {
@@ -27,25 +22,16 @@ char* input_line (char* dst, char* src) {
 
 bool built_in(const char** argv, int argc) {
     const char* path = argv[0];
-    printf("i have determined that my path is %s\n", path);
-    if(streq(path, "cd")) {
-        if(argc != 2) {
-            printf("invalid args for command cd\n");
-        }
+    if (streq(path, "cd")) {
+        if (argc != 2) error("invalid args for command cd\n");
         chdir(argv[1]);
         return false;
-    }  
-    if(streq(path, "path")) {
+    } else if (streq(path, "path")) {
         printf("¯\\_(ツ)_/¯\n");
         return false;
-    }
-    if(streq(path, "exit")) {
-        if(argc != 1) {
-            printf("invalid args for exit cd\n");
-        }
+    } else if (streq(path, "exit")) {
         exit(0);
-        printf("About to exit");
-        return false;
+        error("returned from exit\n");
     }
     return true;
 }
@@ -54,10 +40,7 @@ void process_start(char* command) {
     Tokenized* tokens = tokenize(command);
     const char** argv = (const char**) tokens->argv;
     const char* path = argv[0];
-    // printf("PATH: %s\n", path);
-    // printf("PATH at 1: %s\n", argv[1]);
     int argc = tokens->argc;
-    // printf("argc: %d\n", tokens->argc);
     if(!built_in(argv, argc)) {
         printf("RETURNING\n");
         return;
@@ -95,9 +78,9 @@ int main(int argc, char** argv) {
     while (*buffer) // you may want to provide a built-in "exit" command
     {
         char* command = malloc(4096);
-        output_prompt();               // display a prompt
+        output_prompt();                             // display a prompt
         buffer = input_line(command, buffer);        // get a line of input, which will become the command to execute
-        process_start(command); // start a process from the command
+        process_start(command);                      // start a process from the command
         free(command);
         printf("loop");
         // TODO be able to send input to process and display their output
