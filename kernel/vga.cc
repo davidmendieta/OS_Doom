@@ -1,5 +1,7 @@
 #include "vga.h"
 #include "pci.h"
+#include "machine.h"
+#include "threads.h"
 
 #define COLOR_BLACK 0x0
 #define COLOR_GREEN 0x2
@@ -19,6 +21,30 @@ unsigned char g_320x200x256[] =
     0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
     0x41, 0x00, 0x0F, 0x00, 0x00
 };
+
+
+void vga_clear_screen() {
+    for (int y = 0; y < 200; y++) {
+        for (int x = 0; x < 320; x++) {
+            vga_plot_pixel(x, y, COLOR_BLACK);
+        }
+    }
+}
+
+void vga_plot_pixel(int x, int y, unsigned short color) {
+    unsigned short offset = x + 320 * y;
+    unsigned char *VGA = (unsigned char*) VGA_ADDRESS;
+    VGA[offset] = color;
+}
+
+void vga_display_image(const unsigned char* image, size_t width, size_t height) {
+    write_regs(g_320x200x256);
+    for (size_t y = 0; y < height && y < 200; y++) {
+        for (size_t x = 0; x < width && x < 320; x++) {
+            vga_plot_pixel(x, y, image[y * width + x]);
+        }
+    }
+}
 
 void draw_rectangle(int x, int y, int width, int height) {
 	for (int i = 0; i < width; i++) {
@@ -47,70 +73,52 @@ void draw_happy_face(int x, int y) {
 	vga_plot_pixel(x+10,y+8,COLOR_PURPLE);
 }
 
-void vga_clear_screen() {
-    for (int y = 0; y < 200; y++) {
-        for (int x = 0; x < 320; x++) {
-            vga_plot_pixel(x, y, COLOR_BLACK);
-        }
-    }
-}
-
-void vga_plot_pixel(int x, int y, unsigned short color) {
-    unsigned short offset = x + 320 * y;
-    unsigned char *VGA = (unsigned char*) VGA_ADDRESS;
-    VGA[offset] = color;
-}
-
-void vga_display_image(const unsigned char* image, size_t width, size_t height) {
-    write_regs(g_320x200x256);
-    for (size_t y = 0; y < height && y < 200; y++) {
-        for (size_t x = 0; x < width && x < 320; x++) {
-            vga_plot_pixel(x, y, image[y * width + x]);
-        }
-    }
-}
-
-void write_regs(unsigned char *regs)
-{
+void write_regs(const unsigned char* regs) {
     unsigned i;
-    outb(VGA_MISC_WRITE, *regs);
-    regs++;
-    for(i = 0; i < VGA_NUM_SEQ_REGS; i++) {
+
+    // write miscellaneous output register
+    outb(VGA_MISC_WRITE, *regs++);
+    
+    // write sequencer registers
+    for (i = 0; i < VGA_NUM_SEQ_REGS; i++) {
         outb(VGA_SEQ_INDEX, i);
-        outb(VGA_SEQ_DATA, *regs);
-        regs++;
+        outb(VGA_SEQ_DATA, *regs++);
     }
+
+    // unlock CRTC registers
     outb(VGA_CRTC_INDEX, 0x03);
     outb(VGA_CRTC_DATA, inb(VGA_CRTC_DATA) | 0x80);
     outb(VGA_CRTC_INDEX, 0x11);
     outb(VGA_CRTC_DATA, inb(VGA_CRTC_DATA) & ~0x80);
-    regs[0x03] |= 0x80;
-    regs[0x11] &= ~0x80;
-    for(i = 0; i < VGA_NUM_CRTC_REGS; i++) {
+
+    // write CRTC registers
+    for (i = 0; i < VGA_NUM_CRTC_REGS; i++) {
         outb(VGA_CRTC_INDEX, i);
-        outb(VGA_CRTC_DATA, *regs);
-        regs++;
+        outb(VGA_CRTC_DATA, *regs++);
     }
-    for(i = 0; i < VGA_NUM_GC_REGS; i++) {
+
+    // write graphics controller registers
+    for (i = 0; i < VGA_NUM_GC_REGS; i++) {
         outb(VGA_GC_INDEX, i);
-        outb(VGA_GC_DATA, *regs);
-        regs++;
+        outb(VGA_GC_DATA, *regs++);
     }
-    for(i = 0; i < VGA_NUM_AC_REGS; i++) {
-        (void)inb(VGA_INSTAT_READ);
+
+    // write attribute controller registers
+    for (i = 0; i < VGA_NUM_AC_REGS; i++) {
+        inb(VGA_INSTAT_READ);               // reset flip-flop
         outb(VGA_AC_INDEX, i);
-        outb(VGA_AC_WRITE, *regs);
-        regs++;
+        outb(VGA_AC_WRITE, *regs++);
     }
-    (void)inb(VGA_INSTAT_READ);
+
+    // lock 16-color palette and unblank display
+    inb(VGA_INSTAT_READ);
     outb(VGA_AC_INDEX, 0x20);
 }
 
 void vga_test() {
-    write_regs(g_320x200x256);
     vga_clear_screen();
-	// draw rectangle
-	draw_rectangle(150, 10, 100, 50);
+
+    draw_rectangle(150, 10, 100, 50);
 	// draw some faces
 	draw_happy_face(10,10);
 	draw_happy_face(100,100);
@@ -126,31 +134,23 @@ void vga_test() {
 	}
 }
 
+
 void vga_init() {
-    // 1. Find the VGA device
+    // find the VGA device
     PciDevice* vga = findDeviceVD(0x1234, 0x1111);
     if (!vga) {
         Debug::panic("VGA device not found!\n");
     }
 
-    // 2. Get BARs
-    uint32_t mmio_base = getBar(vga, 0);      // Bochs SVGA registers
-    uint32_t fb_base   = getBar(vga, 2);      // Framebuffer
+    // get MMIO BARs
+    uint32_t mmio_base = getBar(vga, 0); 
+    uint32_t io_mmio   = getBar(vga, 2); 
 
-    Debug::printf("VGA MMIO base: 0x%08x, FB base: 0x%08x\n", mmio_base, fb_base);
+    Debug::printf("VGA MMIO base: 0x%08x, IO MMIO base: 0x%08x\n",
+                  mmio_base, io_mmio);
 
-    // 3. Set up legacy VGA mode 
-    // write_regs(g_320x200x256);
-    // vga_test();
-
-    // 4. Other option for Bochs SVGA, set registers via MMIO
-    // volatile uint32_t* svga = (volatile uint32_t*) mmio_base;
-    // svga[0] = 0x900000;    // ID
-    // svga[1] = 640;         // X
-    // svga[2] = 480;         // Y
-    // svga[3] = 32;          // BPP
-    // svga[4] = 0x41;        // ENABLE | LFB
-
-    // 5. Save fb_base somewhere for your drawing code (e.g., as a global or in a struct)
-    // framebuffer = (uint8_t*)fb_base;
+    write_regs(g_320x200x256);
+    sleep(2);
+    vga_test();
+    sleep(10);
 }

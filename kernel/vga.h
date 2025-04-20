@@ -15,7 +15,7 @@ extern void vga_init();
 
 // VGA mode setting
 extern unsigned char g_320x200x256[];
-extern void write_regs(unsigned char *regs);
+extern void write_regs(const unsigned char *regs);
 
 // VGA register ports
 #define VGA_AC_INDEX        0x3C0

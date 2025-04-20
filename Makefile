@@ -28,7 +28,7 @@ QEMU_ACCEL ?= tcg,thread=multi
 QEMU_CPU ?= max
 QEMU_SMP ?= 4
 QEMU_MEM ?= 128m
-QEMU_TIMEOUT ?= 10
+QEMU_TIMEOUT ?= 25
 QEMU_TIMEOUT_CMD ?= timeout
 QEMU_DEBUG ?=  # e.g -d guest_errors
 
@@ -43,8 +43,8 @@ QEMU_CONFIG_FLAGS = -accel ${QEMU_ACCEL} \
 
 QEMU_FLAGS = -no-reboot \
 	${QEMU_CONFIG_FLAGS} \
-	-nographic\
-	--monitor none \
+	-vga std \
+	-display sdl \
 	--serial file:$*.raw \
 	-drive file=kernel/build/kernel.img,index=0,media=disk,format=raw,file.locking=off \
 	-drive file=$*.data,index=1,media=disk,format=raw,file.locking=off \
