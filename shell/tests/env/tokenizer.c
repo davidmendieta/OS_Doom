@@ -1,7 +1,7 @@
 #include "libc.h"
 #include "tokenizer.h"
 
-int count_argc(char *input) {
+int count_argc(const char *input) {
     int ret = 0;
     int index = 0;
     while (input[index] != '\0') {
@@ -13,7 +13,7 @@ int count_argc(char *input) {
     return ret + 1;
 }
 
-char* iterate_and_fill (char* dst, char* src) {
+const char* iterate_and_fill (char* dst, const char* src) {
     int i = 0;
     char c = *(src + i);
     while (c && c != ' ') {
@@ -25,31 +25,35 @@ char* iterate_and_fill (char* dst, char* src) {
     return (src + i + 1);
 }
 
-Tokenized *tokenize(char *input)
-{
-    if (input[0] == 0)
-    {
-        // empty line, return
-        return 0;
-    }
-    Tokenized *token = (Tokenized *) malloc(sizeof(Tokenized));
-    token->argc = count_argc(input);
-    printf("ARC in tokenize: %d\n", token->argc);
-    token->argv = (char **) malloc(sizeof(char *) * (token->argc + 1));
-    token->argv[token->argc] = 0;
+void tokens_init(Tokenized* tokens, const char* input) {
+    // empty line, return
+    tokens->argv = 0;
+    if (input[0] == 0) return;
 
-    int index = 0;
-    while (index < token->argc) {
-        char *temp_buffer = malloc(4096);
-        input = iterate_and_fill(temp_buffer, input);
-        int len = strlen(temp_buffer);
-        token->argv[index] = malloc(len + 1);
-        memcpy((void *)token->argv[index], (void *)temp_buffer, len + 1);
-        free(temp_buffer);
-        index++;
+    int argc = count_argc(input);
+    tokens->argc = argc;
+    tokens->argv = (char**) malloc(sizeof(char*) * (argc + 1));
+    tokens->argv[argc] = 0;
+}
+
+void tokens_free(Tokenized* tokens) {
+    for (int i = 0; i < tokens->argc; i++) {
+        free(tokens->argv[i]);
     }
-    for (int i = 0; i < token->argc; i++) {
-        printf("ARG %d: %s\n", i, token->argv[i]);
+    free(tokens->argv);
+}
+
+void tokenize(Tokenized* tokens, const char *input) {
+    // fill argv with each token
+    // "ls -al" --> ["ls", "-al", 0]
+    char* temp = malloc(4096);
+    for (int i = 0; i < tokens->argc; i++) {
+        input = iterate_and_fill(temp, input);
+        int len = strlen(temp);
+        tokens->argv[i] = malloc(len + 1);
+        memcpy((void *)tokens->argv[i], (void *)temp, len + 1);
+        
+        printf("ARG %d: %s\n", i, tokens->argv[i]);
     }
-    return token;
+    free(temp);
 }

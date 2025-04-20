@@ -4,8 +4,10 @@
 #include "libc.h"
 
 typedef struct Tokenized {
-    char **argv;
+    char** argv;
     int argc;
 } Tokenized;
 
-Tokenized *tokenize(char *input);
+void tokens_init(Tokenized* tokens, const char* input);
+void tokens_free(Tokenized* tokens);
+void tokenize(Tokenized* tokens, const char* input);

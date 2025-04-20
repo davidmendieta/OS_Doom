@@ -1,0 +1,17 @@
+#!/bin/bash
+
+ORIGINAL_DIR="$(pwd)"
+THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# cd into /shell/tests
+cd $THIS_DIR
+cd ../tests
+
+echo "compiling $1"
+cd "$1.dir/sbin"
+make clean
+make -s
+
+cd $ORIGINAL_DIR
+
+make -s clean $1.test

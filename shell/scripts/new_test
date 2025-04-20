@@ -20,11 +20,9 @@ touch "t${COUNT}.ok"
 # everything here is hard linked
 cp -l ./env/* "$TESTDIR_NAME/sbin/"
 
-# compile the test
+# make input file (not hardlinked)
 cd "$TESTDIR_NAME/sbin"
 echo exit > input
-make clean
-make -s
 
 echo "*** fill out input.txt and .ok file"
 echo "*** do TESTS_DIR=shell/tests make t##.test"
