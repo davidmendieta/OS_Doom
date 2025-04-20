@@ -114,6 +114,10 @@ void remove_mapping(uint32_t* PD, uint32_t VPN) {
 
 uint32_t global_page_directory;
 
+uint32_t get_pd () {
+    return global_page_directory;
+}
+
 uint32_t new_page_directory() {
     // Debug::printf("CREATING A NEW PD\n");
     uint32_t tmp = PhysMem::alloc_frame();
