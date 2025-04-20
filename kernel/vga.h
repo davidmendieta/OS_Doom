@@ -5,22 +5,13 @@ typedef unsigned char  uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int size_t;
 
-static inline uint8_t inb(uint16_t port) {
-    uint8_t ret;
-    __asm__ volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
-    return ret;
-}
-
-static inline void outb(uint16_t port, uint8_t val) {
-    __asm__ volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
-}
-
 #define VGA_ADDRESS 0xA0000
 
 extern void vga_clear_screen();
 extern void vga_plot_pixel(int x, int y, unsigned short color);
 extern void vga_display_image(const unsigned char* image, size_t width, size_t height);
 extern void vga_test();
+extern void vga_init();
 
 // VGA mode setting
 extern unsigned char g_320x200x256[];

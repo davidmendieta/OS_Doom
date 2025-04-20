@@ -4,8 +4,8 @@ UTCS_OPT=-O3 make clean $1 $1.data
 
 time `make qemu_cmd` `make qemu_config_flags` \
              -no-reboot \
-             -nographic \
              --monitor none \
+             -vga std \
              -drive file=kernel/build/kernel.img,index=0,media=disk,format=raw \
              -drive file=$*.data,index=1,media=disk,format=raw,file.locking=off \
              -device isa-debug-exit,iobase=0xf4,iosize=0x04 || true

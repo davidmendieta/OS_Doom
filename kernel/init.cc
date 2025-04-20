@@ -115,7 +115,7 @@ extern "C" void kernelInit(void) {
         Pit::calibrate(1000);
         
         /* Enumerate Devices */
-        Debug::printf("| ENUMERATING DEVICES\n");
+        Debug::printf("\n- PCI ENUMERATING DEVICES -\n");
         pciEnumDevices();
 
 	/* sys calls */

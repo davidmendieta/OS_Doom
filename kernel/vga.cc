@@ -1,4 +1,5 @@
 #include "vga.h"
+#include "pci.h"
 
 #define COLOR_BLACK 0x0
 #define COLOR_GREEN 0x2
@@ -123,4 +124,31 @@ void vga_test() {
 			vga_plot_pixel(i, 50+j, i);
 		}
 	}
+}
+
+void vga_init() {
+    // 1. Find the VGA device
+    PciDevice* vga = findDeviceVD(0x1234, 0x1111);
+    if (!vga) {
+        Debug::panic("VGA device not found!\n");
+    }
+
+    // 2. Get BARs
+    uint32_t mmio_base = getBar(vga, 0);      // Bochs SVGA registers
+    uint32_t fb_base   = getBar(vga, 2);      // Framebuffer
+
+    Debug::printf("VGA MMIO base: 0x%08x, FB base: 0x%08x\n", mmio_base, fb_base);
+
+    // 3. Set up legacy VGA mode 
+    write_regs(g_320x200x256);
+
+    // 4. Other option for Bochs SVGA, set registers via MMIO
+    // volatile uint32_t* svga = (volatile uint32_t*)mmio_base;
+    // svga[0x1] = 640;   // X resolution
+    // svga[0x2] = 480;   // Y resolution
+    // svga[0x3] = 32;    // Bits per pixel
+    // svga[0x4] = 0x41;  // Enable | LFB enabled
+
+    // 5. Save fb_base somewhere for your drawing code (e.g., as a global or in a struct)
+    // Example: framebuffer = (uint8_t*)fb_base;
 }

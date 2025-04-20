@@ -12,6 +12,7 @@
 #include "libk.h"
 #include "elf.h"
 #include "promise.h"
+#include "vga.h"
 
 bool address_valid(uint32_t addr, uint32_t size) {
     return addr >= 0x80000000 && addr + size <= 0xFFFFFFFF;
@@ -271,8 +272,13 @@ void naive_unmap(void* p) {
     VMM::naive_munmap(p, true);
 }
 
+void vga_syscall(){
+    Debug::printf("in vga system call\n");
+    vga_init();
+}
+
 extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
-    //Debug::printf("*** syscall #%d\n",eax);
+    // Debug::printf("*** syscall #%d\n",eax);
     uint32_t *user_sp = (uint32_t*)frame[3];
     if((uint32_t)user_sp < 0x80000000 || (uint32_t)user_sp >= 0xF0000000) {
         Debug::printf("USER ESP IS INVALID\n");
@@ -309,6 +315,9 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
         return read(user_sp[1], (void*)user_sp[2], user_sp[3]);
     case 13:
         return seek(user_sp[1], user_sp[2]);
+    case 103:
+        vga_syscall();
+        return 0;
     case 100:
         return chdir((const char*)user_sp[1]);
     case 101:
