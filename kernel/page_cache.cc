@@ -4,17 +4,27 @@
 #include "queue.h"
 
 namespace page_cache {  
+    
+    uint32_t hashtable [1024];
 
     void cache_init() { // call init for page cache?? 
 
     }
 
-    uint32_t hash(uint32_t raw_va) {
-
+    uint32_t hash(uint32_t fs, uint32_t inum, uint32_t block_num) {
+        return (fs + inum + block_num) % 1024;
     }
         
-    void evict_page() { // for when we run out of room in page_cache
-
+    uint32_t evict_page() { // for when we run out of room in page_cache
+        bool no_eviction = false;
+        uint32_t i = 0;
+        while(no_eviction) {
+            uint32_t entry = hashtable[i];
+            if(entry & 0x10) {
+                hashtable[i] = 0;
+                //we dont have write to disk yet
+            }
+        }   
     }
     
     void evict_page(uint32_t va) { // for the system call to remove a page
