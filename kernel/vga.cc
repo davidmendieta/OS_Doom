@@ -140,7 +140,7 @@ void vga_init() {
     Debug::printf("VGA MMIO base: 0x%08x, FB base: 0x%08x\n", mmio_base, fb_base);
 
     // 3. Set up legacy VGA mode 
-    write_regs(g_320x200x256);
+    // write_regs(g_320x200x256);
 
     // 4. Other option for Bochs SVGA, set registers via MMIO
     // volatile uint32_t* svga = (volatile uint32_t*)mmio_base;
