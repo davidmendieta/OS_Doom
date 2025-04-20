@@ -1,5 +1,5 @@
 #include "shell.h"
-#include "tokenizer.c"
+#include "tokenizer.h"
 
 void output_prompt() {
     printf("$ ");
@@ -20,7 +20,7 @@ char* input_line(char* dst, char* src) {
     return (src + i + 1);
 }
 
-bool built_in(const char** argv, int argc) {
+bool handle_built_in(int argc, char** argv) {
     const char* path = argv[0];
     if (streq(path, "cd")) {
         if (argc != 2) error("invalid args for command cd\n");
@@ -30,53 +30,46 @@ bool built_in(const char** argv, int argc) {
         printf("¯\\_(ツ)_/¯\n");
         return false;
     } else if (streq(path, "exit")) {
-        exit(0);
-        error("returned from exit\n");
+        shutdown();
     }
     return true;
 }
 
 void process_start(char* command) {
-    Tokenized* tokens = tokenize(command);
-    const char** argv = (const char**) tokens->argv;
-    const char* path = argv[0];
-    int argc = tokens->argc;
-    if(!built_in(argv, argc)) {
+    Tokenized tokens;
+    tokens_init(&tokens, command);
+    tokenize(&tokens, command);
+
+    if(!handle_built_in(tokens.argc, tokens.argv)) {
         printf("RETURNING\n");
         return;
     }
+
     int id = fork();
     if(id < 0) {
-        printf("can't fork\n");
+        error("can't fork\n");
     } else if(id == 0) {
-        // child
-        printf("im forking %s\n", path);
-        // if(built_in(argv, argc)) {
-            // executable
-            printf("im exec\n");
-            execl(path, (const char*) argv[0], (const char*) argv[1]);
-            printf("couldn't execute %s\n", path);
-            exit(0);
-        // }
+        printf("executing instruction: %s\n", tokens.argv[0]);
+        // executable
+        execl(tokens.argv[0], (const char*) tokens.argv[0], (const char*) tokens.argv[1]);
+        error("couldn't execute command\n");
     } else {
         // parent
         uint32_t status = 42;
         wait(id, &status);
         printf("process exited with status %ld\n", status);
     }
+    tokens_free(&tokens);
 }
 
-
 int main(int argc, char** argv) {
-
     int stdin = open("/sbin/input", 0); // our test case
-    printf("STDIN: %d\n", stdin);
     char *buffer = (void*) malloc(4096);
     read(stdin, (void*) buffer, 4096);
-    printf("buffer; %s\n", buffer);
 
-    while (*buffer) // you may want to provide a built-in "exit" command
+    while (true) // you may want to provide a built-in "exit" command
     {
+        printf("buffer %s\n", buffer);
         char* command = malloc(4096);
         output_prompt();                             // display a prompt
         buffer = input_line(command, buffer);        // get a line of input, which will become the command to execute
