@@ -14,8 +14,8 @@
 
 const uint32_t my_ip = 0x0A000001;  // 10.0.0.1
 const uint32_t dest_ip = 0x0A000002;  // 10.0.0.2
-const uint16_t src_port = 1234;  // source udp port
-const uint16_t dest_port = 5678;  // dest udp port
+// const uint16_t src_port = 1234;  // source udp port
+// const uint16_t dest_port = 5678;  // dest udp port
 
 static inline uint16_t ntohs(uint16_t netshort) {
     return (netshort << 8) | (netshort >> 8);
@@ -49,6 +49,42 @@ uint16_t fold_checksum(uint32_t sum) {
     return (uint16_t)~sum;
 }
 
+// build and checksum the UDP packet (pseudo‑header + UDP header + payload)
+uint16_t udp_checksum(const IPv4Header* ip, const UDPHeader* udp,
+    const uint8_t* payload, size_t payload_len) {
+
+    PseudoHeader ph = {};
+    ph.src_ip     = ip->src_ip;                  // already in network byte order
+    ph.dst_ip     = ip->dest_ip;                 // ditto
+    ph.zero       = 0;
+    ph.protocol   = ip->protocol;                // usually 17
+    ph.udp_length = udp->length;                 // network byte order
+
+    // sum pseudo‑header
+    uint32_t sum = 0;
+    sum += checksum(&ph, sizeof(ph));            // fold inside
+
+    // sum UDP header
+    sum += checksum(udp, sizeof(UDPHeader));
+
+    // sum payload (and pad if odd)
+    sum += checksum(payload, payload_len);
+
+    return fold_checksum(sum);
+}
+
+uint16_t checksum(const void* data, size_t len) {
+    uint32_t acc = 0;
+    const uint16_t* ptr = (const uint16_t*)data;
+    while (len > 1) {
+        acc += *ptr++;
+        len -= 2;
+    }
+    if (len) {
+        acc += *(const uint8_t*)ptr;
+    }
+    return fold_checksum(acc);
+}
 
 //void* send(const void* payload, size_t payload_len, size_t* out_packet_len) {
 //    size_t udp_len = sizeof(UDPHeader) + payload_len;
@@ -83,7 +119,8 @@ uint16_t fold_checksum(uint32_t sum) {
 //
 // send output (void* buf) is IPV4 + UDP (no ethernet header)
 //
-void* send(const void* payload, size_t payload_len, size_t* out_packet_len) {
+void* send(const void* payload, size_t payload_len, size_t* out_packet_len, uint16_t src_port,
+    uint16_t dest_port) {
     size_t udp_len = sizeof(UDPHeader) + payload_len;
     size_t ip_len  = sizeof(IPv4Header) + udp_len;
 
@@ -125,16 +162,16 @@ void* send(const void* payload, size_t payload_len, size_t* out_packet_len) {
     return buf;
 }
 
-
-
 //
 // packet is ethernet packet: ethernet header + IPv4 + UDP 
 //
-void* receive(const void* packet, size_t packet_len, size_t* out_payload_len) {
+void* receive(const void* packet, size_t packet_len, size_t* out_payload_len, uint32_t*out_src_ip, uint16_t* out_src_port,
+    uint16_t* out_dest_port) {
 
     if (packet_len < sizeof(struct EthernetHeader) + sizeof(struct IPv4Header) + sizeof(UDPHeader)) {
         // Too small to contain Ethernet + IPv4
-        return 0;
+        // return 0;
+        return nullptr;
     }
 
     uint8_t* eth_frame = (uint8_t*)packet;
@@ -143,7 +180,8 @@ void* receive(const void* packet, size_t packet_len, size_t* out_payload_len) {
     uint16_t ethertype = ntohs(eth->ethertype);
     if (ethertype != 0x0800) {
         // Not IPv4
-        return 0;
+        // return 0;
+        return nullptr;
     }
 
     const IPv4Header *ip = (const IPv4Header *)(eth_frame + sizeof(EthernetHeader));
@@ -152,12 +190,14 @@ void* receive(const void* packet, size_t packet_len, size_t* out_payload_len) {
 
     // 1) verify IPv4 header checksum
     if (checksum(ip, ihl_bytes) != 0) {
-        return 0;
+        // return 0;
+        return nullptr;
     }
 
     // 2) protocol & IP‑dest checks
     if (!verify_receiver(ip)) {
-        return 0;
+        // return 0;
+        return nullptr;
 	}
 
 //    if (packet_len < sizeof(IPv4Header) + sizeof(UDPHeader)) {
@@ -177,7 +217,8 @@ void* receive(const void* packet, size_t packet_len, size_t* out_payload_len) {
     const UDPHeader* udp = (const UDPHeader*) ((const uint8_t*)ip + ihl_bytes);
     size_t udp_len = ntohs(udp->length);
     if (packet_len < ihl_bytes + udp_len) {
-        return 0;
+        // return 0;
+        return nullptr;
 	}
 
     size_t payload_len = udp_len - sizeof(UDPHeader);
@@ -185,13 +226,20 @@ void* receive(const void* packet, size_t packet_len, size_t* out_payload_len) {
 
     // 4) verify UDP checksum
     if (udp_checksum(ip, udp, payload_ptr, payload_len) != 0) {
-        return 0;
+        // return 0;
+        return nullptr;
     }
+
+    // extract metadata
+    *out_src_ip   = ntohl(ip->src_ip);
+    *out_src_port = ntohs(udp->src_port);
+    *out_dest_port = ntohs(udp->dest_port);
+    *out_payload_len = payload_len;
 
     // 5) finally, extract payload
     void* payload = malloc(payload_len);
     memcpy(payload, payload_ptr, payload_len);
-    *out_payload_len = payload_len;
+    // *out_payload_len = payload_len;
     return payload;
 }
 
@@ -234,48 +282,9 @@ bool verify_receiver(const IPv4Header* ip_hdr) {
 	return true; 
 }
 
-uint16_t checksum(const void* data, size_t len) {
-    uint32_t acc = 0;
-    const uint16_t* ptr = (const uint16_t*)data;
-    while (len > 1) {
-        acc += *ptr++;
-        len -= 2;
-    }
-    if (len) {
-        acc += *(const uint8_t*)ptr;
-    }
-    return fold_checksum(acc);
-}
-
 void decrement_ttl(IPv4Header* ip_hdr) {
     if (ip_hdr->ttl) { 
 		ip_hdr->ttl--;
 	}
 }
-
-// build and checksum the UDP packet (pseudo‑header + UDP header + payload)
-uint16_t udp_checksum(const IPv4Header* ip, const UDPHeader* udp,
-    const uint8_t* payload, size_t payload_len) {
-
-    PseudoHeader ph = {};
-    ph.src_ip     = ip->src_ip;                  // already in network byte order
-    ph.dst_ip     = ip->dest_ip;                 // ditto
-    ph.zero       = 0;
-    ph.protocol   = ip->protocol;                // usually 17
-    ph.udp_length = udp->length;                 // network byte order
-
-    // sum pseudo‑header
-    uint32_t sum = 0;
-    sum += checksum(&ph, sizeof(ph));            // fold inside
-
-    // sum UDP header
-    sum += checksum(udp, sizeof(UDPHeader));
-
-    // sum payload (and pad if odd)
-    sum += checksum(payload, payload_len);
-
-    return fold_checksum(sum);
-}
-
-
 } // parser

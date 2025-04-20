@@ -50,10 +50,10 @@ struct PseudoHeader {
 
 namespace Parser {
 
-	void* send(const void* payload, size_t payload_len, size_t* out_packet_len);
-
-	void* receive(const void* packet, size_t packet_len, size_t* out_payload_len);
-
+    void* send(const void* payload, size_t payload_len, size_t* out_packet_len, uint16_t src_port,
+        uint16_t dest_port);
+    void* receive(const void* packet, size_t packet_len, size_t* out_payload_len, uint32_t* out_src_ip, uint16_t* out_src_port,
+        uint16_t* out_dest_port);
 	bool verify_receiver(const IPv4Header* ip_hdr);
 	uint16_t checksum(const void* data, size_t len);
 	void decrement_ttl(IPv4Header* ip_hdr);
