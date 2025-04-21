@@ -6,7 +6,7 @@
 #include "libk.h"
 #include "config.h"
 #include "shared.h"
-#include "peripherals/mouse.h" 
+#include "mouse.h" 
 #include "idt.h"
 
 StrongPtr<Ext2> fs{};
