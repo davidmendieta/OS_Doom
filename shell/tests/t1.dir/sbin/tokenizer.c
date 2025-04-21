@@ -1,8 +1,12 @@
 #include "libc.h"
 #include "tokenizer.h"
 
-bool is_path(char* argv0) {
-    return *argv0 == '.' || *argv0 == '/';
+bool is_newline(char c) {
+    return c == '\n' || c == '\r';
+}
+
+bool is_path(char c) {
+    return c == '.' || c == '/';
 }
 
 int count_argc(const char *input) {

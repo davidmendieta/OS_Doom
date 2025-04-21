@@ -7,11 +7,8 @@ typedef struct Tokenized {
     int argc;
 } Tokenized;
 
-// static bool is_newline(char c) {
-//     return c == '\n' || c == '\r';
-// }
-
-bool is_path(char* argv0);
+bool is_newline(char c);
+bool is_path(char c);
 
 void tokens_init(Tokenized* tokens, const char* input);
 void tokens_free(Tokenized* tokens);

@@ -1,2 +1,2 @@
-cat t1.raw
+cat /user/t1.raw
 exit
