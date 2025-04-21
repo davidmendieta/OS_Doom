@@ -177,13 +177,16 @@ mouse_bytes[2] = y axis
 use "mouse_move x y" to simulate mouse coordinates
 
 0, 0 is a special case, it 0 outs both within the input packet bits
+(output shows both raw and "displaced" y coordinates)
 
 I think the maxes for single output are <128, since byte size is 8bits, 
 if u try x and y >= 128 u get multiple outputs that add up to ur input
 
 y axis, starts from 256 and decreases when you put it into terminal. 
-ie. running "mouse_move 100 100" gives u x = 100, y = 156
-
+ie. running "mouse_move 100 100" gives u x = 100, raw y = 156, actual y = 100,
+because qemu goes from its current position to (100,100) and sends a single 
+X = +100, Y = –100 packet (raw bytes 0x64,0x9C) and the PS/2 device never 
+actaully holds “(100,100)” itself, only those raw delta bytes.
 
 use "mouse_button 0-7" to simulate left, middle, right mouse presses
 */
@@ -193,7 +196,7 @@ use "mouse_button 0-7" to simulate left, middle, right mouse presses
 // @diego i moved some of ur code to this function to make names fit better
 // i'm not sure where the return value should go so I left it as void for now
 void read_keyboard_data(uint8_t in_byte) {
-    uint8_t scancode = inb(0x60);
+    uint8_t scancode = in_byte;
     // if (scancode != 0xF0) {
     //     Debug::printf("Scancode: 0x%x\n", scancode);
     //     Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
@@ -222,8 +225,19 @@ void read_mouse_data(uint8_t in_byte) {
     if ((mouse_bytes[0] & 0x02) != 0) {
         Debug::printf("right button pressed\n");
     }
-    Debug::printf("left: %d, middle: %d, right: %d, x: %d, y:%d\n", 
-        (mouse_bytes[0] & 0x01), (mouse_bytes[0] & 0x04), (mouse_bytes[0] & 0x02), mouse_bytes[1], 256 - mouse_bytes[2]);
+
+    uint8_t rawX = mouse_bytes[1];
+    uint8_t rawY = mouse_bytes[2];
+
+    // Detect the special absolute-move case (0,0)
+    bool origin = (rawX == 0 && rawY == 0);
+
+    // origin maps to full 256
+    uint16_t y = origin ? 256 : (uint8_t)(256 - rawY);
+
+    // Print raw values directly (0-255), so you see 156 for -100
+    Debug::printf("left: %d, middle: %d, right: %d, x: %u, y (raw): %u, y (disp): %u\n", (mouse_bytes[0] & 0x01), 
+        (mouse_bytes[0] & 0x04), (mouse_bytes[0] & 0x02), rawX, rawY, y);
 
 }
 
