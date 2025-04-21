@@ -59,6 +59,46 @@ void draw_rectangle(int x, int y, int width, int height, unsigned short color) {
     }
 }
 
+// draws the word SONIC in large block letters at (x, y)
+void draw_sonic_banner(int x, int y) {
+    int w = 18; // letter width
+    int h = 30; // letter height
+    int t = 4;  // thickness
+    int s = 4;  // space between letters
+    int color = COLOR_SONIC_BLUE;
+    int cx = x;
+    // S
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx, y, t, h/2, color); // upper left
+    draw_rectangle(cx, y + h/2 - t/2, w, t, color); // middle
+    draw_rectangle(cx + w - t, y + h/2, t, h/2, color); // lower right
+    draw_rectangle(cx, y + h - t, w, t, color); // bottom
+    cx += w + s; // add space
+    // O
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx, y, t, h, color); // left
+    draw_rectangle(cx + w - t, y, t, h, color); // right
+    draw_rectangle(cx, y + h - t, w, t, color); // bottom
+    cx += w + s;// add space
+    // N
+    draw_rectangle(cx, y, t, h, color); // left
+    draw_rectangle(cx + w - t, y, t, h, color); // right
+    for (int i = 0; i < h; ++i) // diagonal
+        draw_rectangle(cx + i * (w-t)/h, y + i, t, 1, color);
+    cx += w + s; // add space
+    // I
+    draw_rectangle(cx + (w-t)/2, y, t, h, color); // vertical
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx, y + h - t, w, t, color); // bottom
+    cx += w + s; // add space
+    // C
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx, y, t, h, color); // left
+    draw_rectangle(cx, y + h - t, w, t, color); // bottom
+    draw_rectangle(cx + w - t, y, t, t*2, color); // top right stub
+    draw_rectangle(cx + w - t, y + h - t*2, t, t*2, color); // bottom right stub
+}
+
 // draw Sonic the Hedgehog at (x, y)
 void draw_sonic(int x, int y) {
     // head (blue)
@@ -106,25 +146,6 @@ void draw_sonic(int x, int y) {
 }
 
 
-void draw_happy_face(int x, int y) {
-	// eye
-	vga_plot_pixel(x,y,COLOR_PURPLE);
-	// eye
-	vga_plot_pixel(x+10,y,COLOR_PURPLE);
-	// mouth
-	vga_plot_pixel(x,	y+8,COLOR_PURPLE);
-	vga_plot_pixel(x+1,	y+9,COLOR_PURPLE);
-	vga_plot_pixel(x+2,	y+10,COLOR_PURPLE);
-	vga_plot_pixel(x+3,	y+10,COLOR_PURPLE);
-	vga_plot_pixel(x+4,	y+10,COLOR_PURPLE);
-	vga_plot_pixel(x+5,	y+10,COLOR_PURPLE);
-	vga_plot_pixel(x+6,	y+10,COLOR_PURPLE);
-	vga_plot_pixel(x+7,	y+10,COLOR_PURPLE);
-	vga_plot_pixel(x+8,	y+10,COLOR_PURPLE);
-	vga_plot_pixel(x+9,	y+9,COLOR_PURPLE);
-	vga_plot_pixel(x+10,y+8,COLOR_PURPLE);
-}
-
 void write_regs(const unsigned char* regs) {
     unsigned i;
 
@@ -167,29 +188,28 @@ void write_regs(const unsigned char* regs) {
     outb(VGA_AC_INDEX, 0x20);
 }
 
+static void short_delay() {
+    volatile int wait = 0;
+    for (int i = 0; i < 10000000; ++i) {
+        wait += 1;
+    }
+}
+
 void vga_test() {
-    vga_clear_screen();
+    while (1)
+    {
+    // animate Sonic running from right to left
+    int sonic_width = 20; // approximate width of Sonic sprite
+    int y = 83; // y for middle of screen
+    for (int x = 320 - sonic_width; x >= 0; x -= 4) { // move left by 4 pixels per frame
+        vga_clear_screen();
+        draw_sonic(x, y);
+        draw_sonic_banner(100, 10);
 
-	// draw some faces
-	draw_happy_face(10,10);
-	draw_happy_face(100,100);
-	draw_happy_face(300,150);
-	// bounds
-	vga_plot_pixel(0, 0, 15);
-	vga_plot_pixel(319, 199, COLOR_PURPLE);
-	// see some colors
-	for (int i = 0; i < 15; i++) {
-		for (int j = 0; j < 100; j++) {
-			vga_plot_pixel(i, 50+j, i);
-		}
-	}
-    for (int i = 16; i < 31; i++) {
-		for (int j = 0; j < 100; j++) {
-			vga_plot_pixel(i, 50+j, i);
-		}
-	}
-
-    draw_sonic(146, 83);
+        // delay to make animation visible  
+        short_delay();
+    }
+    }
 }
 
 
@@ -210,5 +230,4 @@ void vga_init() {
     write_regs(g_320x200x256);
     sleep(2);
     vga_test();
-    sleep(10);
 }
