@@ -73,6 +73,9 @@ struct RTL8139 {
     char * rx_buffer;
     int tx_cur;
     RTL8139();
+    //SOCKET STUFF
+    uint32_t resolve_ip(); 
+    //END SOCKET STUFF
     void send_packet(void* data, uint32_t len);
     void receive_packet();
     void read_mac_addr();

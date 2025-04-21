@@ -8,6 +8,8 @@
 #include "../../physmem.h"
 #include "../../pci.h"
 #include "../../smp.h"
+#include "../protocols/parser.h"
+#include "../socket/porttable.h"
 
 PciDevice* device;
 
@@ -131,6 +133,23 @@ void RTL8139::receive_packet() {
     void * packet = malloc(packet_length);
     memcpy(packet, t, packet_length);
 
+      //SOCKET STUFF
+    size_t payload_length = 0;
+    uint32_t src_ip = 0;
+    uint16_t src_port = 0;
+    uint16_t dst_port = 0;
+    void* received_packet = Parser::receive(packet, packet_length, &payload_length, &src_ip, &src_port, &dst_port);
+    if (!received_packet) {
+        StrongPtr<sockets::UDPSocket> socket = sockets::port_table.get(dst_port);
+        if (socket != nullptr) {
+            socket->add(received_packet, payload_length, src_ip, src_port);
+        }   
+    }
+
+    free(packet);
+
+    //END SOCKET
+
     // ethernet_handle_packet(packet, packet_length);
 
     current_packet_ptr = (current_packet_ptr + packet_length + 4 + 3) & RX_READ_POINTER_MASK;
@@ -172,6 +191,11 @@ void RTL8139::send_packet(void * data, uint32_t len) {
     outl(io_base + TSD_array[tx_cur++], len);
     if(tx_cur > 3)
         tx_cur = 0;
+}
+
+
+uint32_t RTL8139::resolve_ip() {
+    return this->my_ip;
 }
 
 // TODO Properly clear interrupts

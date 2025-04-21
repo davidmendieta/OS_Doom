@@ -12,10 +12,10 @@
 #include "../../machine.h"
 #include "../../debug.h"
 
-const uint32_t src_ip = 0x0A000001;  // 10.0.0.1
-const uint32_t dest_ip = 0x0A000002;  // 10.0.0.2
-const uint16_t src_port = 1234;  // source udp port
-const uint16_t dest_port = 5678;  // dest udp port
+// const uint32_t src_ip = 0x0A000001;  // 10.0.0.1
+// const uint32_t dest_ip = 0x0A000002;  // 10.0.0.2
+// const uint16_t src_port = 1234;  // source udp port
+// const uint16_t dest_port = 5678;  // dest udp port
 
 static inline uint16_t ntohs(uint16_t netshort) {
     return (netshort << 8) | (netshort >> 8);
@@ -84,7 +84,7 @@ uint16_t fold_checksum(uint32_t sum) {
 //
 // send output (void* buf) is IPV4 + UDP (no ethernet header)
 //
-void* send(const void* payload, size_t payload_len, size_t* out_packet_len) {
+void* send(const void* payload, size_t payload_len, uint32_t src_ip, uint16_t src_port,uint32_t dest_ip, uint16_t dest_port, size_t* out_packet_len) {
     size_t udp_len = sizeof(UDPHeader) + payload_len;
     size_t ip_len  = sizeof(IPv4Header) + udp_len;
 
@@ -131,7 +131,7 @@ void* send(const void* payload, size_t payload_len, size_t* out_packet_len) {
 //
 // packet is ethernet packet: ethernet header + IPv4 + UDP 
 //
-void* receive(const void* packet, size_t packet_len, size_t* out_payload_len) {
+void* receive(const void* packet, size_t packet_len, size_t* out_payload_len,uint32_t* src_ip, uint16_t* src_port, uint16_t* dest_port) {
 
     if (packet_len < sizeof(struct EthernetHeader) + sizeof(struct IPv4Header) + sizeof(UDPHeader)) {
         // Too small to contain Ethernet + IPv4
@@ -191,7 +191,14 @@ void* receive(const void* packet, size_t packet_len, size_t* out_payload_len) {
 
     // 5) finally, extract payload
     void* payload = malloc(payload_len);
+
     memcpy(payload, payload_ptr, payload_len);
+
+    //SOCKET STUFF
+    *src_port = ntohs(udp->src_port);
+    *dest_port = ntohs(udp->dest_port);
+    *src_ip = ntohs(ip->src_ip);
+
     *out_payload_len = payload_len;
     return payload;
 }
