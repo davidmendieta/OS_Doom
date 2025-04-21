@@ -273,7 +273,7 @@ namespace impl::ext2 {
                     global_index_lock.unlock();
                 }
             }
-            memcpy(block->buffer, src, block_size);
+            memcpy(block->buffer, src,  block_size);
             block->dirty = true;
             list->add(block);
             global_index_lock.lock();
