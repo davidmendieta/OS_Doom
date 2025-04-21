@@ -17,7 +17,5 @@ namespace PS2 {
 	extern void read_mouse_data(uint8_t in_byte);
 }
 
-// //ADDED
-// extern "C" void keyboard_interrupt();
-// extern "C" void mouse_interrupt();
+
 

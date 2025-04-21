@@ -1,6 +1,6 @@
 #include "idt.h"
 #include "ps2.h"
-
+#include "smp.h"
 namespace PS2 {
 volatile bool debug_on = true;
 
@@ -60,25 +60,60 @@ void init() {
     uint8_t mouse_ack = inb(0x60);
     Debug::printf("mouse acknowledgement: 0x%x\n", mouse_ack); // should be 0xFA
 
+    // add handlers to idt
+    IDT::trap(32 + 1, (uint32_t)keyboard_handler_, 3);
+    IDT::trap(32 + 12, (uint32_t)mouse_handler_, 3);
+
+    
+
+    //PIC stuff "borrowed" from Terence networking interrupts
+    #define IOAPIC_REGSEL  0xFEC00000
+    #define IOAPIC_WINDOW  0xFEC00010
+    #define REDIR_BASE     0x10
+    
+    // keyboard IOPIC
+    uint32_t irq_num = 1;
+    uint32_t irq = irq_num;
+    // We want to map the irq route #11 (or whatever irq is: this is on which line our NIC sends signals). From what I understand, REDIR_BASE is the start of the redirection table (mapping interrupt requests to an index in the IDT). There are 2 entries per IRQ (one low and one high), which explains why we add 2*irq.
+    uint32_t redir_low = REDIR_BASE + 2 * irq;
+    uint32_t redir_high = redir_low + 1;
+    uint8_t vector = 32 + irq_num; // If we keep it this way for all devices, we shouldn't run into conflicts
+    uint8_t dest_apic_id = 0; // This corresponds to which CPU is going to handle our NIC interrupts
+
+    volatile uint32_t* sel = (volatile uint32_t*)IOAPIC_REGSEL;
+    volatile uint32_t* win = (volatile uint32_t*)IOAPIC_WINDOW;
+
+    // Set destination CPU
+    *sel = redir_high;
+    *win = ((uint32_t)dest_apic_id) << 24;
+
+    // Unmask and set vector
+    uint32_t flags = vector & 0xFF; // bits 0-7 = vector
+    *sel = redir_low;
+    *win = flags;
+
+    // mouse IOPIC
+    irq_num = 12;
+    irq = irq_num;
+    // We want to map the irq route #11 (or whatever irq is: this is on which line our NIC sends signals). From what I understand, REDIR_BASE is the start of the redirection table (mapping interrupt requests to an index in the IDT). There are 2 entries per IRQ (one low and one high), which explains why we add 2*irq.
+    redir_low = REDIR_BASE + 2 * irq;
+    redir_high = redir_low + 1;
+    vector = 32 + irq_num; // If we keep it this way for all devices, we shouldn't run into conflicts
+    dest_apic_id = 0; // This corresponds to which CPU is going to handle our NIC interrupts
+
+    sel = (volatile uint32_t*)IOAPIC_REGSEL;
+    win = (volatile uint32_t*)IOAPIC_WINDOW;
+
+    // Set destination CPU
+    *sel = redir_high;
+    *win = ((uint32_t)dest_apic_id) << 24;
+
+    // Unmask and set vector
+    flags = vector & 0xFF; // bits 0-7 = vector
+    *sel = redir_low;
+    *win = flags;
+    
 }
-
-// // ADDED
-// extern "C" void keyboard_interrupt() {
-//     Debug::printf("*** Keyboard interrupt!\n");
-//     outb(0x20, 0x20); // acknowledge PIC
-// }
-
-// extern "C" void mouse_interrupt() {
-//     Debug::printf("*** Mouse interrupt!\n");
-//     outb(0xA0, 0x20); // acknowledge slave PIC first
-//     outb(0x20, 0x20); // then master PIC
-// }
-
-// void setup_ps2_irqs() {
-//     IDT::interrupt(0x21, (uint32_t) keyboard_interrupt);
-//     IDT::interrupt(0x2C, (uint32_t) mouse_interrupt);
-// }
-
 
 char scancode_to_ascii(uint8_t scancode) {
 	switch (scancode) {
@@ -151,20 +186,6 @@ char scancode_to_ascii(uint8_t scancode) {
     }
 }
 
-// read a byte from data port
-void read_ps2_data() {
-    uint8_t status = inb(0x64);
-    if (status & 1) {
-        uint8_t in_byte = inb(0x60);
-        if (status & 0x20) {
-            // Debug::printf("is mouse data");
-            read_mouse_data(in_byte);
-        }
-        else {
-            read_keyboard_data(in_byte);
-        }
-    }
-}
 
 
 uint8_t mouse_cycle = 0;
@@ -177,55 +198,128 @@ mouse_bytes[2] = y axis
 use "mouse_move x y" to simulate mouse coordinates
 
 0, 0 is a special case, it 0 outs both within the input packet bits
+(output shows both raw and "displaced" y coordinates)
 
 I think the maxes for single output are <128, since byte size is 8bits, 
 if u try x and y >= 128 u get multiple outputs that add up to ur input
 
 y axis, starts from 256 and decreases when you put it into terminal. 
-ie. running "mouse_move 100 100" gives u x = 100, y = 156
+ie. running "mouse_move 100 100" gives u x = 100, raw y = 156, actual y = 100,
+because qemu goes from its current position to (100,100) and sends a single 
+X = +100, Y = –100 packet (raw bytes 0x64,0x9C) and the PS/2 device never 
+actaully holds “(100,100)” itself, only those raw delta bytes.
 
 
 use "mouse_button 0-7" to simulate left, middle, right mouse presses
 */
 
+extern "C" void keyboard_handler() {
+    Debug::printf("*** Keyboard interrupt!\n");
+    SMP::eoi();
+    // reset Lapic_eoi
+    *((volatile uint32_t*)0xFEE000B0) = 0;
 
-
-// @diego i moved some of ur code to this function to make names fit better
-// i'm not sure where the return value should go so I left it as void for now
-void read_keyboard_data(uint8_t in_byte) {
     uint8_t scancode = inb(0x60);
-    // if (scancode != 0xF0) {
-    //     Debug::printf("Scancode: 0x%x\n", scancode);
-    //     Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
-    // }
     Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
+    Debug::printf("Scancode: 0x%x\n", scancode);
     mouse_cycle = 0;
-    // Debug::printf("full keyboard data\n");
-}
-
-
-
-
-void read_mouse_data(uint8_t in_byte) {
-    mouse_bytes[mouse_cycle++] = in_byte;
-    if (mouse_cycle < 3)  {
-        return; // wait for full packet since mouse packet is 3 bytes
-    }
-    mouse_cycle = 0;
-    // Debug::printf("full mouse input detected\n");
-    if ((mouse_bytes[0] & 0x01) != 0) {
-        Debug::printf("left button pressed\n");
-    }
-    if ((mouse_bytes[0] & 0x04) != 0) {
-        Debug::printf("middle button pressed\n");
-    }
-    if ((mouse_bytes[0] & 0x02) != 0) {
-        Debug::printf("right button pressed\n");
-    }
-    Debug::printf("left: %d, middle: %d, right: %d, x: %d, y:%d\n", 
-        (mouse_bytes[0] & 0x01), (mouse_bytes[0] & 0x04), (mouse_bytes[0] & 0x02), mouse_bytes[1], 256 - mouse_bytes[2]);
 
 }
 
 
+extern "C" void mouse_handler() {
+    Debug::printf("*** Mouse interrupt!\n");
+    SMP::eoi();
+    // reset Lapic_eoi
+    *((volatile uint32_t*)0xFEE000B0) = 0;
+
+    uint8_t mouse_byte = inb(0x60);
+    mouse_bytes[mouse_cycle++] = mouse_byte;
+    if (mouse_cycle == 3)  {
+        Debug::printf("full mouse input detected\n");
+
+        mouse_cycle = 0;
+        if ((mouse_bytes[0] & 0x01) != 0) {
+            Debug::printf("left button pressed\n");
+        }
+        if ((mouse_bytes[0] & 0x04) != 0) {
+            Debug::printf("middle button pressed\n");
+        }
+        if ((mouse_bytes[0] & 0x02) != 0) {
+            Debug::printf("right button pressed\n");
+        }
+        
+        uint8_t rawX = mouse_bytes[1];
+        uint8_t rawY = mouse_bytes[2];
+
+        // Detect the special absolute-move case (0,0)
+        bool origin = (rawX == 0 && rawY == 0);
+
+        // origin maps to full 256
+        uint16_t y = origin ? 256 : (uint8_t)(256 - rawY);
+
+        // Print raw values directly (0-255), so you see 156 for -100
+        Debug::printf("left: %d, middle: %d, right: %d, x: %u, y (raw): %u, y (disp): %u\n", (mouse_bytes[0] & 0x01), 
+            (mouse_bytes[0] & 0x04), (mouse_bytes[0] & 0x02), rawX, rawY, y);
+
+    }
+
 }
+
+}
+
+// LEGACY STUFF, NOT USED
+// // @diego i moved some of ur code to this function to make names fit better
+// // i'm not sure where the return value should go so I left it as void for now
+// void read_keyboard_data(uint8_t in_byte) {
+//     Debug::printf("inb: %x\n", inb(0x64));
+//     while (inb(0x64) & 1) {
+
+//         uint8_t scancode = inb(0x60);
+//         // if (scancode != 0xF0) {
+//         //     Debug::printf("Scancode: 0x%x\n", scancode);
+//         //     Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
+//         // }
+//         Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
+//     }
+    
+//     mouse_cycle = 0;
+//     // Debug::printf("full keyboard data\n");
+// }
+
+// void read_mouse_data(uint8_t in_byte) {
+//     while (inb(0x64) & 1);
+//     // uint8_t scancode = inb(0x60);
+//     mouse_bytes[mouse_cycle++] = in_byte;
+//     if (mouse_cycle < 3)  {
+//         return; // wait for full packet since mouse packet is 3 bytes
+//     }
+//     mouse_cycle = 0;
+//     // Debug::printf("full mouse input detected\n");
+//     if ((mouse_bytes[0] & 0x01) != 0) {
+//         Debug::printf("left button pressed\n");
+//     }
+//     if ((mouse_bytes[0] & 0x04) != 0) {
+//         Debug::printf("middle button pressed\n");
+//     }
+//     if ((mouse_bytes[0] & 0x02) != 0) {
+//         Debug::printf("right button pressed\n");
+//     }
+//     Debug::printf("left: %d, middle: %d, right: %d, x: %d, y:%d\n", 
+//         (mouse_bytes[0] & 0x01), (mouse_bytes[0] & 0x04), (mouse_bytes[0] & 0x02), mouse_bytes[1], 256 - mouse_bytes[2]);
+
+// }
+// read a byte from data port
+// void read_ps2_data() {
+//     uint8_t status = inb(0x64);
+//     if (status & 1) {
+//         uint8_t in_byte = inb(0x60);
+//         if (status & 0x20) {
+//             // Debug::printf("is mouse data");
+//             read_mouse_data(in_byte);
+//         }
+//         else {
+//             read_keyboard_data(in_byte);
+//         }
+//     }
+// }
