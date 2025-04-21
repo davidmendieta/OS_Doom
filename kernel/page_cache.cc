@@ -5,27 +5,32 @@
 
 namespace page_cache {  
     
-    uint32_t hashtable [1024];
+    uint32_t hashtable [1024]; // the 
 
     void cache_init() { // call init for page cache?? 
 
     }
 
-    uint32_t hash(uint32_t fs, uint32_t inum, uint32_t block_num) {
-        return (fs + inum + block_num) % 1024;
+    uint32_t hash(uint32_t va) {
+        // return (fs + inum + block_num) % 1024;
+        return va % 1024;
     }
-        
-    uint32_t evict_page() { // for when we run out of room in page_cache
-        bool no_eviction = false;
-        uint32_t i = 0;
-        while(no_eviction) {
-            uint32_t entry = hashtable[i];
-            if(entry & 0x10) {
-                hashtable[i] = 0;
-                //we dont have write to disk yet
+
+    uint32_t evict_page() { // do we need to work with tlb?
+        for(uint32_t revolutions = 0; revolutions <= 2; revolutions++) {// when page_cache runs out of space
+            for(uint32_t i = 0; i < 1024; i++) {
+                if(!(hashtable[i] & 0x20)) {
+                    hashtable[i] = 0;
+                    //write to disk
+                    // VMM::naive_munmap((uint32_t*)hashtable[i], true); // free up space in PD. Do we need to do this?
+                    return i;
+                }
+                hashtable[i] &= ~0x10;
             }
-        }   
+        }
+        return -1;
     }
+    
     
     void evict_page(uint32_t va) { // for the system call to remove a page
         
@@ -36,7 +41,8 @@ namespace page_cache {
     }
 
     uint32_t get_page(uint32_t va) {
-
+        uint32_t hash_val = hash(va);
+        return hashtable[hash_val];
     }
     
     void release_page(uint32_t va) {
