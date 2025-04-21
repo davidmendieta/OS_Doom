@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export TESTS_DIR=shell/tests
 ORIGINAL_DIR="$(pwd)"
 THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -7,8 +8,14 @@ THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd $THIS_DIR
 cd ../tests
 
+# build shell
 echo "compiling $1"
-cd "$1.dir/sbin"
+cd "./env"
+make clean
+make -s
+
+# build /bin
+cd "../$1.dir/bin"
 make clean
 make -s
 

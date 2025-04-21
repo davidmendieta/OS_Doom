@@ -20,9 +20,23 @@ char* input_line(char* dst, char* src) {
     return (src + i + 1);
 }
 
+// read keyboard input into buffer
+// return on newline
+// void input_line(char* buffer) {
+//     uint32_t write = 0;
+//     char c = 0; // read from keyboard
+//     while (!is_newline(c)) {
+//         buffer[write] = c;
+//         c = 0; // read from keyboard
+//         write++;
+//     }
+//     buffer[write] = 0;
+// }
+
 void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
     switch (id) {
-        case CMD_IGNORE:
+        case CMD_IGNORE: // comment
+            printf("\n");
             break;
         case CMD_CD:
             if (tokens.argc != 2) error("invalid args for command cd\n");
@@ -32,12 +46,12 @@ void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
             printf("¯\\_(ツ)_/¯\n");
             break;
         case CMD_EXIT:
-            shutdown();
+            exit(0);
             break;
         case CMD_ECHO:
             // todo we need a more powerful tokenizer :_(
             for (int i = 1; tokens.argv[i]; i++) {
-                printf("%s", tokens.argv[i]);
+                printf("%s ", tokens.argv[i]);
             }
             printf("\n");
             break;
@@ -83,8 +97,7 @@ int main(int argc, char** argv) {
     char *buffer = (void*) malloc(4096);
     read(stdin, (void*) buffer, 4096);
 
-    while (true) // you may want to provide a built-in "exit" command
-    {
+    while (true) {
         char* command = malloc(4096);
         output_prompt();                             // display a prompt
         buffer = input_line(command, buffer);        // get a line of input, which will become the command to execute

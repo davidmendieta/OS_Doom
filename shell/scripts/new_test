@@ -18,11 +18,14 @@ touch "t${COUNT}.ok"
 
 # copy the test environment
 # everything here is hard linked
-cp -l ./env/* "$TESTDIR_NAME/sbin/"
+cp -rl ./env/* "$TESTDIR_NAME/sbin/"
 
 # make input file (not hardlinked)
 cd "$TESTDIR_NAME/sbin"
 echo exit > input
+
+# move bin up
+mv ./bin ..
 
 echo "*** fill out input.txt and .ok file"
 echo "*** then cook t##"
