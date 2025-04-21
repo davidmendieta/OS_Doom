@@ -41,8 +41,12 @@ uint32_t write(uint32_t fd, void* buf, int32_t nbyte) {
     auto open_file = me->pcb->fdt[fd];
 
     if(open_file == nullptr || open_file->node == nullptr) return -1; // File doesn't exist
-    uint32_t bytes_written = open_file->node->write(open_file->offset, nbyte, (char*)buf);
+    uint32_t bytes_written = open_file->node->write_all(open_file->offset, nbyte, (char*)buf);
     open_file->offset += bytes_written;
+    auto data = &open_file->node->data;
+    if (open_file->offset > data->size_low) {
+        data->size_low = open_file->offset;
+    }
     return bytes_written;
 }
 

@@ -2,15 +2,13 @@
 #include "libk.h"
 #include "utils.h"
 #include "path.h"
-
-
+;
 Ext2::Ext2(StrongPtr<Ide> ide_): ide_(ide_), root() {
     using namespace impl::ext2;
 
-    SuperBlock sb;
 
     ide_->read(1024,sb);
-    iNodeSize = sb.inode_size;
+    iNodeSize = sb.inode_size;  
     iNodesPerGroup = sb.inodes_per_group;
     numberOfNodes = sb.inodes_count;
     numberOfBlocks = sb.blocks_count;
@@ -39,14 +37,14 @@ Ext2::Ext2(StrongPtr<Ide> ide_): ide_(ide_), root() {
     auto groupTableSize = sizeof(BlockGroup) * nGroups;
     //Debug::printf("group table size %d\n",groupTableSize);
 
-    auto groupTable = new BlockGroup[nGroups];
+    groupTable = new BlockGroup[nGroups];
     auto cnt = buffer_cache->read_all(groupTableNumber * blockSize, groupTableSize, (char*) groupTable);
     ASSERT(cnt == groupTableSize);
 
     iNodeTables = new uint32_t[nGroups];
-
     for (uint32_t i=0; i < nGroups; i++) {
         auto g = &groupTable[i];
+    
 
         iNodeTables[i] = g->inode_table;
 
@@ -84,6 +82,49 @@ Ext2::Ext2(StrongPtr<Ide> ide_): ide_(ide_), root() {
     //println(sb.volume_name);
 }
 
+uint32_t Node::get_offset() {
+        uint32_t idx = number - 1;
+        uint32_t group = idx / fs->iNodesPerGroup;
+        uint32_t idxGroup = idx % fs->iNodesPerGroup;
+        uint32_t table = fs->iNodeTables[group];
+        return table * block_size + idxGroup * fs->iNodeSize;
+}
+uint32_t Ext2::alloc_block() {
+    char bitmap[blockSize];
+    for (uint32_t bg = 0;  bg < nGroups; bg++) {
+        // read the bitmap from disk
+        uint32_t block_bitmap = groupTable[bg].block_bitmap;
+        buffer_cache->read_all(block_bitmap * blockSize, blockSize, bitmap);
+
+        uint32_t bpg = sb.blocks_per_group;
+        for (uint32_t i = 0; i < bpg; i++) {
+            uint32_t byte = i / 8;
+            uint32_t bit = i % 8;
+            if ((bitmap[byte] & (1 << bit)) == 0) {
+                bitmap[byte] |= (1 << bit);
+                // put the updated bitmap on disk
+                buffer_cache->write_all(block_bitmap * blockSize, blockSize, bitmap);
+                sb.free_blocks_count--;
+                groupTable[bg].free_blocks_count--;
+                // put the updated superblock on disk
+                buffer_cache->write_all(1024, sizeof(sb), (char*) &sb);
+                uint32_t table_start; 
+                if (blockSize == 1024) {
+                    table_start = 2048;
+                }
+                else {
+                    table_start = blockSize;
+                }
+                buffer_cache->write_all(table_start + bg * sizeof(BlockGroup),
+                sizeof(BlockGroup), (char*) &groupTable[bg]);
+                return sb.first_data_block + bg * bpg + i;
+            }
+        }
+    }
+    // we did not find a suitable block
+    return -1;
+}
+
 StrongPtr<Node> Ext2::get_node(uint32_t number) {
     if (number == 0) return {};
     ASSERT(number <= numberOfNodes);
@@ -99,7 +140,7 @@ StrongPtr<Node> Ext2::get_node(uint32_t number) {
     auto nodeOffset = iTableBase * blockSize + indexInGroup * iNodeSize;
     //Debug::printf("nodeOffset %d\n",nodeOffset);
 
-    auto out = StrongPtr<Node>::make(buffer_cache,number,blockSize);
+    auto out = StrongPtr<Node>::make(this, buffer_cache,number,blockSize);
     buffer_cache->read(nodeOffset,out->data);
     return out;
 }
@@ -264,6 +305,20 @@ void Node::read_block(uint32_t lbn, char* buffer) {
         ASSERT(cnt == block_size);
     }
 }
+void Node::write_block(uint32_t lbn, const char* buffer) {
+    uint32_t* direct = &data.direct0;
+    uint32_t& pbn = direct[lbn];
+    if (pbn == 0) {
+        pbn = fs->alloc_block(); 
+    }
+    buffer_cache->write_all(pbn * block_size, block_size, const_cast<char*> (buffer));
+    uint32_t newSize = (lbn + 1) * block_size;
+    if (newSize > data.size_low) {
+        data.size_low = newSize;
+    }
+    buffer_cache->write_all(get_offset(), sizeof(NodeData), (char*) &data);
+}
+
 
 uint32_t Node::entry_count() {
     ASSERT(is_dir());
