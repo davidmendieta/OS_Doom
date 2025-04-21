@@ -122,7 +122,7 @@ void receive_arp(uint8_t* packet, int len){
     EthernetHeader_arp* eth_header = (EthernetHeader_arp*)packet;
     if (eth_header->ethertype != 0x0806) { 
         Debug::printf("Not an ARP packet\n");
-        // return;
+        return;
     }
     Debug::printf("the sixe of the packet is %d\n", len);
     Debug::printf("the size of the ethernet header is %d\n", sizeof(EthernetHeader_arp));
@@ -130,7 +130,6 @@ void receive_arp(uint8_t* packet, int len){
     
     if (arp_head->opcode != 0x0001) { // ARP request
         Debug::printf("Not an ARP request\n");
-        // add 
         return;
     }
     if (arp_head->target_ip != my_ip()) { // not for us
@@ -139,7 +138,7 @@ void receive_arp(uint8_t* packet, int len){
     } else {
         Debug::printf("ARP request for us\n");
         // Send ARP reply
-        send_arp(, 0x0002); // ARP reply
+        send_arp((uint8_t*)arp_head->sender_ip, 0x0002); // ARP reply
         
     }
     
