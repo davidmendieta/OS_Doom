@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "idt.h"
 
+
 AtomicPtr<uint32_t> SMP::id;
 AtomicPtr<uint32_t> SMP::eoi_reg;
 AtomicPtr<uint32_t> SMP::spurious;
@@ -49,6 +50,8 @@ void SMP::init(bool isFirst) {
 
         // Register spurious interrupt handler
         IDT::interrupt(0xff, (uint32_t) spuriousHandler_);
+
+		IDT::interrupt(0x2C, (uint32_t) irq12_handler_asm);
 
     }
 

@@ -6,6 +6,9 @@
 #include "libk.h"
 #include "config.h"
 #include "shared.h"
+#include "mouse.h" 
+#include "idt.h"
+#include "ps2.h"
 
 StrongPtr<Ext2> fs{};
 
@@ -38,6 +41,12 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
 }
 
 void kernelMain(void) {
+
+
+    //IDT::interrupt(IRQ12, (uint32_t)mouse::irq12_handler); //to test the mouse
+    //mouse::test_mouse();
+
+
     auto d = StrongPtr<Ide>::make(1,0);
     fs = StrongPtr<Ext2>::make(d);
     auto init = fs->find(fs->root, "/sbin/init");
@@ -88,6 +97,10 @@ void kernelMain(void) {
     // User mode will never "return" from switchToUser. It will
     // enter the kernel through interrupts, exceptions, and system
     // calls.
+	while(true){
+		PS2::read_ps2_data();
+	}
+
     switchToUser(e,userEsp,0);
     Debug::panic("*** implement switchToUser in machine.S\n");
 }

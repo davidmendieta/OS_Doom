@@ -4,54 +4,38 @@
 
 #define CONFIG_ADDRESS 0xCF8
 #define CONFIG_DATA    0xCFC
-#define NUM_BARS 6
+#define NUM_BARS 6 // FIXME : is 6 correct?
 #define NUM_BUS 256
-#define MAX_DEVICES 20
 
-// struct to "wrap" our devices
 typedef struct {
     uint8_t bus;
     uint8_t slot;
     uint8_t function;
-    uint16_t vendor;
-    uint16_t device;
+    uint16_t vendor_id;
+    uint16_t device_id;
     uint8_t header;
     uint32_t bars[NUM_BARS];
 } PciDevice;
 
-// struct for to wrap a vendor device pair - used to for verificatoin 
-typedef struct {
-    uint16_t vendor;
-    uint16_t device;
-} VendorDevice;
-
-// expected devices
-extern VendorDevice expectedDevices[];
-
-// discovered PCI devices
 extern PciDevice pciDevices[NUM_BUS];
-extern size_t pciDeviceCount;
+extern size_t deviceCount;
 
-// 32 bit read and writes
-// bus - PCI bus number
-// slot - device (slot) number
-// function - function number.
-// registerOffset - offset within the PCI config space
-extern uint32_t pciConfigRead32(uint8_t bus, uint8_t slot, uint8_t function, uint8_t registerOffset);
-extern void pciConfigWrite32(uint8_t bus, uint8_t slot, uint8_t function, uint8_t registerOffset, uint32_t value);
+// bus = the PCI bus number
+// slot (device) = the PCI slot number
+// function = is the function number
+// register_offset = the offset in the configuration space
+extern uint16_t pciConfigRead(uint8_t bus, uint8_t slot, uint8_t function, uint8_t register_offset);
 
-// returns a BAR value for the given device and BAR number
-// For I/O BARs, it masks the lower 2 bits; for memory BARs, it extracts the base address
-extern uint32_t getBar(PciDevice* device, uint32_t barNum);
+// writes to a config space, similar to read above.
+extern void pciConfigWrite(uint8_t bus, uint8_t slot, uint8_t function, uint8_t register_offset, uint16_t value);
 
-// stores a device into the struct wrapper
-extern void storePciDevice(uint8_t bus, uint8_t slot, uint8_t function);
+// checks if a PCI device exists at the given bus and slot
+// returns the vendor ID
+extern uint16_t checkVendor(uint8_t bus, uint8_t slot);
 
-// enumerates all PCI devices across all buses
-extern void pciEnumDevices(void);
+// finds Device by Vendor & Device ID
+extern PciDevice* findDeviceVD(uint16_t vendor_id, uint16_t device_id);
 
-// finds and returns a pointer to the PCI device matching the vendor and device
-extern PciDevice* findDeviceVD(uint16_t vendor, uint16_t device);
+// enumerates all PCI devices
+extern void pciEnumDevices();
 
-// verifies that all expected devices have been found
-extern void verifyDevices(void);

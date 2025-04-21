@@ -223,5 +223,12 @@ sysHandler_:
     add $8,%esp
     iret
 
+.global irq12_handler_asm
+irq12_handler_asm:
+    pusha                   # Save all general-purpose registers
+    call irq12_handler      # Call the C++ handler function
+    popa                    # Restore all general-purpose registers
+    iret                    # Return from the interrupt
+
     .section .note.GNU-stack,"",@progbits
 
