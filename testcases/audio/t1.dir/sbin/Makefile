@@ -9,7 +9,7 @@ GCC := /usr/bin/gcc
 
 UTILS = init robotics
 
-CFLAGS = -std=c99 -m32 -nostdlib -g -O2 -Wall -Werror
+CFLAGS = -std=c99 -m32 -nostdlib -g -O0 -Wall -Werror
 
 all : $(UTILS)
     # Restore original environment after build
@@ -41,4 +41,3 @@ clean ::
 -include *.d
 
 .PHONY: all clean
-

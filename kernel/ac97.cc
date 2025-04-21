@@ -2,7 +2,6 @@
 #include "libk.h"
 #include "pci.h"
 #include "machine.h"
-#include "physmem.h"
 #include "vmm.h"
 #include "audio_data.h"
 #include "io.h"
@@ -52,7 +51,7 @@ you must set bit 0 and bit 2 in PCI Command Register to enable I/O space and bus
 uint32_t nam = 0;   // Native Audio Mixer BAR (BAR0)
 uint32_t nabm = 0;  // Native Audio Bus Master BAR (BAR1)
 
-extern uint32_t get_phys_addr(uint32_t vaddr) {
+uint32_t get_phys_addr(uint32_t vaddr) {
     uint32_t pd_index = (vaddr >> 22) & 0x3FF; // Extract page directory index
     uint32_t pt_index = (vaddr >> 12) & 0x3FF; // Extract page table index
 
@@ -60,7 +59,7 @@ extern uint32_t get_phys_addr(uint32_t vaddr) {
     uint32_t* pd = (uint32_t*)VMM::get_pd();
     if (!pd) {
         return 0; // Page directory not available
-    }//peepeepoopoobro is not coding
+    }
 
     // Check if the page directory entry is present
     uint32_t pd_entry = pd[pd_index];
@@ -87,59 +86,61 @@ extern uint32_t get_phys_addr(uint32_t vaddr) {
     return page_frame | (vaddr & 0xFFF); // Add the page offset
 }
 
-extern uint32_t init_ac97() {
+uint32_t init_ac97() {
     // 1. Find AC97 PCI device (assume bus, slot, func already known)
-    PciDevice* ac97 = findDeviceVD(0x8086, 0x2415);
-    PciDevice* ac97 = findDeviceVD(0x8086, 0x2415);
-    if (!ac97) {
-        Debug::printf("*** AC97 device not found!\n");
-        return -1;
-    }
+	Debug::printf("im here in inti\n");
+    PciDevice* ac97 = findDeviceVD(0x8086, 0x100e);
+	Debug::printf("found device\n");
+
     uint8_t bus = ac97->bus;
     uint8_t slot = ac97->slot;
     uint8_t func = ac97->function;
+	Debug::printf("im here in inti 1\n");
 
     // 2. Read BARs
     // nam = getBar();
     nam = pciConfigRead32(bus, slot, func, 0x10) & ~0xF;
     nabm = pciConfigRead32(bus, slot, func, 0x14) & ~0xF;
+	Debug::printf("im here in inti 2\n");
 
     // 3. Enable I/O and Bus Mastering
     uint16_t cmd = pciConfigRead32(bus, slot, func, 0x04);
     cmd |= 0x5;
     pciConfigWrite32(bus, slot, func, 0x04, cmd);
+	Debug::printf("im here in inti 3\n");
 
     // 4. Reset AC97
     outl(nam + AC97_RESET_REG, 0x1);
-    for (volatile int i = 0; i < 100000; i++) {}  // crude delay
+    for (int i = 0; i < 100000; i++) {}  // crude delay
     outl(nam + AC97_RESET_REG, 0x0);
+	Debug::printf("im here in inti 4\n");
 
     // 5. Wait for codec ready
     while (!(inl(nam + AC97_GLOBAL_STAT) & (1 << 15))) {
         // Debug::printf("*** waiting for codec\n");
     }
+	Debug::printf("im here in inti 5\n");
+
 
     // 6. Allocate buffers
     for (int i = 0; i < BDL_ENTRY_COUNT; i++) {
-        buffers[i] = (buffer*)PhysMem::alloc_frame();  // or kalloc(sizeof(buffer))
-        buffers[i]->start_addr = (uint32_t*)PhysMem::alloc_frame();
-        buffers[i]->phys_addr = get_phys_addr((uint32_t)buffers[i]->start_addr);
         buffers[i]->size = BUFFER_SIZE;
     
         // Fill with silence
         for (int j = 0; j < BUFFER_SIZE / 4; j++)
             buffers[i]->start_addr[j] = 0;
     }
+	Debug::printf("im here in inti 6\n");
+
 
     // testing audio that isnt the doom stream
-    extern void generate_test_tone();
-    extern uint16_t audio_samples[];
-    extern uint32_t num_samples;
+    // extern void generate_test_tone();
+    // extern uint16_t audio_samples[];
+    // extern uint32_t num_samples;
     generate_test_tone();
     fill_ac97_buffers();
 
     // 7. Allocate and set up BDL (buffer descriptor list)
-    bdl = (BufferDescriptor*)PhysMem::alloc_frame(); // 128 bytes
     uint32_t bdl_phys = get_phys_addr((uint32_t)bdl);
     
     for (int i = 0; i < BDL_ENTRY_COUNT; i++) {
@@ -147,13 +148,15 @@ extern uint32_t init_ac97() {
         bdl[i].buffer_len = BUFFER_SIZE;
         bdl[i].control = (i == (BDL_ENTRY_COUNT - 1)) ? (1 << 15) : 0;
     }
+	Debug::printf("im here in inti 7\n");
 
     // 8. Program AC'97 controller
     outl(nabm + AC97_PCM_OUT_BDBAR, bdl_phys);
     outb(nabm + AC97_PCM_OUT_CIV, 0);
     outb(nabm + AC97_PCM_OUT_LVI, BDL_ENTRY_COUNT - 1);
     outb(nabm + AC97_PCM_OUT_STATUS, 0xFF); // clear
-    outb(nabm + AC97_PCM_OUT_CONTROL, 0x01); // run disabled intterupts, for enabled change to 0x05
+    outb(nabm + AC97_PCM_OUT_CONTROL, 0x05); // run + interrupt enable
+	Debug::printf("im here in inti 8\n");
 
     return 0;
 }
@@ -243,12 +246,5 @@ void reset_buffers() {
 void shutdown_ac97() {
     outb(nabm + AC97_PCM_OUT_CONTROL, 0x00); // Stop playback
 
-    // Free buffers
-    for (int i = 0; i < BDL_ENTRY_COUNT; i++) {
-        PhysMem::dealloc_frame((uint32_t)buffers[i]->start_addr);
-        PhysMem::dealloc_frame((uint32_t)buffers[i]);
-    }
-
     // Free BDL
-    PhysMem::dealloc_frame((uint32_t)bdl);
 }

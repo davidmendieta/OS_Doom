@@ -47,5 +47,7 @@ void poll_ac97_loop();
 void fill_ac97_buffers();
 void ac97_interrupt_handler();
 void refill_buffers();
+void reset_buffers();
+void shutdown_ac97();
 
 #endif // AC97_H

@@ -6,6 +6,8 @@
 #include "libk.h"
 #include "config.h"
 #include "shared.h"
+#include "ac97.h"
+#include "audio_data.h"
 
 StrongPtr<Ext2> fs{};
 
@@ -38,19 +40,39 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
 }
 
 void kernelMain(void) {
+	Debug::printf("im here in ernel main\n");
+
     auto d = StrongPtr<Ide>::make(1,0);
     fs = StrongPtr<Ext2>::make(d);
     auto init = fs->find(fs->root, "/sbin/init");
-
+	Debug::printf("im here in ernel main 2\n");
     // Debug::printf("loading init\n");
     uint32_t e = ELF::load(init);
-    // Debug::printf("entry %x\n",e);
+    Debug::printf("entry %x\n",e);
     const uint32_t stack_size = 134217728;
     void* stack_start = VMM::naive_mmap(stack_size, false, {}, 0, false);
     uint32_t userEsp = ((uint32_t)stack_start + stack_size - 16);
-    
+    Debug::printf("im here in ernel main 3\n");
     const char* argv[] = { "init", nullptr };
     userEsp = (uint32_t)load_args((uint32_t*)userEsp, argv);
+
+
+	Debug::printf("*** launching AC97 audio test\n");
+
+    if (init_ac97() == 0) {
+        Debug::printf("*** audio init success\n");
+    } else {
+        Debug::printf("*** audio init failed\n");
+    }
+
+    // Wait a bit to give QEMU time to emit sound
+    for (int i = 0; i < 100000000; i++) {
+		Debug::printf("i %d\n", i);
+	}
+
+    shutdown_ac97();
+    Debug::printf("*** audio shutdown success\n");
+
     
     // userEsp-=16; // Account for argc and argv
     
