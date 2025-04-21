@@ -154,7 +154,7 @@ namespace impl::ext2 {
         };
     
         virtual ~BufferCache() {
-            for(uint32_t i = 0; i < size; i++) {
+            for (uint32_t i = 0; i < size; i++) {
                 auto curr = indices[i]->getFirst();
                 while (curr != nullptr) { 
                     if (curr->dirty) {
