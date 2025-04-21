@@ -12,7 +12,9 @@ namespace PS2 {
 	// //ADDED
  	// void setup_ps2_irqs();
 
-	extern uint8_t read_ps2_data();
+	extern void read_ps2_data();
+	extern void read_keyboard_data(uint8_t in_byte);
+	extern void read_mouse_data(uint8_t in_byte);
 }
 
 // //ADDED

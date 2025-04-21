@@ -13,8 +13,8 @@ void init() {
 
 	if(debug_on) Debug::printf("PS2 OK IF 0x55: 0x%x\n", result);
 
-	// disable PS/2 port 1 and 2 so they don't send data while we configure the controller
-	if(debug_on) Debug::printf("disable ports\n");
+	// disable PS/2 port 1 and 2 so they don't send data while we configure the controller (disable interrupts)
+	if(debug_on) Debug::printf("disable ps2 port interrupts\n");
 	outb(0x64, 0xAD);
     outb(0x64, 0xA7);
 
@@ -46,10 +46,19 @@ void init() {
 	while (inb(0x64) & 0x02); 
 	outb(0x60, config);
 
-	// enable port 1 and 2
-	if(debug_on) Debug::printf("reenabled ports\n");
+	// enable port 1 and 2 interrupts
+	if(debug_on) Debug::printf("reenabled ps2 port interrupts\n");
 	outb(0x64, 0xAE); // keyboard
 	outb(0x64, 0xA8); // mouse
+
+    // turn on mouse data reporting
+    outb(0x64, 0xD4); // next byte goes to mouse
+    outb(0x60, 0xF4); // cmd 0xF4 = enable data reporting
+
+    // wait for mouse acknowledgement
+    while (!(inb(0x64) & 1));
+    uint8_t mouse_ack = inb(0x60);
+    Debug::printf("mouse acknowledgement: 0x%x\n", mouse_ack); // should be 0xFA
 
 }
 
@@ -143,14 +152,80 @@ char scancode_to_ascii(uint8_t scancode) {
 }
 
 // read a byte from data port
-uint8_t read_ps2_data() {
-	while (!(inb(0x64) & 1));
-	uint8_t scancode = inb(0x60);
-    if (scancode != 0xF0) {
-        Debug::printf("Scancode: 0x%x\n", scancode);
-        Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
+void read_ps2_data() {
+    uint8_t status = inb(0x64);
+    if (status & 1) {
+        uint8_t in_byte = inb(0x60);
+        if (status & 0x20) {
+            // Debug::printf("is mouse data");
+            read_mouse_data(in_byte);
+        }
+        else {
+            read_keyboard_data(in_byte);
+        }
     }
-	return scancode;
 }
+
+
+uint8_t mouse_cycle = 0;
+uint8_t mouse_bytes[3];
+/*
+mouse_bytes[0] = flags from mouse from OSDev ps2 mouse pg
+mouse_bytes[1] = x axis
+mouse_bytes[2] = y axis
+
+use "mouse_move x y" to simulate mouse coordinates
+
+0, 0 is a special case, it 0 outs both within the input packet bits
+
+I think the maxes for single output are <128, since byte size is 8bits, 
+if u try x and y >= 128 u get multiple outputs that add up to ur input
+
+y axis, starts from 256 and decreases when you put it into terminal. 
+ie. running "mouse_move 100 100" gives u x = 100, y = 156
+
+
+use "mouse_button 0-7" to simulate left, middle, right mouse presses
+*/
+
+
+
+// @diego i moved some of ur code to this function to make names fit better
+// i'm not sure where the return value should go so I left it as void for now
+void read_keyboard_data(uint8_t in_byte) {
+    uint8_t scancode = inb(0x60);
+    // if (scancode != 0xF0) {
+    //     Debug::printf("Scancode: 0x%x\n", scancode);
+    //     Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
+    // }
+    Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
+    mouse_cycle = 0;
+    // Debug::printf("full keyboard data\n");
+}
+
+
+
+
+void read_mouse_data(uint8_t in_byte) {
+    mouse_bytes[mouse_cycle++] = in_byte;
+    if (mouse_cycle < 3)  {
+        return; // wait for full packet since mouse packet is 3 bytes
+    }
+    mouse_cycle = 0;
+    // Debug::printf("full mouse input detected\n");
+    if ((mouse_bytes[0] & 0x01) != 0) {
+        Debug::printf("left button pressed\n");
+    }
+    if ((mouse_bytes[0] & 0x04) != 0) {
+        Debug::printf("middle button pressed\n");
+    }
+    if ((mouse_bytes[0] & 0x02) != 0) {
+        Debug::printf("right button pressed\n");
+    }
+    Debug::printf("left: %d, middle: %d, right: %d, x: %d, y:%d\n", 
+        (mouse_bytes[0] & 0x01), (mouse_bytes[0] & 0x04), (mouse_bytes[0] & 0x02), mouse_bytes[1], 256 - mouse_bytes[2]);
+
+}
+
 
 }
