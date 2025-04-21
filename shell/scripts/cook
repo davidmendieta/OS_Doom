@@ -10,15 +10,17 @@ cd ../tests
 
 # build shell
 echo "compiling $1"
-cd "./env"
+cd "$1.dir/sbin/"
 make clean
 make -s
 
 # build /bin
-cd "../$1.dir/bin"
+cd "../bin"
 make clean
 make -s
 
-cd $ORIGINAL_DIR
-
+# run the test
+cd "../../../../"
 make -s clean $1.test
+
+cd $ORIGINAL_DIR

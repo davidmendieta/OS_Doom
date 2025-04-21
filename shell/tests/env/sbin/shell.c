@@ -79,9 +79,20 @@ void process_start(char* command) {
     if(id < 0) {
         error("can't fork\n");
     } else if(id == 0) {
-        printf("executing instruction: %s\n", tokens.argv[0]);
-        // executable
-        execl(tokens.argv[0], (const char*) tokens.argv[0], (const char*) tokens.argv[1]);
+        char* path;
+        if (is_path(tokens.argv[0])) {
+            path = tokens.argv[0];
+        } else { // default to /bin
+            const char* bin = "/bin/";
+            int len = strlen(tokens.argv[0]); // something like `ls` or `cat`
+            path = (char*) malloc(sizeof(bin) + len + 1);
+            path[0] = 0;
+            strcat(path, bin);
+            strcat(path, tokens.argv[0]);
+        }
+
+        // todo parse for variable args
+        execl(path, tokens.argv[0], &tokens.argv[1], 0);
         error("couldn't execute command\n");
     } else {
         // parent
@@ -93,7 +104,7 @@ void process_start(char* command) {
 }
 
 int main(int argc, char** argv) {
-    int stdin = open("/sbin/input", 0); // our test case
+    int stdin = open("/user/input", 0); // our test case
     char *buffer = (void*) malloc(4096);
     read(stdin, (void*) buffer, 4096);
 

@@ -26,5 +26,8 @@ extern void cp(int from, int to);
 
 extern int streq(const char*, const char*);
 extern int strlen(const char*);
+extern char* strcat(char*, const char*);
+extern char* strcpy(char*, const char*);
+
 
 #endif

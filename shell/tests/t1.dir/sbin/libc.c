@@ -1,0 +1,81 @@
+#include "libc.h"
+
+int putchar(int c) {
+    char t = (char)c;
+    return write(1,&t,1);
+}
+
+int puts(const char* p) {
+    char c;
+    int count = 0;
+    while ((c = *p++) != 0) {
+        int n = putchar(c); 
+        if (n < 0) return n;
+        count ++;
+    }
+    putchar('\n');
+    
+    return count+1;
+}
+
+void cp(int from, int to) {
+    while (1) {
+        char buf[100];
+        ssize_t n = read(from,buf,100);
+        if (n == 0) break;
+        if (n < 0) {
+            printf("*** %s:%d read error, fd = %d\n",__FILE__,__LINE__,from);
+            break;
+        }
+        char *ptr = buf;
+        while (n > 0) {
+            ssize_t m = write(to,ptr,n);
+            if (m < 0) {
+                printf("*** %s:%d write error, fd = %d\n",__FILE__,__LINE__,to);
+                break;
+            }
+            n -= m;
+            ptr += m;
+        }
+    }
+}
+
+int streq(const char* s1, const char* s2) {
+    while (*s1 && *s2) {
+        if (*s1 != *s2) return 0;
+        s1++;
+        s2++;
+    }
+    return *s1 == *s2;
+}
+
+int strlen(const char *str) {
+    int index = 0;
+    while (str[index]) {
+        index++;
+    }
+    return index;
+}
+
+char* strcat(char* dest, const char* src) {
+    char* ptr = dest;
+    while (*ptr != '\0') {
+        ptr++;
+    }
+    while (*src != '\0') {
+        *ptr = *src;
+        ptr++;
+        src++;
+    }
+    *ptr = '\0';
+    return dest;
+}
+
+char* strcpy(char* dest, const char* src) {
+    char* ptr = dest;
+    while (*src != '\0') {
+        *ptr++ = *src++;
+    }
+    *ptr = '\0';
+    return dest;
+}

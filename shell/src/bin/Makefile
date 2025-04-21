@@ -6,7 +6,7 @@ PATH := /usr/bin
 
 # Set GCC path explicitly
 GCC := /usr/bin/gcc
-INCLUDE = /u/vxiao/OS-Doom/shell/tests/env
+INCLUDE = $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../)/sbin/
 UTILS = cat
 CFLAGS = -std=c99 -m32 -nostdlib -g -O2 -Wall -Werror
 
@@ -26,9 +26,6 @@ OBJFILES = $(addprefix $(INCLUDE)/, $(OFILES))
 
 $(UTILS) : % : Makefile %.o $(OBJFILES)
 	ld -N -m elf_i386 -e start -Ttext=0x80000000 -o $@ $*.o $(OBJFILES)
-
-print:
-	@echo $(OBJFILES)
 
 clean ::
 	rm -f *.o

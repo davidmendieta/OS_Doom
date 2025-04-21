@@ -11,6 +11,8 @@ typedef struct Tokenized {
 //     return c == '\n' || c == '\r';
 // }
 
+bool is_path(char* argv0);
+
 void tokens_init(Tokenized* tokens, const char* input);
 void tokens_free(Tokenized* tokens);
 void tokenize(Tokenized* tokens, const char* input);

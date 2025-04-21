@@ -13,19 +13,17 @@ TESTDIR_NAME="t${COUNT}.dir"
 
 echo "creating ${TESTDIR_NAME} ${TESTDIR_NAME}/sbin t${COUNT}.ok"
 
-mkdir -p "$TESTDIR_NAME"/sbin
+mkdir -p "$TESTDIR_NAME"
 touch "t${COUNT}.ok"
 
 # copy the test environment
 # everything here is hard linked
-cp -rl ./env/* "$TESTDIR_NAME/sbin/"
+cp -rl ./env/* "$TESTDIR_NAME/"
 
 # make input file (not hardlinked)
-cd "$TESTDIR_NAME/sbin"
+mkdir -p "$TESTDIR_NAME/user"
+cd "$TESTDIR_NAME/user"
 echo exit > input
-
-# move bin up
-mv ./bin ..
 
 echo "*** fill out input.txt and .ok file"
 echo "*** then cook t##"
