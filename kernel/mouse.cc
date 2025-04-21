@@ -25,11 +25,6 @@ namespace mouse
 #define MOUSE_DISABLE_DATA_REPORTING 0xF5
 #define MOUSE_ENABLE_SCALING 0xE7
 #define MOUSE_DISABLE_SCALING 0xE6
-    // #define MOUSE_ALWAYS_SET 0x08
-    // #define MOUSE_X_OVERFLOW 0x40
-    // #define MOUSE_Y_OVERFLOW 0x80
-    // #define MOUSE_X_NEG 0x10
-    // #define MOUSE_Y_NEG 0x20
 
     // we initialize the mouse position to 0,0
     // REMEMBER! the Y axis is inverted in the mouse
@@ -41,16 +36,6 @@ namespace mouse
     static bool middleButtonPressed = false;
     static float mouseSensitivity = 1.0;
 
-    // Helper function to write to mouse and expect acknowledgment
-    // static void mouse_write_and_ack(uint8_t command)
-    // {
-    //     // Send command to mouse
-    //     outb(PS2_CMD_PORT, 0xD4); // Tell PS/2 controller we're sending to mouse
-    //     outb(PS2_DATA_PORT, command);
-    //     // Read acknowledgment byte
-    //     inb(PS2_DATA_PORT); // Should be 0xFA (ACK)
-    // }
-
     void ps2_mouse_init()
     {
         // Reset mouse position and button states
@@ -59,7 +44,6 @@ namespace mouse
         leftButtonPressed = false;
         rightButtonPressed = false;
         middleButtonPressed = false;
-
         // enable the mouse
         // outb will send the command (0xA8) to the PS/2 controller
         // this command enables the mouse port
@@ -85,9 +69,7 @@ namespace mouse
         outb(PS2_DATA_PORT, byteWeReadIn);
 
         // Set defaults for better performance
-        mouse_set_sample_rate(80);
         mouse_set_resolution(0x00); // One unit per mm
-        mouse_disable_scaling();    // Disable acceleration
 
         // Enable data reporting (start sending mouse packets)
         mouse_enable_data_reporting();
@@ -184,20 +166,6 @@ namespace mouse
         }
     }
 
-    // Set mouse sample rate (how often the mouse sends updates)
-    void mouse_set_sample_rate(uint8_t rate)
-    {
-        // Write command to mouse device
-        outb(PS2_CMD_PORT, 0xD4);
-        outb(PS2_DATA_PORT, MOUSE_SET_SAMPLE);
-        inb(PS2_DATA_PORT); // Acknowledge
-
-        // Send the rate
-        outb(PS2_CMD_PORT, 0xD4);
-        outb(PS2_DATA_PORT, rate);
-        inb(PS2_DATA_PORT); // Acknowledge
-    }
-
     // Set mouse resolution (movement precision)
     void mouse_set_resolution(uint8_t resolution)
     {
@@ -220,30 +188,7 @@ namespace mouse
         inb(PS2_DATA_PORT); // Acknowledge
     }
 
-    // Disable mouse data reporting (stop sending movement packets)
-    void mouse_disable_data_reporting()
-    {
-        outb(PS2_CMD_PORT, 0xD4);
-        outb(PS2_DATA_PORT, MOUSE_DISABLE_DATA_REPORTING);
-        inb(PS2_DATA_PORT); // Acknowledge
-    }
-
-    // Enable mouse acceleration
-    void mouse_enable_scaling()
-    {
-        outb(PS2_CMD_PORT, 0xD4);
-        outb(PS2_DATA_PORT, MOUSE_ENABLE_SCALING);
-        inb(PS2_DATA_PORT); // Acknowledge
-    }
-
-    // Disable mouse acceleration
-    void mouse_disable_scaling()
-    {
-        outb(PS2_CMD_PORT, 0xD4);
-        outb(PS2_DATA_PORT, MOUSE_DISABLE_SCALING);
-        inb(PS2_DATA_PORT); // Acknowledge
-    }
-
+   
     // Set mouse sensitivity multiplier
     void mouse_set_sensitivity(float sensitivity)
     {
