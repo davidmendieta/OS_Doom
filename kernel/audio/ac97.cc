@@ -94,13 +94,14 @@ uint32_t init_ac97() {
     uint8_t func = ac97->function;
 
     // 2. Read BARs
-    nam = pciConfigRead(bus, slot, func, 0x10) & ~0xF;
-    nabm = pciConfigRead(bus, slot, func, 0x14) & ~0xF;
+    // nam = getBar();
+    nam = pciConfigRead32(bus, slot, func, 0x10) & ~0xF;
+    nabm = pciConfigRead32(bus, slot, func, 0x14) & ~0xF;
 
     // 3. Enable I/O and Bus Mastering
-    uint16_t cmd = pciConfigRead(bus, slot, func, 0x04);
+    uint16_t cmd = pciConfigRead32(bus, slot, func, 0x04);
     cmd |= 0x5;
-    pciConfigWrite(bus, slot, func, 0x04, cmd);
+    pciConfigWrite32(bus, slot, func, 0x04, cmd);
 
     // 4. Reset AC97
     outl(nam + AC97_RESET_REG, 0x1);
