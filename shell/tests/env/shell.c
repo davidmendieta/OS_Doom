@@ -20,19 +20,34 @@ char* input_line(char* dst, char* src) {
     return (src + i + 1);
 }
 
-bool handle_built_in(int argc, char** argv) {
-    const char* path = argv[0];
-    if (streq(path, "cd")) {
-        if (argc != 2) error("invalid args for command cd\n");
-        chdir(argv[1]);
-        return false;
-    } else if (streq(path, "path")) {
-        printf("¯\\_(ツ)_/¯\n");
-        return false;
-    } else if (streq(path, "exit")) {
-        shutdown();
+void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
+    switch (id) {
+        case CMD_IGNORE:
+            break;
+        case CMD_CD:
+            if (tokens.argc != 2) error("invalid args for command cd\n");
+            chdir(tokens.argv[1]);
+            break;
+        case CMD_PATH:
+            printf("¯\\_(ツ)_/¯\n");
+            break;
+        case CMD_EXIT:
+            shutdown();
+            break;
+        case CMD_ECHO:
+            // todo we need a more powerful tokenizer :_(
+            for (int i = 1; tokens.argv[i]; i++) {
+                printf("%s", tokens.argv[i]);
+            }
+            printf("\n");
+            break;
+        case CMD_PWD:
+            // todo ask for a syscall
+            printf("i think you are in a directory ngl\n");
+            break;
+        default:
+            error("how did you get here??\n");
     }
-    return true;
 }
 
 void process_start(char* command) {
@@ -40,8 +55,9 @@ void process_start(char* command) {
     tokens_init(&tokens, command);
     tokenize(&tokens, command);
 
-    if(!handle_built_in(tokens.argc, tokens.argv)) {
-        printf("RETURNING\n");
+    enum CMD_CODES command_id = get_command_id(tokens.argv);
+    if (command_id != CMD_EXTERNAL) {
+        handle_built_in(command_id, tokens);
         return;
     }
 
@@ -69,13 +85,11 @@ int main(int argc, char** argv) {
 
     while (true) // you may want to provide a built-in "exit" command
     {
-        printf("buffer %s\n", buffer);
         char* command = malloc(4096);
         output_prompt();                             // display a prompt
         buffer = input_line(command, buffer);        // get a line of input, which will become the command to execute
         process_start(command);                      // start a process from the command
         free(command);
-        printf("loop");
         // TODO be able to send input to process and display their output
     }
 }

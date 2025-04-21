@@ -53,7 +53,7 @@ void tokenize(Tokenized* tokens, const char *input) {
         tokens->argv[i] = malloc(len + 1);
         memcpy((void *)tokens->argv[i], (void *)temp, len + 1);
         
-        printf("ARG %d: %s\n", i, tokens->argv[i]);
+        // printf("ARG %d: %s\n", i, tokens->argv[i]);
     }
     free(temp);
 }

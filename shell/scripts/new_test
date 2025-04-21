@@ -25,6 +25,6 @@ cd "$TESTDIR_NAME/sbin"
 echo exit > input
 
 echo "*** fill out input.txt and .ok file"
-echo "*** do TESTS_DIR=shell/tests make t##.test"
+echo "*** then cook t##"
 
 cd $ORIGINAL_DIR
