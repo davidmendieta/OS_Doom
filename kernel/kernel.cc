@@ -6,6 +6,7 @@
 #include "libk.h"
 #include "config.h"
 #include "shared.h"
+#include "ps2.h"
 
 StrongPtr<Ext2> fs{};
 
@@ -88,6 +89,14 @@ void kernelMain(void) {
     // User mode will never "return" from switchToUser. It will
     // enter the kernel through interrupts, exceptions, and system
     // calls.
+
+    // Debug::printf("1234imheere\n");
+
+    while(true) {
+        //  Debug::printf("looping\n");
+        PS2::read_ps2_data();
+    }
+
     switchToUser(e,userEsp,0);
     Debug::panic("*** implement switchToUser in machine.S\n");
 }

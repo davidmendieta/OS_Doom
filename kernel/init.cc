@@ -16,6 +16,7 @@
 #include "sys.h"
 #include "tss.h"
 #include "pci.h"
+#include "ps2.h"
 
 struct Stack {
     static constexpr int BYTES = 4096;
@@ -113,6 +114,8 @@ extern "C" void kernelInit(void) {
         /* initialize IDT */
         IDT::init();
         Pit::calibrate(1000);
+
+        PS2::init();
         
         /* Enumerate Devices */
         Debug::printf("| ENUMERATING DEVICES\n");
