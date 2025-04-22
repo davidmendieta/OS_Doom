@@ -50,31 +50,31 @@
 
 
 
-// #pragma once
+#pragma once
 
-// #include "../drivers/rtl8139.h"
-// #include "debug.h"
-// #include "../../shared.h" 
+#include "../drivers/rtl8139.h"
+#include "debug.h"
+#include "../../shared.h" 
 
-// struct EthernetHeader_arp
-// {
-//     uint8_t dest_mac[6]; 
-//     uint8_t src_mac[6]; 
-//     uint16_t ethertype; 
-// };
+struct EthernetHeader_arp
+{
+    uint8_t dest_mac[6]; 
+    uint8_t src_mac[6]; 
+    uint16_t ethertype; 
+};
 
-// struct arp_header {
-//     uint16_t hardware_type;
-//     uint16_t protocol_type;
-//     uint8_t  hardware_size; 
-//     uint8_t  protocol_size; 
-//     uint16_t opcode;
-//     uint8_t  sender_mac[6];
-//     uint32_t sender_ip;
-//     uint8_t  target_mac[6];
-//     uint32_t target_ip;
-// };
+struct arp_header {
+    uint16_t hardware_type;
+    uint16_t protocol_type;
+    uint8_t  hardware_size; 
+    uint8_t  protocol_size; 
+    uint16_t opcode;
+    uint8_t  sender_mac[6];
+    uint32_t sender_ip;
+    uint8_t  target_mac[6];
+    uint32_t target_ip;
+};
 
-// void dhcp_init(uint32_t start_ip);
+void dhcp_init(uint32_t start_ip);
 
-// void receive_dhcp(uint8_t* packet, int len);
+void receive_dhcp(uint8_t* packet, int len);
