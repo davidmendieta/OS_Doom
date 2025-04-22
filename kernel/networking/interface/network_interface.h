@@ -15,6 +15,9 @@ class NetworkInterface {
     void handle_ip_udp(IPv4Header* packet, uint32_t packet_length);
     
     public:
+
+    NetworkInterface(uint32_t ip): my_IP(ip){};
+
     void send(const char* payload, uint32_t length);
 
     uint32_t get_io_base() { return rtl8139.io_base; }
@@ -31,11 +34,18 @@ class NetworkInterface {
     }
 
     void send_arp_request(uint32_t target_ip) {
-        char* my_mac = (char*)malloc(6);;
+        char* my_mac = (char*)malloc(6);
         rtl8139.get_mac_addr(my_mac);
         char target_mac[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
         uint32_t packet_length;
         char* packet = ARP::encode_arp(my_IP, my_mac, target_ip, target_mac, ARP_REQUEST, &packet_length);
+
+        Debug::printf("Sending ARP request to %x\n", target_ip);
+        for(uint32_t i = 0; i < packet_length; i++) {
+            Debug::printf("%x ", packet[i]);
+        }
+        Debug::printf("\n");
+
         send(packet, packet_length);
     }
 
