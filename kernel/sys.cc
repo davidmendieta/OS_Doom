@@ -12,6 +12,7 @@
 #include "libk.h"
 #include "elf.h"
 #include "promise.h"
+#include "stat.h" // is it ok to include stat.h from mlibc repo?
 
 bool address_valid(uint32_t addr, uint32_t size) {
     return addr >= 0x80000000 && addr + size <= 0xFFFFFFFF;
@@ -271,6 +272,49 @@ void naive_unmap(void* p) {
     VMM::naive_munmap(p, true);
 }
 
+// add system call stat()
+int stat(const char* path, struct stat *buf) {
+    StrongPtr<Node> inode = fs->find(fs->root, path);
+    if (inode == nullptr) return -1;
+    buf->st_mode = inode->data.mode;
+    buf->st_ino = inode->number;
+    buf->st_nlink = inode->data.n_links;
+    buf->st_uid = inode->data.uid;
+    buf->st_gid = inode->data.gid;
+    buf->st_size = inode->data.size_low;
+    buf->st_blksize = inode->block_size;
+    buf->st_blocks = (inode->data.n_sectors * 512) / buf->st_blksize;
+
+    // not sure if it's ok to cast uint32_t to timespec type
+    buf->st_atim = (timespec) inode->data.atime;
+    buf->st_mtim = (timespec) inode->data.mtime;
+    buf->st_ctim = (timespec) inode->data.ctime;
+    return 0;
+}
+
+// add system call f_stat()
+int fstat(int fd, struct stat *buf) {
+    auto me =impl::threads::state.current();
+    StrongPtr<OpenFile> open_file = me->pcb->fdt[fd];
+    if (open_file == nullptr) return -1;
+    StrongPtr<Node> inode = open_file->node;
+
+    buf->st_mode = inode->data.mode;
+    buf->st_ino = inode->number;
+    buf->st_nlink = inode->data.n_links;
+    buf->st_uid = inode->data.uid;
+    buf->st_gid = inode->data.gid;
+    buf->st_size = inode->data.size_low;
+    buf->st_blksize = inode->block_size;
+    buf->st_blocks = (inode->data.n_sectors * 512) / buf->st_blksize;
+
+    // not sure if it's ok to cast uint32_t to timespec type
+    buf->st_atim = (timespec) inode->data.atime;
+    buf->st_mtim = (timespec) inode->data.mtime;
+    buf->st_ctim = (timespec) inode->data.ctime;
+    return 0;
+}
+
 extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     //Debug::printf("*** syscall #%d\n",eax);
     uint32_t *user_sp = (uint32_t*)frame[3];
@@ -319,6 +363,10 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     case 418:
         Debug::printf("*** I'm a teapot\n");
         return -1;
+    // case 200:
+    //     return stat((const char*)user_sp[1], (struct stat*) user_sp[2]);
+    // case 201:
+    //     return fstat(user_sp[1], (struct stat*) user_sp[2]);
     default:
         Debug::printf("*** unknown system call %d\n",eax);
         return -1;

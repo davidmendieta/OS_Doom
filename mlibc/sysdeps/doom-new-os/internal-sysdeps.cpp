@@ -8,6 +8,9 @@
 #include <kernel/heap.h>
 #include <kernel/vmm.h>
 #include <kernel/debug.h>
+#include <kernel/threads.h>
+#include <errno.h>
+#include <kernel/sys.h>
 
 namespace mlibc {
 
@@ -23,24 +26,29 @@ namespace mlibc {
     // 2) TLS (if you don’t support threads yet, just return 0)
     int sys_tcb_set(void *pointer) {
         // e.g. current_thread->tls_base = pointer;
+        (void)pointer;     // silence unused‑parameter warning
+        // mlibc will think TLS is installed, but any __thread variables will not work.
+        // just because we don't have Thread-Local Storage (TLS) support yet.
+
         return 0;
     }
     
     // 3) Futex stubs (if threads enabled, replace with real futex calls)
-    // [[gnu::weak]] int sys_futex_tid()   { return -ENOSYS; }
-    // int sys_futex_wait(int *uaddr, int val, const struct timespec *tmo) {
-    //     (void)uaddr; (void)val; (void)tmo;
-    //     return -ENOSYS;
-    // }
-    // int sys_futex_wake(int *uaddr) {
-    //     (void)uaddr;
-    //     return -ENOSYS;
-    // }
+    // for now just return error number since right now we don't have futex implementation
+    [[gnu::weak]] int sys_futex_tid()   { return -ENOSYS; }
+    int sys_futex_wait(int *uaddr, int val, const struct timespec *tmo) {
+        (void)uaddr; (void)val; (void)tmo;
+        return -ENOSYS;
+    }
+    int sys_futex_wake(int *uaddr) {
+        (void)uaddr;
+        return -ENOSYS;
+    }
     
     // 4) Anonymous memory (malloc / sbrk)
     int sys_anon_allocate(size_t size, void **ptr) {
         void *p = malloc(size);
-        if (!p) return -1;
+        if (!p) return -ENOMEM;
         *ptr = p;
         return 0;
     }
@@ -74,26 +82,33 @@ namespace mlibc {
         return close(fd);
     }
     
-    // Come back and fix it, currently not compatiable with naive_mmap
     // figure out what sys_stat do
-    // // 6) stat (weak)
-    // [[gnu::weak]] int sys_stat(fsfd_target t, int fd,
-    //                            const char *path, int flags,
-    //                            struct stat *st) {
-    //     if (t == fsfd_target::path)
-    //         return sys_stat(path, st);
-    //     return -1;
-    // }
+    // 6) stat (weak)
+    [[gnu::weak]] int sys_stat(fsfd_target t, int fd,
+                               const char *path, int flags,
+                               struct stat *st) {
+        (void)flags; // we don't handle flags
+        if (t == fsfd_target::path) {
+            // forward to your kernel’s stat syscall
+            int ret = stat(path, st);
+            return ret < 0 ? ret : 0;
+        } else {
+            int ret = fstat(fd, st);
+            return ret < 0 ? ret : 0;
+        }
+    }
     
-    // // 7) Memory map (loader, SDL, etc.)
-    // int sys_vm_map(void *hint, size_t sz, int prot, int flags,
-    //                int fd, off_t off, void **res) {
-    //     //void *m = VMM::map(hint, sz, prot, flags, fd, off);
-    //     void *m = VMM::naive_mmap(sz, );
-    //     if (!m) return -1;
-    //     *res = m;
-    //     return 0;
-    // }
+    // 7) Memory map (loader, SDL, etc.)
+    int sys_vm_map(void *hint, size_t sz, int prot, int flags,
+                   int fd, off_t off, void **res) {
+        //void *m = VMM::map(hint, sz, prot, flags, fd, off);
+        auto me = impl::threads::state.current();
+        StrongPtr<OpenFile> file = me->pcb->fdt[fd];
+        void *m = VMM::naive_mmap(sz, false, file->node, 0, false);
+        if (!m) return -1;
+        *res = m;
+        return 0;
+    }
 
     int sys_vm_unmap(void *ptr, size_t sz) {
         VMM::naive_munmap(ptr, true); // put true for user (?)

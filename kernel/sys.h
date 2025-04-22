@@ -1,6 +1,8 @@
 #ifndef _SYS_H_
 #define _SYS_H_
 
+struct stat; // forward declare stat
+
 extern void exit(uint32_t rc); //  0
 extern uint32_t write(uint32_t fd, void* buf, int32_t nbyte); // 1
 extern uint32_t fork(); //  2
@@ -22,6 +24,8 @@ void* naive_mmap(uint32_t size, bool is_shared, uint32_t file, uint32_t offset);
 void naive_unmap(void* p); // 102
 void iamateapot(); // 418
 
+int stat(const char* path, struct stat *buf); // 200
+int fstat(int fd, struct stat *buf); // 201
 
 class SYS {
 public:
