@@ -26,7 +26,7 @@ alignas(16) uint8_t tx_buf[4][60];
 RTL8139::RTL8139(){
     // First get the network device using PCI
     device = findDeviceVD(RTL8139_VENDOR_ID, RTL8139_DEVICE_ID);
-    uint32_t ret = pciConfigRead(device->bus, device->slot, device->function, PCI_BAR0);
+    uint32_t ret = pciConfigRead32(device->bus, device->slot, device->function, PCI_BAR0);
 
 
     bar_type = ret & 0x1;
@@ -39,10 +39,10 @@ RTL8139::RTL8139(){
     tx_cur = 0;
 
     // Enable PCI Bus Mastering
-    uint32_t pci_command_reg = pciConfigRead(device->bus, device->slot, device->function, PCI_COMMAND); 
+    uint32_t pci_command_reg = pciConfigRead32(device->bus, device->slot, device->function, PCI_COMMAND); 
     if(!(pci_command_reg & (1 << 2))) {
         pci_command_reg |= (1 << 2);
-        pciConfigWrite(device->bus, device->slot, device->function, PCI_COMMAND, pci_command_reg);
+        pciConfigWrite32(device->bus, device->slot, device->function, PCI_COMMAND, pci_command_reg);
     }
 
     // Send 0x00 to the CONFIG_1 register (0x52) to set the LWAKE + LWPTN to active high. this should essentially *power on* the device.
@@ -77,7 +77,7 @@ RTL8139::RTL8139(){
     outb(io_base + 0x37, 0x0C); // We are allowing transfering and receiving on the NIC
     
     
-    uint16_t irq_num = pciConfigRead(device->bus, device->slot, device->function, PCI_INTERRUPT_LINE) & 0xFF; 
+    uint16_t irq_num = pciConfigRead32(device->bus, device->slot, device->function, PCI_INTERRUPT_LINE) & 0xFF; 
 
 
 
