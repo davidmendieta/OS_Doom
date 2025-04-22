@@ -56,4 +56,7 @@ class VME {
     void remove_entry(uint32_t va, bool user);
 
     static StrongPtr<VME> duplicate(StrongPtr<VME> vme);
+
+    uint32_t get_phys_addr();
+
 };

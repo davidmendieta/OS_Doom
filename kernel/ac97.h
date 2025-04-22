@@ -36,7 +36,7 @@ struct BufferDescriptor {
 // };
 
 // Global Variables
-extern BufferDescriptor bdl[BDL_ENTRY_COUNT];
+extern BufferDescriptor* bdl;
 // extern BufferDescriptor* bdl;
 extern uint32_t nam;  // Native Audio Mixer BAR (BAR0)
 extern uint32_t nabm; // Native Audio Bus Master BAR (BAR1)

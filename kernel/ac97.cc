@@ -52,45 +52,13 @@ uint32_t nabm;  // Native Audio Bus Master BAR (BAR1)
 uint32_t sample_index = 0;
 
 // Array of BufferDescriptors, one for each buffer
-BufferDescriptor bdl[BDL_ENTRY_COUNT];
+BufferDescriptor* bdl;
 
 // Allocate memory for buffers (audio data)
 uint32_t* buffers[BDL_ENTRY_COUNT];  // Array of pointers to audio buffers
 
-uint32_t get_phys_addr(uint32_t vaddr) {
-    uint32_t pd_index = (vaddr >> 22) & 0x3FF; // Extract page directory index
-    uint32_t pt_index = (vaddr >> 12) & 0x3FF; // Extract page table index
 
-    // Get the current page directory
-    uint32_t* pd = (uint32_t*)VMM::get_pd();
-    if (!pd) {
-        return 0; // Page directory not available
-    }
 
-    // Check if the page directory entry is present
-    uint32_t pd_entry = pd[pd_index];
-    if (!(pd_entry & 0x1)) { // Check the present bit
-        return 0; // Page directory entry not present
-    }
-
-    // Get the page table base address from the page directory entry
-    uint32_t* pt = (uint32_t*)((pd_entry & ~0xFFF)); // Mask out flags
-    if (!pt) {
-        return 0; // Page table not available
-    }
-
-    // Check if the page table entry is present
-    uint32_t pt_entry = pt[pt_index];
-    if (!(pt_entry & 0x1)) { // Check the present bit
-        return 0; // Page table entry not present
-    }
-
-    // Get the page frame address from the page table entry
-    uint32_t page_frame = pt_entry & ~0xFFF; // Mask out flags
-
-    // Calculate the physical address
-    return page_frame | (vaddr & 0xFFF); // Add the page offset
-}
 
 uint32_t init_ac97() {
     // Initialize the AC'97 controller
@@ -103,8 +71,16 @@ uint32_t init_ac97() {
     uint8_t slot = ac97->slot;
     uint8_t func = ac97->function;
 
-    uint16_t command = pciConfigRead16(bus, slot, func, 0x04);
-    pciConfigWrite16(bus, slot, func, 0x04, command | 0x05);
+    // uint16_t command = pciConfigRead16(bus, slot, func, 0x04);
+    // pciConfigWrite16(bus, slot, func, 0x04, command | 0x05);
+
+    uint32_t regValue = pciConfigRead32(bus, slot, func, 0x04);
+    uint16_t command = (uint16_t)(regValue & 0xFFFF);
+
+    command |= 0x05;  // Modify the command register (e.g., add 0x05)
+    uint32_t newRegValue = (regValue & 0xFFFF0000) | (command & 0xFFFF);  // Keep the upper 16 bits the same
+    pciConfigWrite32(bus, slot, func, 0x04, newRegValue);
+
     // get bars
     nam = pciConfigRead32(bus, slot, func, 0x10) & ~0xF;
     nabm = pciConfigRead32(bus, slot, func, 0x14) & ~0xF;
@@ -141,8 +117,8 @@ uint32_t init_ac97() {
         bdl[i].buffer_len = BUFFER_SIZE;
         bdl[i].control = (i == (BDL_ENTRY_COUNT - 1)) ? (1 << 15) : 0;  // Interrupt on completion for last buffer
         Debug::printf("We set our buffer[%d] addr: 0x%x\n", i, bdl[i].buffer_addr);
-        Debug::printf("We mmapped our buffer[%d]: 0x%x\n", i, bdl[i].buffer_len);
-        Debug::printf("We mmapped our buffer[%d]: 0x%x\n", i, bdl[i].control);
+        Debug::printf("We have our buffer[%d] length: 0x%x\n", i, bdl[i].buffer_len);
+        Debug::printf("We have our buffer[%d] control: 0x%x\n", i, bdl[i].control);
     }
 
     generate_test_tone();
@@ -165,8 +141,7 @@ void poll_ac97_loop() {
     Debug::printf("Starting audio playback loop\n");
     
     uint8_t last_civ = 0;
-    uint8_t lvi = BDL_ENTRY_COUNT - 1;
-
+    
     while (true) {
         // Read current index value
         uint8_t civ = inb(nabm + AC97_PCM_OUT_CIV);
@@ -207,7 +182,7 @@ void poll_ac97_loop() {
         }
         
         // Small delay to avoid eating 100% CPU
-        for (volatile int i = 0; i < 10000; i++);
+        for (int i = 0; i < 10000; i++);
     }
 }
 
@@ -294,7 +269,7 @@ void reset_buffers() {
     uint8_t next_buffer = (civ + 1) % BDL_ENTRY_COUNT;  // Next buffer to reset
 
     // Get the address of the next buffer from the BufferDescriptor
-    uint16_t* buf = (uint16_t*)bdl[next_buffer];
+    uint16_t* buf = (uint16_t*)buffers[next_buffer];
 
     // Fill the next buffer with silence
     for (int i = 0; i < (BUFFER_SIZE / 2); i++) {
@@ -310,9 +285,9 @@ void shutdown_ac97() {
             break;
         }
     }
-    VMM::munmap(bdl);
+    VMM::naive_munmap(bdl, true);
     for (int i = 0; i < BDL_ENTRY_COUNT; i++) {
-        VMM::munmap(buffers[i]);
+        VMM::naive_munmap(buffers[i], true);
     }
     // Free BDL
 }

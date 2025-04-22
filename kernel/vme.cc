@@ -205,3 +205,26 @@ StrongPtr<VMEEntry> VMEEntry::duplicate(StrongPtr<VMEEntry> vme_entry) {
     new_vme_entry->next = VMEEntry::duplicate(vme_entry->next);
     return new_vme_entry;
 }
+
+
+uint32_t get_phys_addr(uint32_t va) {
+    // Retrieve the current thread's VME (Virtual Memory Entry)
+    auto me = impl::threads::state.current();
+
+    uint32_t* pd = (uint32_t*)me->pd;
+
+    uint32_t pdi = va >> 22;
+    uint32_t pti = (va >> 12) & 0x3FF;
+
+    uint32_t pde = pd[pdi];
+
+    if (!(pde&1)) return 0;
+
+    uint32_t* pt = (uint32_t*)(pde & 0xFFFFF000);
+    uint32_t pte = pt[pti];
+    if (!(pte&1)) return 0;
+
+    uint32_t page_frame = pte & 0xFFFFF000;
+    uint32_t offset = va & 0xFFF;
+    return page_frame | offset;
+}
