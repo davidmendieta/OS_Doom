@@ -1,8 +1,6 @@
 #include "idt.h"
 #include "ps2.h"
 #include "smp.h"
-#include "keyboard.h"
-
 namespace PS2 {
 volatile bool debug_on = true;
 
@@ -222,10 +220,8 @@ extern "C" void keyboard_handler() {
     *((volatile uint32_t*)0xFEE000B0) = 0;
 
     uint8_t scancode = inb(0x60);
-    // Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
+    Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
     Debug::printf("Scancode: 0x%x\n", scancode);
-
-    keyboardHandler(scancode);
     mouse_cycle = 0;
 
 }
@@ -233,28 +229,30 @@ extern "C" void keyboard_handler() {
 
 extern "C" void mouse_handler() {
     Debug::printf("*** Mouse interrupt!\n");
+    // Debug::printf("mouse cycle: %d\n", mouse_cycle);
     SMP::eoi();
     // reset Lapic_eoi
     *((volatile uint32_t*)0xFEE000B0) = 0;
 
     uint8_t mouse_byte = inb(0x60);
     mouse_bytes[mouse_cycle++] = mouse_byte;
+    // Debug::printf("mouse cycle: %d\n", mouse_cycle);
     if (mouse_cycle == 3)  {
         Debug::printf("full mouse input detected\n");
 
         mouse_cycle = 0;
-        if ((mouse_bytes[0] & 0x01) != 0) {
+        if ((mouse_bytes[2] & 0x01) != 0) {
             Debug::printf("left button pressed\n");
         }
-        if ((mouse_bytes[0] & 0x04) != 0) {
+        if ((mouse_bytes[2] & 0x04) != 0) {
             Debug::printf("middle button pressed\n");
         }
-        if ((mouse_bytes[0] & 0x02) != 0) {
+        if ((mouse_bytes[2] & 0x02) != 0) {
             Debug::printf("right button pressed\n");
         }
         
         uint8_t rawX = mouse_bytes[1];
-        uint8_t rawY = mouse_bytes[2];
+        uint8_t rawY = mouse_bytes[0];
 
         // Detect the special absolute-move case (0,0)
         bool origin = (rawX == 0 && rawY == 0);
@@ -263,8 +261,8 @@ extern "C" void mouse_handler() {
         uint16_t y = origin ? 256 : (uint8_t)(256 - rawY);
 
         // Print raw values directly (0-255), so you see 156 for -100
-        Debug::printf("left: %d, middle: %d, right: %d, x: %u, y (raw): %u, y (disp): %u\n", (mouse_bytes[0] & 0x01), 
-            (mouse_bytes[0] & 0x04), (mouse_bytes[0] & 0x02), rawX, rawY, y);
+        Debug::printf("left: %d, middle: %d, right: %d, x: %u, y (raw): %u, y (disp): %u\n", (mouse_bytes[2] & 0x01), 
+            (mouse_bytes[2] & 0x04), (mouse_bytes[2] & 0x02), rawX, rawY, y);
 
     }
 
