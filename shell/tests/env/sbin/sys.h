@@ -80,4 +80,6 @@ extern int execl(const char* path, const char* arg0, ...);
 
 extern int chdir(const char* path);
 
+extern int shell_exec(const char* path, char** argv, uint32_t argc);
+
 #endif
