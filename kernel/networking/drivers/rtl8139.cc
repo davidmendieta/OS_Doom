@@ -9,6 +9,8 @@
 #include "../../pci.h"
 #include "../../smp.h"
 
+#include "../Arp/arp.h"
+
 PciDevice* device;
 
 uint32_t current_packet_ptr;
@@ -116,10 +118,17 @@ RTL8139::RTL8139(){
     Debug::printf("PCI interrupt pin = %u, line = %u\n", int_pin, irq_line);
 }
 
-void RTL8139::receive_packet() {
+void* RTL8139::receive_packet() {
     uint16_t * t = (uint16_t*)(rx_buffer + current_packet_ptr);
     // Skip packet header, get packet length
     uint16_t packet_length = *(t + 1);
+
+
+    // print packet
+    // Debug::printf("Packet length: %d\n", packet_length);
+    // for (int i = 0; i < packet_length; i++) {
+    //     Debug::printf("%02x ", *(t + 2 + i));
+    // }
 
     // Skip, packet header and packet length, now t points to the packet data
     t = t + 2;
@@ -139,7 +148,12 @@ void RTL8139::receive_packet() {
         current_packet_ptr -= RX_BUF_SIZE;
 
     outw(io_base + CAPR, current_packet_ptr - 0x10);
+
+    return packet;
 }
+
+
+
 
 void RTL8139::read_mac_addr() {
     uint32_t mac_part1 = inl(io_base + 0x00);
@@ -189,7 +203,24 @@ extern "C" void RTL8139Handler() {
     }
     if (status & ROK) {
         Debug::printf("Received packet\n");
-        rtl8139->receive_packet();
+        
+        void* packet = rtl8139->receive_packet();
+
+        uint16_t Ethertype = ((uint16_t*)packet)[6]; // EtherType
+        
+        Debug::printf("\nEthertype is : %x\n", Ethertype);
+
+        if (Ethertype == 0x0800) { // IPv4
+            Debug::printf("IPv4 packet received\n");
+        if (((uint16_t*)packet)[23] == 0x11) { // UDP
+            Debug::printf("UDP packet received\n");
+        }
+        } else if (Ethertype == 0x0608) { // ARP revesed for little endian
+            Debug::printf("ARP packet received\n");
+            receive_arp((uint8_t*)packet, 42);
+        } else {
+            Debug::printf("Unknown Ethertype: %04x\n", Ethertype);
+        }
     }
 
 }

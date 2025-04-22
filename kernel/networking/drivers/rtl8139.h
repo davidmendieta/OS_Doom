@@ -74,7 +74,7 @@ struct RTL8139 {
     int tx_cur;
     RTL8139();
     void send_packet(void* data, uint32_t len);
-    void receive_packet();
+    void* receive_packet();
     void read_mac_addr();
     void get_mac_addr(uint8_t* src_mac_addr);
     uint32_t my_ip = 0xC0A80102;  // 192.168.1.2 in hex 
