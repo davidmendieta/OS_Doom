@@ -29,12 +29,12 @@ char* encode_arp(uint32_t sender_ip, char* sender_mac, uint32_t target_ip, char*
     arp_head->opcode = opcode; // opcode: request or reply
     
     memcpy(arp_head->sender_mac, sender_mac, 6);
-    arp_head->sender_ip = *(uint32_t*)sender_ip; // sender IP address
+    arp_head->sender_ip = sender_ip; // sender IP address
 
     memcpy(arp_head->target_mac, target_mac, 6);
     arp_head->target_ip = target_ip;
 
-    *packet_length = sizeof(arp_packet);
+    *packet_length = sizeof(EthernetHeader) + sizeof(ARPHeader);
     return arp_packet;
 }
 
