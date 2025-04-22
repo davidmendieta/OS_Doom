@@ -40,19 +40,19 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
 }
 
 void kernelMain(void) {
-	Debug::printf("im here in ernel main\n");
+	Debug::printf("im here in kernel main\n");
 
     auto d = StrongPtr<Ide>::make(1,0);
     fs = StrongPtr<Ext2>::make(d);
     auto init = fs->find(fs->root, "/sbin/init");
-	Debug::printf("im here in ernel main 2\n");
+	Debug::printf("im here in kernel main 2\n");
     // Debug::printf("loading init\n");
     uint32_t e = ELF::load(init);
     Debug::printf("entry %x\n",e);
     const uint32_t stack_size = 134217728;
     void* stack_start = VMM::naive_mmap(stack_size, false, {}, 0, false);
     uint32_t userEsp = ((uint32_t)stack_start + stack_size - 16);
-    Debug::printf("im here in ernel main 3\n");
+    Debug::printf("im here in kernel main 3\n");
     const char* argv[] = { "init", nullptr };
     userEsp = (uint32_t)load_args((uint32_t*)userEsp, argv);
 
@@ -64,7 +64,7 @@ void kernelMain(void) {
     } else {
         Debug::printf("*** audio init failed\n");
     }
-	poll_ac97_loop();
+	poll_ac97_loop();   
     // Wait a bit to give QEMU time to emit sound
     for (int i = 0; i < 100; i++) {
 		Debug::printf("i %d\n", i);
