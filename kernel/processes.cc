@@ -41,5 +41,12 @@ StrongPtr<PCB> PCB::duplicate(StrongPtr<PCB> parent_pcb) {
         child_pcb->sdt[i] = parent_pcb->sdt[i];
     }
 
+
+        
+    //NETWORKING!!!!
+    for(uint32_t i = 0; i < PCB_ARR_SIZE; i++) {
+        child_pcb->sockdt[i] = parent_pcb->sockdt[i];
+    }
+
     return child_pcb;
 }

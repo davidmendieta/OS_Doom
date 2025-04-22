@@ -6,14 +6,11 @@
 #include "../../idt.h"
 #include "../networking.h"
 #include "../../physmem.h"
-#include "../../pci.h"
 #include "../../smp.h"
+#include "../protocols/parser.h"
+#include "../socket/porttable.h"
 
-#include "../Arp/arp.h"
-
-PciDevice* device;
-
-uint32_t current_packet_ptr;
+#include "../arp/arp.h"
 
 // Four TXAD register, you must use a different one to send packet each time(for example, use the first one, second... fourth and back to the first)
 uint8_t TSAD_array[4] = {0x20, 0x24, 0x28, 0x2C};
@@ -118,10 +115,10 @@ RTL8139::RTL8139(){
     Debug::printf("PCI interrupt pin = %u, line = %u\n", int_pin, irq_line);
 }
 
-void* RTL8139::receive_packet() {
+void* RTL8139::get_packet(uint32_t* packet_length) {
     uint16_t * t = (uint16_t*)(rx_buffer + current_packet_ptr);
     // Skip packet header, get packet length
-    uint16_t packet_length = *(t + 1);
+    *packet_length = (uint32_t)*(t + 1);
 
 
     // print packet
@@ -137,12 +134,10 @@ void* RTL8139::receive_packet() {
 
     // Now, ethernet layer starts to handle the packet(be sure to make a copy of the packet, insteading of using the buffer)
     // and probabbly this should be done in a separate thread...
-    void * packet = malloc(packet_length);
-    memcpy(packet, t, packet_length);
+    void * packet = malloc(*packet_length);
+    memcpy(packet, t, *packet_length);
 
-    // ethernet_handle_packet(packet, packet_length);
-
-    current_packet_ptr = (current_packet_ptr + packet_length + 4 + 3) & RX_READ_POINTER_MASK;
+    current_packet_ptr = (current_packet_ptr + *packet_length + 4 + 3) & RX_READ_POINTER_MASK;
 
     if(current_packet_ptr > RX_BUF_SIZE)
         current_packet_ptr -= RX_BUF_SIZE;
@@ -172,7 +167,7 @@ void RTL8139::get_mac_addr(uint8_t* src_mac_addr) {
     memcpy(src_mac_addr, mac_addr, 6);
 }
 
-void RTL8139::send_packet(void * data, uint32_t len) {    
+void RTL8139::send_packet(const void* data, uint32_t len) {    
     // First, copy the data to a physically contiguous chunk of memory
     void* raw_buf = malloc(len + 4096); // overallocate
     uintptr_t raw_addr = (uintptr_t)raw_buf;
@@ -186,41 +181,31 @@ void RTL8139::send_packet(void * data, uint32_t len) {
     outl(io_base + TSD_array[tx_cur++], len);
     if(tx_cur > 3)
         tx_cur = 0;
+
+    free(raw_buf);
 }
 
-// TODO Properly clear interrupts
+
+uint32_t RTL8139::resolve_ip() {
+    return this->my_ip;
+}
+
 extern "C" void RTL8139Handler() {
     Debug::printf("RTL8139 interrupt was fired !!!! \n");
-    uint16_t status = inw(rtl8139->io_base + 0x3e);
+    uint16_t status = inw(network_interface->get_io_base() + 0x3e);
 
-    SMP::eoi();
-    outw(rtl8139->io_base + 0x3E, status); // clear interrupt
-
+    
     Debug::printf("STATUS: %d", status);
-
+    
     if(status & TOK) {
         Debug::printf("Packet sent\n");
     }
     if (status & ROK) {
         Debug::printf("Received packet\n");
-        
-        void* packet = rtl8139->receive_packet();
-
-        uint16_t Ethertype = ((uint16_t*)packet)[6]; // EtherType
-        
-        Debug::printf("\nEthertype is : %x\n", Ethertype);
-
-        if (Ethertype == 0x0800) { // IPv4
-            Debug::printf("IPv4 packet received\n");
-        if (((uint16_t*)packet)[23] == 0x11) { // UDP
-            Debug::printf("UDP packet received\n");
-        }
-        } else if (Ethertype == 0x0608) { // ARP revesed for little endian
-            Debug::printf("ARP packet received\n");
-            receive_arp((uint8_t*)packet, 42);
-        } else {
-            Debug::printf("Unknown Ethertype: %04x\n", Ethertype);
-        }
+        network_interface->receive();
     }
+    
+    SMP::eoi();
+    outw(network_interface->get_io_base() + 0x3E, status); // clear interrupt
 
 }

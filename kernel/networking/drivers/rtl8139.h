@@ -3,6 +3,7 @@
 #pragma once
 
 #include "../../debug.h"
+#include "../../pci.h"
 
 // Define some constants
 #define RTL8139_VENDOR_ID 0x10EC
@@ -64,7 +65,11 @@ struct tx_desc_t {
     uint32_t packet_size;
 };
 
-struct RTL8139 {
+class RTL8139 {
+StrongPtr<PciDevice> device;
+uint32_t current_packet_ptr;
+
+public:
     uint8_t bar_type;
     uint16_t io_base;
     uint32_t mem_base;
@@ -73,9 +78,14 @@ struct RTL8139 {
     char * rx_buffer;
     int tx_cur;
     RTL8139();
-    void send_packet(void* data, uint32_t len);
-    void* receive_packet();
+    //SOCKET STUFF
+    uint32_t resolve_ip(); 
+    //END SOCKET STUFF
+    void send_packet(const void* data, uint32_t len);
+    void* get_packet(uint32_t* packet_length);
+
     void read_mac_addr();
+
     void get_mac_addr(uint8_t* src_mac_addr);
     uint32_t my_ip = 0xC0A80102;  // 192.168.1.2 in hex 
 };

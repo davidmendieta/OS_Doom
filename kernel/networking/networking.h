@@ -1,8 +1,8 @@
 #pragma once
 
-#include "drivers/rtl8139.h"
+#include "interface/network_interface.h"
 #include "../shared.h"
 
-extern StrongPtr<RTL8139> rtl8139;
+extern StrongPtr<NetworkInterface> network_interface;
 
 void networkingMain(void);

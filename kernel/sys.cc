@@ -12,6 +12,7 @@
 #include "libk.h"
 #include "elf.h"
 #include "promise.h"
+#include "networking/socket/socket_sys.h"
 
 bool address_valid(uint32_t addr, uint32_t size) {
     return addr >= 0x80000000 && addr + size <= 0xFFFFFFFF;
@@ -84,6 +85,9 @@ uint32_t close(uint32_t fd) {
         fd -= PCB_ARR_SIZE * 2;
         me->pcb->children[fd] = nullptr;
         me->pcb->children_promises[fd] = nullptr;
+    } else if (fd < PCB_ARR_SIZE * 4) {
+        fd -= PCB_ARR_SIZE * 3;
+        me->pcb->sockdt[fd] = nullptr;
     } else { // should never happen
         return -1;
     }
@@ -277,6 +281,9 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     if((uint32_t)user_sp < 0x80000000 || (uint32_t)user_sp >= 0xF0000000) {
         Debug::printf("USER ESP IS INVALID\n");
         exit(-1);
+    }
+    if (eax >= 200 && eax< 250) {
+        return sockets::socket_sys_handler(eax, frame);
     }
     switch (eax) {
     case 0:

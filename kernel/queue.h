@@ -60,6 +60,16 @@ public:
         return it;
     }
 
+
+    T* peek() {
+        LockGuard g{lock};
+        if (first == nullptr) {
+            return nullptr;
+        }
+        auto it = first;
+        return it;
+    }
+
     T* remove_all() {
         LockGuard g{lock};
         auto it = first;
