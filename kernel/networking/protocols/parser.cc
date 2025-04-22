@@ -86,39 +86,6 @@ uint16_t checksum(const void* data, size_t len) {
     return fold_checksum(acc);
 }
 
-//void* send(const void* payload, size_t payload_len, size_t* out_packet_len) {
-//    size_t udp_len = sizeof(UDPHeader) + payload_len;
-//    size_t ip_len  = sizeof(IPv4Header) + udp_len;
-
-//    auto* buf = (uint8_t*) malloc(ip_len);
-//    auto* ip = (IPv4Header*)buf;
-
-//    ip->version_ihl     = (4 << 4) | (sizeof(IPv4Header)/4);
-//    ip->type_of_service = 0;
-//    ip->total_length    = (uint16_t)ip_len;
-//    ip->identification  = 0;
-//    ip->flags_fragment  = 0x4000;
-//    ip->ttl             = 64;
-//    ip->protocol        = 17;
-//    ip->header_checksum = 0;
-//    ip->src_ip          = 0;
-//    ip->dest_ip         = 0;
-
-//    UDPHeader* udp = (UDPHeader*)(buf + sizeof(IPv4Header));
-//    udp->src_port   = 0;
-//    udp->dest_port  = 0;
-//    udp->length     = (uint16_t)udp_len;
-//    udp->checksum   = 0;
-
-//    memcpy(buf + sizeof(IPv4Header) + sizeof(UDPHeader), payload, payload_len);
-
-//    *out_packet_len = ip_len;
-//    return buf;
-//}
-
-//
-// send output (void* buf) is IPV4 + UDP (no ethernet header)
-//
 void* send(const void* payload, size_t payload_len, size_t* out_packet_len, uint16_t src_port,
     uint16_t dest_port) {
     size_t udp_len = sizeof(UDPHeader) + payload_len;
