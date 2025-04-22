@@ -3,10 +3,6 @@
 
 namespace sockets {
 
-
-
-
-
 struct PortEntry {
     uint16_t port = 0;
     StrongPtr<UDPSocket> socket{};

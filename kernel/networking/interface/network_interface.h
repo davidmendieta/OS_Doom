@@ -1,55 +1,61 @@
-#include "../drivers/rtl8139.h"
+#pragma once
 
-enum EtherType { ARP = 0x0806, IPV4 = 0x0800 };
+#include "../drivers/rtl8139.h"
+#include "../protocols/parser.h"
+#include "../arp/arp.h"
+#include "../../heap.h"
+
+enum EtherType { ARP_VALUE = 0x0806, IPV4_VALUE = 0x0800, };
 
 class NetworkInterface {
     uint32_t my_IP;
     RTL8139 rtl8139{};
 
-   public:
+    void handle_arp(ARPHeader* packet, char* sender_mac);
+    void handle_ip_udp(IPv4Header* packet, uint32_t packet_length);
+    
+    public:
+    void send(const char* payload, uint32_t length);
+
     uint32_t get_io_base() { return rtl8139.io_base; }
 
     uint32_t get_ip() { return my_IP; }
 
-    void send(const char* payload, uint32_t length) {
-        rtl8139.send_packet(payload, length);
+    void send_ip_udp(const void* payload, size_t payload_length, uint32_t src_ip, uint16_t src_port, uint32_t dest_ip, uint16_t dest_port, size_t* out_length) {
+        char* src_mac = (char*)malloc(6);
+        rtl8139.get_mac_addr(src_mac);
+        char* dest_mac = nullptr; //! GET FROM HASHMAP / ARP REQUEST IF NOT
+        uint32_t packet_length;
+        char* packet = Parser::encode_ip_udp(payload, payload_length, src_ip, src_mac, src_port, dest_ip, dest_mac, dest_port, &packet_length);
+        send(packet, packet_length);
+    }
+
+    void send_arp_request(uint32_t target_ip) {
+        char* my_mac = (char*)malloc(6);;
+        rtl8139.get_mac_addr(my_mac);
+        char target_mac[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        uint32_t packet_length;
+        char* packet = ARP::encode_arp(my_IP, my_mac, target_ip, target_mac, ARP_REQUEST, &packet_length);
+        send(packet, packet_length);
     }
 
     void receive() {
         uint32_t packet_length;
-        EthernetHeader* packet =
-            (EthernetHeader*)rtl8139.get_packet(&packet_length);
+        EthernetHeader* packet = (EthernetHeader*)rtl8139.get_packet(&packet_length);
 
         uint32_t ethertype = packet->ethertype;
+        char* sender_mac = packet->src_mac;
 
         switch (ethertype) {
-            case ARP:
+            case ARP_VALUE:
+                handle_arp((ARPHeader*)((char*)packet + sizeof(EthernetHeader)), sender_mac);
                 break;
-            case IPV4:
-                handle_ip_udp(
-                    (IPv4Header*)((void*)packet + sizeof(EthernetHeader)),
-                    packet_length);
+            case IPV4_VALUE:
+                handle_ip_udp((IPv4Header*)((char*)packet + sizeof(EthernetHeader)), packet_length - sizeof(EthernetHeader));
                 break;
             default:
-                Debug::printf("ETHERTYPE NOT RECOGNIZED");
+                Debug::printf("ETHERTYPE NOT RECOGNIZED\n");
                 return;
-        }
-    }
-
-    void handle_ip_udp(IPv4Header* packet, uint32_t packet_length) {
-        size_t payload_length = 0;
-        uint32_t src_ip = 0;
-        uint16_t src_port = 0;
-        uint16_t dst_port = 0;
-        void* received_packet =
-            Parser::decode_ip_udp(packet, packet_length, &payload_length,
-                                  &src_ip, &src_port, &dst_port);
-        if (!received_packet) {
-            StrongPtr<sockets::UDPSocket> socket =
-                sockets::port_table.get(dst_port);
-            if (socket != nullptr) {
-                socket->add(received_packet, payload_length, src_ip, src_port);
-            }
         }
     }
 };

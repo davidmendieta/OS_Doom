@@ -3,14 +3,11 @@
 #include <stdint.h>
 
 #include "../../heap.h"
-#include "../drivers/rtl8139.h"
 #include "../networking.h"
 #include "../protocols/parser.h"
 #include "porttable.h"
 
 namespace sockets {
-
-
 
 UDPSocket::UDPSocket() {}
 UDPSocket::~UDPSocket() {
@@ -53,17 +50,16 @@ ssize_t UDPSocket::sendto(const void* buf, size_t len, const sockaddr_in* dst) {
     memcpy(send, buf, len);
     uint32_t send_ip = this->sockaddr_info.sin_addr.s_addr;
     if (send_ip == INADDR_ANY) {
-        send_ip = rtl8139->resolve_ip();
+        send_ip = network_interface->get_ip();
     }
     if (dst->sin_addr.s_addr == INADDR_ANY || dst->sin_port == 0) {
         return -1;
     }
-    size_t outlength = 0;
-    void* packed = Parser::send(send, len, send_ip, this->sockaddr_info.sin_port,
-                                dst->sin_addr.s_addr, dst->sin_port, &outlength);
+    size_t out_length = 0;
+    network_interface->send_ip_udp(send, len, send_ip, this->sockaddr_info.sin_port,
+                                dst->sin_addr.s_addr, dst->sin_port, &out_length);
     free(send);
-    rtl8139->send_packet(packed, outlength);
-    return outlength;
+    return out_length;
 }
 
 ssize_t UDPSocket::recvfrom(void* buf, size_t len, sockaddr_in* src, int flags) {

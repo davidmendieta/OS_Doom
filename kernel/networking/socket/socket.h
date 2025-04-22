@@ -23,7 +23,6 @@ namespace sockets {
 #define INADDR_ANY 0x00000000
 
 typedef int ssize_t;
-typedef uint32_t size_t;
 typedef uint32_t socklen_t;
 typedef uint16_t sa_family_t;
 

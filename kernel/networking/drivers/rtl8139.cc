@@ -163,7 +163,7 @@ void RTL8139::read_mac_addr() {
     Debug::printf("MAC Address: %01x:%01x:%01x:%01x:%01x:%01x\n", mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
 }
 
-void RTL8139::get_mac_addr(uint8_t* src_mac_addr) {
+void RTL8139::get_mac_addr(char* src_mac_addr) {
     memcpy(src_mac_addr, mac_addr, 6);
 }
 
@@ -183,11 +183,6 @@ void RTL8139::send_packet(const void* data, uint32_t len) {
         tx_cur = 0;
 
     free(raw_buf);
-}
-
-
-uint32_t RTL8139::resolve_ip() {
-    return this->my_ip;
 }
 
 extern "C" void RTL8139Handler() {

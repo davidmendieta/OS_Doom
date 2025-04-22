@@ -7,10 +7,11 @@
 // }
 
 #include "parser.h"
-
 #include "../../debug.h"
 #include "../../heap.h"
 #include "../../machine.h"
+#include "../interface/network_interface.h"
+#include "../networking.h"
 
 // const uint32_t src_ip = 0x0A000001;  // 10.0.0.1
 // const uint32_t dest_ip = 0x0A000002;  // 10.0.0.2
@@ -45,7 +46,7 @@ uint16_t fold_checksum(uint32_t sum) {
 
 // build and checksum the UDP packet (pseudo‑header + UDP header + payload)
 uint16_t udp_checksum(const IPv4Header* ip, const UDPHeader* udp,
-                      const uint8_t* payload, size_t payload_len) {
+                      const char* payload, size_t payload_len) {
     PseudoHeader ph = {};
     ph.src_ip = ip->src_ip;   // already in network byte order
     ph.dst_ip = ip->dest_ip;  // ditto
@@ -83,14 +84,24 @@ uint16_t checksum(const void* data, size_t len) {
 // FUNCTION Wrap something with IP
 // FUNCTION Wrap something with Ethernet
 
-void* encode_ip_udp(const void* payload, size_t payload_len, uint32_t src_ip,
-                    uint16_t src_port, uint32_t dest_ip, uint16_t dest_port,
-                    size_t* out_packet_len) {
+char* encode_ip_udp(const void* payload, size_t payload_len, uint32_t src_ip,
+                    char* src_mac, uint16_t src_port, uint32_t dest_ip,
+                    char* dest_mac, uint16_t dest_port,
+                    uint32_t* out_packet_len) {
+
     size_t udp_len = sizeof(UDPHeader) + payload_len;
     size_t ip_len = sizeof(IPv4Header) + udp_len;
+    size_t ethernet_len = sizeof(EthernetHeader) + ip_len;
 
-    auto* buf = (uint8_t*)malloc(ip_len);
-    auto* ip = (IPv4Header*)buf;
+    auto* buf = (char*)malloc(ethernet_len);
+
+    // --- fill Ethernet Header ---
+    auto* ethernet = (EthernetHeader*)buf;
+    memcpy(ethernet->src_mac, src_mac, 6);
+    memcpy(ethernet->dest_mac, dest_mac, 6);
+    ethernet->ethertype = IPV4_VALUE;
+
+    auto* ip = (IPv4Header*)(buf + sizeof(EthernetHeader));
 
     // --- fill IPv4 header (all multi‑byte fields in network order) ---
     ip->version_ihl = (4 << 4) | (sizeof(IPv4Header) / 4);
@@ -108,20 +119,20 @@ void* encode_ip_udp(const void* payload, size_t payload_len, uint32_t src_ip,
     ip->header_checksum = checksum(ip, sizeof(IPv4Header));
 
     // --- fill UDP header ---
-    auto* udp = (UDPHeader*)(buf + sizeof(IPv4Header));
+    auto* udp = (UDPHeader*)(buf + sizeof(EthernetHeader) + sizeof(IPv4Header));
     udp->src_port = htons(src_port);
     udp->dest_port = htons(dest_port);
     udp->length = htons((uint16_t)udp_len);
     udp->checksum = 0;  // zero before computing
 
     // copy payload
-    memcpy(buf + sizeof(IPv4Header) + sizeof(UDPHeader), payload, payload_len);
+    memcpy(buf + sizeof(EthernetHeader) + sizeof(IPv4Header) + sizeof(UDPHeader), payload, payload_len);
 
     // compute UDP checksum (including pseudo‑header)
     udp->checksum = udp_checksum(
         ip, udp, buf + sizeof(IPv4Header) + sizeof(UDPHeader), payload_len);
 
-    *out_packet_len = ip_len;
+    *out_packet_len = ethernet_len;
     return buf;
 }
 
@@ -161,7 +172,7 @@ void* decode_ip_udp(const void* packet, size_t packet_len,
     }
 
     size_t payload_len = udp_len - sizeof(UDPHeader);
-    const uint8_t* payload_ptr = (const uint8_t*)udp + sizeof(UDPHeader);
+    const char* payload_ptr = (const char*)udp + sizeof(UDPHeader);
 
     // 4) verify UDP checksum
     if (udp_checksum(ip, udp, payload_ptr, payload_len) != 0) {
@@ -189,7 +200,7 @@ void* decode_ip_udp(const void* packet, size_t packet_len,
     return payload;
 }
 
-bool verify_receiver(const IPv4Header* ip_hdr, uint32_t my_IP) {
+bool verify_receiver(const IPv4Header* ip_hdr) {
     uint8_t version = ip_hdr->version_ihl >> 4;
     uint8_t ihl = ip_hdr->version_ihl & 0x0F;  // header length in 32-bit words
     uint16_t ip_header_len = ihl * 4;
@@ -210,7 +221,7 @@ bool verify_receiver(const IPv4Header* ip_hdr, uint32_t my_IP) {
     }
 
     // not my ip
-    if (dst_ip != my_IP) {
+    if (dst_ip != network_interface->get_ip()) {
         return false;
     }
 

@@ -4,6 +4,7 @@
 
 #include "../../debug.h"
 #include "../../pci.h"
+#include "../../shared.h"
 
 // Define some constants
 #define RTL8139_VENDOR_ID 0x10EC
@@ -78,14 +79,12 @@ public:
     char * rx_buffer;
     int tx_cur;
     RTL8139();
-    //SOCKET STUFF
-    uint32_t resolve_ip(); 
+
     //END SOCKET STUFF
     void send_packet(const void* data, uint32_t len);
     void* get_packet(uint32_t* packet_length);
 
     void read_mac_addr();
 
-    void get_mac_addr(uint8_t* src_mac_addr);
-    uint32_t my_ip = 0xC0A80102;  // 192.168.1.2 in hex 
+    void get_mac_addr(char* src_mac_addr);
 };

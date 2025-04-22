@@ -31,8 +31,8 @@ struct UDPHeader {
 
 #pragma pack(push, 1)
 struct EthernetHeader {
-    uint8_t dest_mac[6];
-    uint8_t src_mac[6];
+    char dest_mac[6];
+    char src_mac[6];
     uint16_t ethertype; // e.g., 0x0800 = IPv4
 };
 #pragma pack(pop)
@@ -50,7 +50,7 @@ struct PseudoHeader {
 
 namespace Parser {
 
-	void* encode_ip_udp(const void* payload, size_t payload_len, uint32_t src_ip, uint16_t src_port,uint32_t dest_ip, uint16_t dest_port, size_t* out_packet_len);
+	char* encode_ip_udp(const void* payload, size_t payload_len, uint32_t src_ip, char* src_mac, uint16_t src_port, uint32_t dest_ip, char* dest_mac, uint16_t dest_port, uint32_t* out_packet_len);
 
 	void* decode_ip_udp(const void* packet, size_t packet_len, size_t* out_payload_len,uint32_t* src_ip, uint16_t* src_port, uint16_t* dest_port);
 
@@ -59,7 +59,7 @@ namespace Parser {
 	void decrement_ttl(IPv4Header* ip_hdr);
 
     uint16_t fold_checksum(uint32_t sum);
-    uint16_t udp_checksum(const IPv4Header* ip, const UDPHeader* udp, const uint8_t* payload, size_t payload_len);
+    uint16_t udp_checksum(const IPv4Header* ip, const UDPHeader* udp, const char* payload, size_t payload_len);
     
 
 } // namespace Parser
