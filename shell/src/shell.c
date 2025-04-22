@@ -75,9 +75,7 @@ void handle_fork(const char* path, Tokenized* tokens) {
     if (id < 0) {
         error("can't fork\n");
     } else if (id == 0) {
-        // todo variadic argument passing on stack, inline assembly? >:_(
         shell_exec(path, tokens->argv, tokens->argc);
-        // execl(path, tokens->argv[0], tokens->argv[1], 0);
         error("couldn't execute command\n");
     } else {
         // parent

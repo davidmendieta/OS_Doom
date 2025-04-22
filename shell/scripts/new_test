@@ -13,12 +13,17 @@ TESTDIR_NAME="t${COUNT}.dir"
 
 echo "creating ${TESTDIR_NAME} ${TESTDIR_NAME}/sbin t${COUNT}.ok"
 
-mkdir -p "$TESTDIR_NAME"
+mkdir -p "$TESTDIR_NAME/sbin"
+mkdir -p "$TESTDIR_NAME/bin"
 touch "t${COUNT}.ok"
 
 # copy the test environment
 # everything here is hard linked
-cp -rl ./env/* "$TESTDIR_NAME/"
+cp -l ./env/sbin/* "$TESTDIR_NAME/sbin/"
+
+# copy from src
+cp -l ../src/* "$TESTDIR_NAME/sbin/"
+cp -l ../src/bin/* "$TESTDIR_NAME/bin"
 
 # make input file (not hardlinked)
 mkdir -p "$TESTDIR_NAME/user"
