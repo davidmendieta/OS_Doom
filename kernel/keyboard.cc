@@ -13,27 +13,13 @@ constexpr uint16_t PS2_STATUS_PORT = 0x64;
 constexpr uint16_t PS2_COMMAND_PORT = 0x64;
 
 
-
-
 #define SDL_KEYDOWN 0x300
 #define SDL_KEYUP   0x301
-
-
-
-
-/*
-figure out how to run
-test functionality
-*/
-
-
 
 
 // static SDL_KeyEvent event_buffer[128];
 // static volatile int buf_head = 0;
 // static volatile int buf_tail = 0;
-
-
 
 
 // extern "C" void keyboardHandler_(void) {
@@ -60,17 +46,17 @@ test functionality
         ? ps2_to_sdl[keycode]
         : SDL_SCANCODE_UNKNOWN;
    
-    // Determine the ASCII value
+    // determine the ascii value
     char ascii_val = PS2::scancode_to_ascii(scancode);
     int sym = (int) ascii_val;
 
 
-    // Determine modifier keys
+    // determine modifier keys
     uint16_t mod = 0;
     if (keycode == 0x2A || keycode == 0x36) mod |= 1; // Shift
     if (keycode == 0x1D) mod |= 2; // Ctrl
    
-    // Create the event with all fields properly set
+    // create the event with all fields
     SDL_KeyEvent event = {
         static_cast<uint32_t>(is_release ? SDL_KEYUP : SDL_KEYDOWN),  // type
         0,                                      // timestamp

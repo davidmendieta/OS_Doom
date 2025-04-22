@@ -1,4 +1,3 @@
-// keyboard.h
 #pragma once
 
 #include <stddef.h>
@@ -9,9 +8,9 @@ int keyboard_read(char* buf, size_t count);
 
 
 struct SDL_Keysym {
-    SDL_Scancode scancode;  // Use the SDL_SCANCODE_* values
-    int sym;                // SDLK_* key symbols (ASCII for letters/numbers)
-    uint16_t mod;           // Modifier keys (shift, ctrl, etc)
+    SDL_Scancode scancode;  // use the sdl scancode values
+    int sym;                // ascii
+    uint16_t mod;           // modifers (shift, ctrl, etc)
     uint32_t unused;
 };
 

@@ -1,7 +1,5 @@
-// sdl_keycodes.h
 #pragma once
 
-// SDL Scancode values (simplified version for OS implementation)
 typedef enum {
     SDL_SCANCODE_UNKNOWN = 0,
     
