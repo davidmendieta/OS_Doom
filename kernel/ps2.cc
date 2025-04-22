@@ -189,7 +189,6 @@ void read_ps2_data() {
 
 
 
-
 uint8_t mouse_cycle = 0;
 uint8_t mouse_bytes[3];
 /*
@@ -230,15 +229,12 @@ void read_keyboard_data(uint8_t in_byte) {
     //     Debug::printf("Scancode: 0x%x\n", scancode);
     //     Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
     // }
-    Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
+    // Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
 
-    // SDL_KeyEvent event_buffer[128];
-    // static volatile int buf_head = 0;
+  //  SDL_KeyEvent event_buffer[128];
 
-    // call
-    // SDL_KeyEvent event;
-
-    keyboard_to_sdl_event(scancode, 0);
+    keyboardHandler(scancode);
+    
     
     mouse_cycle = 0;
     // Debug::printf("full keyboard data\n");
