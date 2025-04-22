@@ -51,6 +51,7 @@ uint32_t open(const char* fd) {
     if(me->pcb->cwd == nullptr) me->pcb->cwd = fs->root;
 
     StrongPtr<Node> new_node = fs->find(me->pcb->cwd, fd);
+    if (new_node == nullptr) return -1;
     StrongPtr<OpenFile> new_open_file = StrongPtr<OpenFile>::make(new_node);
 
     for(uint32_t i = 0; i < PCB_ARR_SIZE; i++) {
