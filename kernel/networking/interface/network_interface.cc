@@ -44,7 +44,7 @@ void NetworkInterface::handle_ip_udp(IPv4Header* packet, uint32_t packet_length)
     uint16_t src_port;
     uint16_t dst_port;
 
-    void* received_packet = Parser::decode_ip_udp(
+    char* received_packet = Parser::decode_ip_udp(
         packet, 
         packet_length, 
         &payload_length, 
@@ -57,6 +57,12 @@ void NetworkInterface::handle_ip_udp(IPv4Header* packet, uint32_t packet_length)
         Debug::printf("ERROR HANDLING IP UDP\n");
         return;
     }
+
+    Debug::printf("RECEIVED PACKET\n");
+    for(uint32_t i = 0; i < payload_length; i++) {
+        Debug::printf("%x", received_packet[i]);
+    }
+    Debug::printf("\n");
 
     StrongPtr<sockets::UDPSocket> socket =
         sockets::port_table.get(dst_port);
