@@ -2,18 +2,11 @@
 #include "../../debug.h"
 #include "../drivers/rtl8139.h"
 #include "../../shared.h"
+#include "../protocols/parser.h"
 
-struct EthernetHeader_arp
-{
-    uint8_t dest_mac[6]; // destination MAC address
-    uint8_t src_mac[6]; // source MAC address
-    uint16_t ethertype; // Ethertype (0x0800 for IPv4)
-};
+#include "arp.h"
 
-
-
-
-struct arp_header
+struct ArpHeader
 {
     uint16_t hardware_type; // 1 for ethernet
     uint16_t protocol_type; // 0x0800 for ipv4
@@ -26,36 +19,14 @@ struct arp_header
     uint32_t target_ip; // target ip address
 };
 
-
-
-
 extern StrongPtr<RTL8139> rtl8139;
 
-
-
-
-
-void send_arp(uint8_t* ip, uint8_t opcode) {
+void send_arp(uint32_t target_ip, uint8_t opcode) {
     if (rtl8139 == nullptr) {
         Debug::panic("RTL8139 not initialized");
     }
-    // uint8_t arp_packet[60] __attribute__((aligned(16))) = { // We want anyone with this mac adress to respond
-    //     0xff,0xff,0xff,0xff,0xff,0xff, // broadcast dest MAC
-    //     0x12,0x34,0x56,0x78,0x9a,0xbc, // source MAC
-    //     0x08,0x00,                     // Ethertype: IPv4
-    //     'h','e','l','l','o'
-    // };
-
-    // The ip we want
-
     uint8_t my_ip[4] = {192, 168, 1, 1};
-
-    Debug::printf("The size of the arp is %d\n", sizeof(arp_header));
-
-     // we just default send this, dhcp will fix it 
-    // uint8_t mac[6] = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc}; // our mac address
-
-    uint8_t arp_packet[42] __attribute__((aligned(16))) = {0}; // size of ARP header
+    uint8_t arp_packet[46] __attribute__((aligned(16))) = {0}; // size of ARP header
 
     // Fill the ethernet Header
     arp_packet[0] = 0xFF; arp_packet[1] = 0xFF; 
@@ -65,36 +36,31 @@ void send_arp(uint8_t* ip, uint8_t opcode) {
     for (int i = 0; i < 6; i++) {
         arp_packet[6 + i] = rtl8139->mac_addr[i]; // source MAC address
     }
-    arp_packet[12] = 0x08; arp_packet[13] = 0x06; // Ethertype: ARP
+    ((EthernetHeader*)arp_packet)->ethertype = ARP_VALUE; // Ethertype: ARP
 
+    ArpHeader* arp_head = (ArpHeader*)(arp_packet + sizeof(EthernetHeader));
+    arp_head->hardware_type = 0x1; // hardware type: Ethernet
+    arp_head->protocol_type = 0x0800; // protocol type: IPv4
+    arp_head->hardware_size = 0x06; // hardware size: MAC address length
+    arp_head->protocol_size = 0x04; // protocol size: IPv4 address length
+    arp_head->opcode = opcode; // opcode: request or reply
 
-
-    // this is an arp payload
-    arp_packet[14] = 0x00; arp_packet[15] = 0x01; // hardware type: Ethernet
-    arp_packet[16] = 0x08; arp_packet[17] = 0x00; // protocol type: IPv4
-    arp_packet[18] = 0x06;                       // hardware size
-    arp_packet[19] = 0x04;                       // protocol size
-    arp_packet[20] = 0x00; arp_packet[21] = opcode; // opcode: request or reply
-
-    for (int i = 0; i < 6; i++) {
-        arp_packet[22 + i] = rtl8139->mac_addr[i]; // sender MAC address
-    }
-    for (int i = 0; i < 4; i++) {
-        arp_packet[28 + i] = my_ip[i]; // sender IP address
-    }
-    for (int i = 0; i < 6; i++) {
-        arp_packet[32 + i] = 0x00; // target MAC address
-    }
-    for (int i = 0; i < 4; i++) {
-        arp_packet[38 + i] = ip[i]; // target IP address
-    }
-    // Now lets send shit
     
-    // uint32_t header_size = sizeof(arp_header);
+    for (int i = 0; i < 6; i++) {
+        arp_head->sender_mac[i] = rtl8139->mac_addr[i]; // sender MAC address
+    }
+    arp_head->sender_ip = *(uint32_t*)my_ip; // sender IP address
+
+    for (int i = 0; i < 6; i++) {
+        arp_head->target_mac[i] = 0x00; // target MAC address
+    }
+    
+    arp_head->target_ip = target_ip;
 
     rtl8139->send_packet(arp_packet, sizeof(arp_packet)); // by default, send packet is a wide broadcast
     Debug::printf("Sent ARP packet\n");
 }
+
 
 // For now Global variable
 uint32_t my_ip_adr = 0; //
@@ -104,42 +70,44 @@ uint32_t my_ip() {
         // port 67 = DHCP
         // port 68 = user
     }
-
     return 0; // NOT IMPLEMENTED
 }
 
 void receive_arp(uint8_t* packet, int len){
-
-
     Debug::printf("Received ARP packet\n");
+    EthernetHeader* eth_header = (EthernetHeader*)packet;
+    uint16_t ether_type = eth_header->ethertype;
 
-    len = 42; // for now, we assume the packet is 42 bytes long
-    for (int i = 0; i < len; i++) {
-        Debug::printf("%02x ", packet[i]);
-    }
-    Debug::printf("\n");
-
-    EthernetHeader_arp* eth_header = (EthernetHeader_arp*)packet;
-    if (eth_header->ethertype != 0x0806) { 
+    if (ether_type != ARP_VALUE) { // little endian 
         Debug::printf("Not an ARP packet\n");
+        Debug::printf("Ethertype is in thee arp resive is  %x\n", ether_type);
         return;
     }
-    Debug::printf("the sixe of the packet is %d\n", len);
-    Debug::printf("the size of the ethernet header is %d\n", sizeof(EthernetHeader_arp));
-    arp_header* arp_head = (arp_header*)(packet + sizeof(EthernetHeader_arp));
+    Debug::printf("the size of the packet is %d\n", len);
+    Debug::printf("the size of the ethernet header is %d\n", sizeof(EthernetHeader));
+    ArpHeader* arp_head = (ArpHeader*)(packet + sizeof(EthernetHeader));
+
+    for (int i = 0; i < len - (int)sizeof(EthernetHeader); i++) {
+        Debug::printf("%x ", ((uint8_t*)arp_head)[i]);
+    }
     
-    if (arp_head->opcode != 0x0001) { // ARP request
+    Debug::printf("Arp code is %x\n", arp_head->opcode);
+
+    if (arp_head->opcode != ARP_REQUEST) { // ARP request
         Debug::printf("Not an ARP request\n");
         return;
     }
-    if (arp_head->target_ip != my_ip()) { // not for us
+    uint32_t target_ip = arp_head->target_ip;
+    Debug::printf("Target IP is %08x\n", target_ip);
+
+    if (target_ip != rtl8139->my_ip) { // not for us
         Debug::printf("Not for us\n");
+        Debug::printf("Sender IP is %x\n", target_ip);
+        Debug::printf("Our IP is %x\n", rtl8139->my_ip);
         return;
     } else {
         Debug::printf("ARP request for us\n");
         // Send ARP reply
-        send_arp((uint8_t*)arp_head->sender_ip, 0x0002); // ARP reply
-        
+        send_arp(arp_head->target_ip, ARP_REPLY); // ARP reply
     }
-    
 }
