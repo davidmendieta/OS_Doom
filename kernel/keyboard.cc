@@ -153,11 +153,12 @@ void keyboardHandler(uint8_t scancode) {
         // semicolon
         // apostrophe
         // grave
+        
         case 0x41: sdl_scancode = SDL_SCANCODE_COMMA; break; // comma
         case 0x49: sdl_scancode = SDL_SCANCODE_PERIOD; break; // period
         // slash
         case 0x59: sdl_scancode = SDL_SCANCODE_RSHIFT; break; // right shift
-        
+    
         // modifer keys
         case 0x14: sdl_scancode = SDL_SCANCODE_LCTRL; break; // left control
         case 0x12: sdl_scancode = SDL_SCANCODE_LSHIFT; break; // left shift

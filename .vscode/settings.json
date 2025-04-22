@@ -4,6 +4,8 @@
 		"array": "cpp",
 		"string": "cpp",
 		"string_view": "cpp",
-		"ranges": "cpp"
-	}
+		"ranges": "cpp",
+		"sdl.h": "c"
+	},
+	"cmake.sourceDirectory": "/u/fabiann/OS-Doom/doom.dir/chocolate-doom"
 }
