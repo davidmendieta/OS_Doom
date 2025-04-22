@@ -20,6 +20,7 @@ char* input_line(char* dst, char* src) {
         c = *(src + i);
     }
     dst[i] = 0;
+    if (c == '\0') return (src + i);
     return (src + i + 1);
 }
 #else
@@ -134,7 +135,25 @@ void process_start(char* command) {
     free(path);
     close(fd);
 
-    // todo try pistash script
+    // pistash script
+    fd = open(tokens.argv[0], 0);
+    if (fd >= 0) {
+        char shebang[14]; 
+        read(fd, shebang, 14); // read first 14 bytes of the file (13 + \n)
+        shebang[13] = '\0'; 
+        if (streq(shebang, "#!bin/pistash")) { // when we have more interpreters, replace with check for #!
+            char *buffer = (void*) malloc(4096);
+            read(fd, (void*) buffer, 4096);
+            while (*buffer != '\0') {
+                char* command = malloc(4096);
+                buffer = input_line(command, buffer);
+                process_start(command);
+                free(command);
+            }
+            free(buffer);
+        }
+    }
+    close(fd);
 
     tokens_free(&tokens);
 }
