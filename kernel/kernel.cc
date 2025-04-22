@@ -64,9 +64,9 @@ void kernelMain(void) {
     } else {
         Debug::printf("*** audio init failed\n");
     }
-
+	poll_ac97_loop();
     // Wait a bit to give QEMU time to emit sound
-    for (int i = 0; i < 100000000; i++) {
+    for (int i = 0; i < 100; i++) {
 		Debug::printf("i %d\n", i);
 	}
 

@@ -27,18 +27,20 @@ struct BufferDescriptor {
     uint32_t control;
 } __attribute__((packed));
 
+
 // Buffer Structure
-struct buffer {
-    uint32_t* start_addr;
-    uint32_t phys_addr;
-    uint32_t size;
-};
+// struct BufferDescriptor {
+//     uint32_t* start_addr;
+//     uint32_t phys_addr;
+//     uint32_t size;
+// };
 
 // Global Variables
-extern buffer* buffers[BDL_ENTRY_COUNT];
-extern BufferDescriptor* bdl;
+extern BufferDescriptor bdl[BDL_ENTRY_COUNT];
+// extern BufferDescriptor* bdl;
 extern uint32_t nam;  // Native Audio Mixer BAR (BAR0)
 extern uint32_t nabm; // Native Audio Bus Master BAR (BAR1)
+extern uint32_t sample_index;
 
 // Function Declarations
 uint32_t get_phys_addr(uint32_t vaddr);
