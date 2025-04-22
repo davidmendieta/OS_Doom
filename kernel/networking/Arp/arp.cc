@@ -98,7 +98,7 @@ void send_arp(uint8_t* ip, uint8_t opcode) {
 
 // For now Global variable
 uint32_t my_ip_adr = 0; //
-unsigned int my_ip() {
+uint32_t my_ip() {
     if (my_ip_adr == 0) {
         // Find MY IP trough protocal or set it to deafault 192.72.123;
         // port 67 = DHCP
