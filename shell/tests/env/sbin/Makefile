@@ -16,7 +16,7 @@ all : $(UTILS)
 	export PATH=$(ORIGINAL_PATH)
 	export LD_LIBRARY_PATH=$(ORIGINAL_LD_LIBRARY_PATH)
 
-OFILES = sys.o crt0.o libc.o heap.o machine.o printf.o tokenizer.o
+OFILES = sys.o crt0.o libc.o heap.o machine.o printf.o tokenizer.o bryan.o hashmap.o
 
 # keep all files
 .SECONDARY :

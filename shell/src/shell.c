@@ -1,5 +1,6 @@
 #include "shell.h"
 #include "tokenizer.h"
+#include "hashmap.h"
 
 #define TESTING
 
@@ -157,7 +158,11 @@ void process_start(char* command) {
 }
 
 int main(int argc, char** argv) {
+    printf("welcome to the pistash shell\n");
+
     char* buffer;
+    Hashmap* shell_vars = (Hashmap*) malloc(sizeof(Hashmap));
+    hash_init(shell_vars);
 
     #ifdef TESTING
     int stdin = open("/user/input", 0); // our test case
