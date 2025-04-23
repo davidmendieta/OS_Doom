@@ -210,6 +210,7 @@ void* naive_mmap(uint32_t sz_, bool shared, StrongPtr<Node> node, uint32_t offse
 } /* namespace vmm */
 
 extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
+    // Debug::printf("page faulting\n");
     StrongPtr<VMEEntry> vme_entry;
     bool unlock = false;
     if(va_ >= 0xF0000000) { // SHARED

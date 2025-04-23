@@ -2,10 +2,13 @@ set -e
 
 UTCS_OPT=-O3 make clean $1 $1.data
 
+export SDL_AUDIODRIVER=pulseaudio
 time `make qemu_cmd` `make qemu_config_flags` \
              -no-reboot \
              -nographic \
              --monitor none \
              -drive file=kernel/build/kernel.img,index=0,media=disk,format=raw \
              -drive file=$*.data,index=1,media=disk,format=raw,file.locking=off \
-             -device isa-debug-exit,iobase=0xf4,iosize=0x04 || true
+             -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
+             -audiodev sdl,id=sdl1,out.buffer-count=512,out.frequency=48000 \
+	         -device ac97,audiodev=sdl1,bus=pci.0,addr=0x1f || true

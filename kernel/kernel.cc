@@ -41,6 +41,7 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
 
 void kernelMain(void) {
 	Debug::printf("im here in kernel main\n");
+    Debug::printf("f sdfkj sadhfkjdash flkjsadhfkljsdah flkjsdahf lkajds \n");
 
     auto d = StrongPtr<Ide>::make(1,0);
     fs = StrongPtr<Ext2>::make(d);

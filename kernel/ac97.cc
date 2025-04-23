@@ -109,7 +109,7 @@ uint32_t init_ac97() {
     // 1. Allocate buffers
     for (int i = 0; i < BDL_ENTRY_COUNT; i++) {
         // Allocate memory for each buffer
-        buffers[i] = (uint32_t*)VMM::naive_mmap(BUFFER_SIZE, true, {}, 0, false);
+        buffers[i] = (uint32_t*)PhysMem::alloc_frame();
         Debug::printf("We mmapped our buffer[%d]: 0x%x\n", i, buffers[i]);
         // Set up the corresponding BufferDescriptor
         bdl[i].buffer_addr = get_phys_addr((uint32_t)buffers[i]);
@@ -287,7 +287,7 @@ void shutdown_ac97() {
     }
     VMM::naive_munmap(bdl, true);
     for (int i = 0; i < BDL_ENTRY_COUNT; i++) {
-        VMM::naive_munmap(buffers[i], true);
+        PhysMem::dealloc_frame((uint32_t)buffers[i]);
     }
     // Free BDL
 }

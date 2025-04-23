@@ -51,7 +51,7 @@ QEMU_FLAGS = -no-reboot \
 	-drive file=$*.data,index=1,media=disk,format=raw,file.locking=off \
 	-device isa-debug-exit,iobase=0xf4,iosize=0x04 \
 	-audiodev sdl,id=sdl1,out.buffer-count=512,out.frequency=48000 \
-	-device ac97,audiodev=sdl1,bus=pci.0,addr=0x1f
+	-device AC97,audiodev=sdl1,bus=pci.0,addr=0x1f
 
 
 TIME = $(shell which time)

@@ -209,6 +209,7 @@ StrongPtr<VMEEntry> VMEEntry::duplicate(StrongPtr<VMEEntry> vme_entry) {
 
 uint32_t get_phys_addr(uint32_t va) {
     // Retrieve the current thread's VME (Virtual Memory Entry)
+    Debug::printf("We entered get phys addr\n");
     auto me = impl::threads::state.current();
 
     uint32_t* pd = (uint32_t*)me->pd;
@@ -217,14 +218,24 @@ uint32_t get_phys_addr(uint32_t va) {
     uint32_t pti = (va >> 12) & 0x3FF;
 
     uint32_t pde = pd[pdi];
+    Debug::printf("VA: 0x%x | PDI: 0x%x | PDE: 0x%x\n", va, pdi, pde);
 
-    if (!(pde&1)) return 0;
+    if (!(pde&1)) {
+        Debug::printf("PDE Doesnt exist\n");
+        return 0;
+    }
 
     uint32_t* pt = (uint32_t*)(pde & 0xFFFFF000);
+    Debug::printf("  PT pointer: 0x%x\n", pt);
     uint32_t pte = pt[pti];
-    if (!(pte&1)) return 0;
+    Debug::printf("  PTI: 0x%x | PTE: 0x%x\n", pti, pte);
+    if (!(pte&1)) {
+        Debug::printf("PTE Doesnt exist\n");
+        return 0;
+    }
 
     uint32_t page_frame = pte & 0xFFFFF000;
     uint32_t offset = va & 0xFFF;
+    Debug::printf("here is the physical address we found: 0x%x\n", page_frame | offset);
     return page_frame | offset;
 }
