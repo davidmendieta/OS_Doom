@@ -2,6 +2,8 @@
 #include "ps2.h"
 #include "smp.h"
 #include "mouse.h"
+#include "keyboard.h"
+
 namespace PS2 {
 volatile bool debug_on = true;
 
@@ -223,8 +225,10 @@ extern "C" void keyboard_handler() {
     *((volatile uint32_t*)0xFEE000B0) = 0;
 
     uint8_t scancode = inb(0x60);
-    Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
-    Debug::printf("Scancode: 0x%x\n", scancode);
+    // Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
+    // Debug::printf("Scancode: 0x%x\n", scancode);
+
+    keyboardHandler(scancode);
     mouse_cycle = 0;
 
 }

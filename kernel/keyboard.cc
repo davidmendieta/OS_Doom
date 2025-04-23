@@ -3,6 +3,8 @@
 #include "machine.h"
 #include "keyboard.h"
 #include "ps2.h"
+//#include "d_event.h"
+//#include "doomkeys.h"
 
 // PS/2 Controller ports
 constexpr uint16_t PS2_DATA_PORT = 0x60;
@@ -201,5 +203,47 @@ void keyboardHandler(uint8_t scancode) {
         event.type == SDL_KEYDOWN ? "pressed" : "released",
         scancode,
         (sym > 0 && sym < 128) ? sym : '?', sdlScancodeToString(sdl_scancode));
+
+
+
+    // int doom_key = get_doom_key(sym);
+
+    // // convert sdl to event_t for doom
+    // event_t doom_event;
+    // doom_event.type = (is_release ? ev_keyup : ev_keydown);
+    // doom_event.data1 = doom_key;
+    // doom_event.data2 = sym; 
+
+    // D_PostEvent(&doom_event);   // pass the event to Doom
 }
 
+// int get_doom_key(int sym){
+//     if (sym >= 'a' && sym <= 'z') {
+//         return  sym;  
+//     }
+//     if (sym >= '0' && sym <= '9') {
+//         return sym;
+//     }
+    
+//     //special keys
+//     switch(sym) {
+//         case 27: return KEY_ESCAPE;
+//         case '\r': return KEY_ENTER;
+//         case '\t': return KEY_TAB;
+//         case '\b': return KEY_BACKSPACE;
+//         case ' ': return ' '; 
+//         case '-': return KEY_MINUS;
+//         case '=': return KEY_EQUALS;
+//         case '[': return '[';
+//         case ']': return ']';
+//         case '\\': return '\\';
+//         case ';': return ';';
+//         case '\'': return '\'';
+//         case '`': return '`';
+//         case ',': return ',';
+//         case '.': return '.';
+//         case '/': return '/';
+//     }
+
+//     return 0;  // Unknown key
+// }
