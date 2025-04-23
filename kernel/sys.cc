@@ -12,6 +12,7 @@
 #include "libk.h"
 #include "elf.h"
 #include "promise.h"
+#include "uio.h" // new code
 
 bool address_valid(uint32_t addr, uint32_t size) {
     return addr >= 0x80000000 && addr + size <= 0xFFFFFFFF;
@@ -48,6 +49,44 @@ uint32_t write(uint32_t fd, void* buf, int32_t nbyte) {
         data->size_low = open_file->offset;
     }
     return bytes_written;
+}
+
+// new code
+// write data from multiple buffers to a fd
+uint32_t writev(uint32_t fd, const iovec* iov, uint32_t iovcnt) {
+    if (fd >= PCB_ARR_SIZE || !address_valid((uint32_t)iov, sizeof(iovec) * iovcnt)) {
+        return -1;
+    }
+
+    auto me = impl::threads::state.current();
+    auto open_file = me->pcb->fdt[fd];
+    
+    if (open_file == nullptr || open_file->node == nullptr) {
+        return -1; // file doesn't exist
+    }
+
+    uint32_t total_written = 0;
+    for (uint32_t i = 0; i < iovcnt; i++) {
+        if (!address_valid((uint32_t)iov[i].iov_base, iov[i].iov_len)) {
+            return -1;
+        }
+        
+        uint32_t bytes_written = open_file->node->write_all(open_file->offset, iov[i].iov_len, (char*)iov[i].iov_base);
+        
+        open_file->offset += bytes_written;
+        total_written += bytes_written;
+        
+        if (bytes_written < iov[i].iov_len) {
+            break; // couldn't write all data
+        }
+    }
+    
+    auto data = &open_file->node->data;
+    if (open_file->offset > data->size_low) {
+        data->size_low = open_file->offset;
+    }
+    
+    return total_written;
 }
 
 uint32_t open(const char* fd) {
@@ -313,6 +352,8 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
         return read(user_sp[1], (void*)user_sp[2], user_sp[3]);
     case 13:
         return seek(user_sp[1], user_sp[2]);
+    case 14: // new code
+        return writev(user_sp[1], (iovec*)user_sp[2], user_sp[3]);
     case 100:
         return chdir((const char*)user_sp[1]);
     case 101:
