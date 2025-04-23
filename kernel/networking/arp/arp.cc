@@ -56,14 +56,18 @@ uint32_t decode_arp(ARPHeader* arp_head, uint32_t* target_ip, uint32_t *sender_i
     if (arp_head->opcode == ARP_REPLY){
         Debug::printf("Received ARP reply\n");
 
-        Debug::printf("Sender IP That we got APR NAMESPACE: %08x\n", arp_head->sender_ip);    
+        Debug::printf("Sender IP That we got APR NAMESPACE: %0x\n", arp_head->sender_ip);    
         Debug::printf("Sender MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", 
             arp_head->sender_mac[0], arp_head->sender_mac[1], arp_head->sender_mac[2], 
             arp_head->sender_mac[3], arp_head->sender_mac[4], arp_head->sender_mac[5]);
+        
         if (network_interface->arp_cache.p[arp_head->sender_ip & 0xFF] == nullptr) {
+            Debug::printf("SOMETHING IS WRONG\n");
             network_interface->arp_cache.p[arp_head->sender_ip & 0xFF] = StrongPtr<PromiseWithTimeout>::make(1);
         }
-        network_interface->arp_cache.p[arp_head->sender_ip & 0xFF]->set((char*)arp_head->sender_mac);
+        char* new_mac = (char*)malloc(6);
+        memcpy(new_mac, arp_head->sender_mac, 6);
+        network_interface->arp_cache.p[arp_head->sender_ip & 0xFF]->set(new_mac);
         return ARP_REPLY; // Magic value 
     }
     
