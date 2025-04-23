@@ -62,7 +62,7 @@ RTL8139::RTL8139(){
     outl(io_base + 0x30, (uint32_t)rx_buffer); // We are telling the NIC where to write data it receives
 
     // (1 << 7) is the WRAP bit, 0xf is AB+AM+APM+AAP. This tells us what type of broadcasts we want to accept
-    outl(io_base + 0x44, 0xf | (1 << 7));
+    outl(io_base + 0x44, (1 << 1) | (1 << 3) | (1 << 7)); // APM, AB, WRAP
     uint32_t rcr_val = inl(io_base + 0x44);
     Debug::printf("RCR: %x\n", rcr_val);
 
