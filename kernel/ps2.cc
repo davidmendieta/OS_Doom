@@ -190,6 +190,8 @@ char scancode_to_ascii(uint8_t scancode) {
 
 uint8_t mouse_cycle = 0;
 uint8_t mouse_bytes[3];
+uint32_t mouse_x_pos = 0;
+uint32_t mouse_y_pos = 0;
 /*
 mouse_bytes[0] = flags from mouse from OSDev ps2 mouse pg
 mouse_bytes[1] = x axis
@@ -252,7 +254,22 @@ extern "C" void mouse_handler() {
         }
         
         uint8_t rawX = mouse_bytes[1];
+        int displace_x = rawX;
+        if (mouse_bytes[2] & 16) {
+            Debug::printf("NEGATIVE X: %d\n", mouse_bytes[1]);
+            displace_x = 256 - rawX;
+            displace_x *= -1;
+        }
+        mouse_x_pos += displace_x;
+
         uint8_t rawY = mouse_bytes[0];
+        int displace_y = (256 - rawY);
+        if (!(mouse_bytes[2] & 0x20)) {
+            Debug::printf("NEGATIVE Y: %d\n", mouse_bytes[0]);
+            displace_y = rawY;
+            displace_y *= -1;
+        }
+        mouse_y_pos += displace_y;
 
         // Detect the special absolute-move case (0,0)
         bool origin = (rawX == 0 && rawY == 0);
@@ -261,8 +278,8 @@ extern "C" void mouse_handler() {
         uint16_t y = origin ? 256 : (uint8_t)(256 - rawY);
 
         // Print raw values directly (0-255), so you see 156 for -100
-        Debug::printf("left: %d, middle: %d, right: %d, x: %u, y (raw): %u, y (disp): %u\n", (mouse_bytes[2] & 0x01), 
-            (mouse_bytes[2] & 0x04), (mouse_bytes[2] & 0x02), rawX, rawY, y);
+        Debug::printf("left: %d, middle: %d, right: %d, x: %u, y (raw): %u, y (disp): %u, abs x: %u, abs y: %u\n", (mouse_bytes[2] & 0x01), 
+            (mouse_bytes[2] & 0x04), (mouse_bytes[2] & 0x02), rawX, rawY, y, mouse_x_pos, mouse_y_pos);
 
     }
 
