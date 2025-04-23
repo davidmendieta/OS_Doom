@@ -6,6 +6,10 @@
 #include "../interface/network_interface.h"
 #include "../../heap.h"
 
+#include "promise.h"
+
+extern StrongPtr<NetworkInterface> network_interface;
+
 #include "arp.h"
 
 namespace ARP {
@@ -41,6 +45,12 @@ char* encode_arp(uint32_t sender_ip, char* sender_mac, uint32_t target_ip, char*
 uint32_t decode_arp(ARPHeader* arp_head, uint32_t* target_ip){
     Debug::printf("Received ARP packet\n");
 
+    if (arp_head->opcode == ARP_REPLY){
+        Debug::printf("Received ARP reply\n");
+        network_interface->arp_cache.p[arp_head->sender_ip & 0xFF]->set((char*)arp_head->sender_mac);
+        return ARP_REPLY; // Magic value 
+    }
+    
     if (arp_head->opcode != ARP_REQUEST) { // ARP request
         Debug::printf("Not an ARP request\n");
         return -1;
@@ -48,7 +58,6 @@ uint32_t decode_arp(ARPHeader* arp_head, uint32_t* target_ip){
     
     *target_ip = arp_head->target_ip;
     Debug::printf("Target IP is %08x\n", target_ip);
-    return 0;
+    return ARP_REQUEST;
 }
-
 }

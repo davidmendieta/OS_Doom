@@ -69,7 +69,7 @@ namespace Parser {
 
 	char* encode_ip_udp(const void* payload, size_t payload_len, uint32_t src_ip, char* src_mac, uint16_t src_port, uint32_t dest_ip, char* dest_mac, uint16_t dest_port, uint32_t* out_packet_len);
 
-	void* decode_ip_udp(const void* packet, size_t packet_len, size_t* out_payload_len,uint32_t* src_ip, uint16_t* src_port, uint16_t* dest_port);
+	char* decode_ip_udp(const void* packet, size_t packet_len, size_t* out_payload_len,uint32_t* src_ip, uint16_t* src_port, uint16_t* dest_port);
 
 	bool verify_receiver(const IPv4Header* ip_hdr);
 	uint16_t checksum(const void* data, size_t len);

@@ -40,13 +40,17 @@ uint16_t udp_checksum(const IPv4Header* ip, const UDPHeader* udp,
 
     // sum pseudo‑header
     uint32_t sum = 0;
-    sum += checksum(&ph, sizeof(ph));  // fold inside
+    // sum += checksum(&ph, sizeof(ph));  // fold inside
+    sum += (uint32_t)(~checksum(&ph,       sizeof(ph)));
 
     // sum UDP header
-    sum += checksum(udp, sizeof(UDPHeader));
+    // sum += checksum(udp, sizeof(UDPHeader));
+    sum += (uint32_t)(~checksum(udp,       sizeof(UDPHeader)));
 
     // sum payload (and pad if odd)
-    sum += checksum(payload, payload_len);
+    // sum += checksum(payload, payload_len);
+    sum += (uint32_t)(~checksum(payload,   payload_len));
+
 
     return fold_checksum(sum);
 }
@@ -123,12 +127,13 @@ char* encode_ip_udp(const void* payload, size_t payload_len, uint32_t src_ip,
 //
 // packet is ethernet packet: ethernet header + IPv4 + UDP
 //
-void* decode_ip_udp(const void* packet, size_t packet_len,
+char* decode_ip_udp(const void* packet, size_t packet_len,
                     size_t* out_payload_len, uint32_t* src_ip,
                     uint16_t* src_port, uint16_t* dest_port) {
     if (packet_len < sizeof(struct IPv4Header) + sizeof(UDPHeader)) {
         // Too small to contain Ethernet + IPv4
         // return 0;
+        Debug::printf("PACKET LENGTH PROBLEM\n");
         return nullptr;
     }
 
@@ -138,12 +143,14 @@ void* decode_ip_udp(const void* packet, size_t packet_len,
     // 1) verify IPv4 header checksum
     if (checksum(ip, ihl_bytes) != 0) {
         // return 0;
+        Debug::printf("CHECK SUM FAILED\n");
         return nullptr;
     }
 
     // 2) protocol & IP‑dest checks
     if (!verify_receiver(ip)) {
         // return 0;
+        Debug::printf("VERIFY RECEIVER FAILED\n");
         return nullptr;
     }
 
@@ -152,15 +159,17 @@ void* decode_ip_udp(const void* packet, size_t packet_len,
     size_t udp_len = ntohs(udp->length);
     if (packet_len < ihl_bytes + udp_len) {
         // return 0;
+        Debug::printf("PACKET LEN FAILED\n");
         return nullptr;
     }
 
     size_t payload_len = udp_len - sizeof(UDPHeader);
     const char* payload_ptr = (const char*)udp + sizeof(UDPHeader);
 
-    // 4) verify UDP checksum
+    // 4) verify UDP checksum //! THIS ONE DOESN'T WORK
     if (udp_checksum(ip, udp, payload_ptr, payload_len) != 0) {
         // return 0;
+        Debug::printf("UDP CHECKSUM FAILED\n");
         return nullptr;
     }
 
@@ -171,7 +180,7 @@ void* decode_ip_udp(const void* packet, size_t packet_len,
    // *out_payload_len = payload_len; //TODO: Not Needed...-David
 
     // 5) finally, extract payload
-    void* payload = malloc(payload_len);
+    char* payload = (char*)malloc(payload_len);
 
     memcpy(payload, payload_ptr, payload_len);
 
@@ -181,6 +190,8 @@ void* decode_ip_udp(const void* packet, size_t packet_len,
     // *src_ip = ntohs(ip->src_ip);
 
     *out_payload_len = payload_len;
+
+    Debug::printf("RETURNING PAYLOAD\n");
     return payload;
 }
 

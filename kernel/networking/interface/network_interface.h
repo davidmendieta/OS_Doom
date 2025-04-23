@@ -27,9 +27,9 @@ class NetworkInterface {
     void send_ip_udp(const void* payload, size_t payload_length, uint32_t src_ip, uint16_t src_port, uint32_t dest_ip, uint16_t dest_port, size_t* out_length) {
         char* src_mac = (char*)malloc(6);
         rtl8139.get_mac_addr(src_mac);
-        char* dest_mac = nullptr; //! GET FROM HASHMAP / ARP REQUEST IF NOT
+        unsigned char dest_mac[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; //! GET FROM HASHMAP / ARP REQUEST IF NOT
         uint32_t packet_length;
-        char* packet = Parser::encode_ip_udp(payload, payload_length, src_ip, src_mac, src_port, dest_ip, dest_mac, dest_port, &packet_length);
+        char* packet = Parser::encode_ip_udp(payload, payload_length, src_ip, src_mac, src_port, dest_ip, (char*)dest_mac, dest_port, &packet_length);
         send(packet, packet_length);
     }
 
