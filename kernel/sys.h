@@ -26,7 +26,10 @@ void iamateapot(); // 418
 
 int stat(const char* path, struct stat *buf); // 200
 int fstat(int fd, struct stat *buf); // 201
+<<<<<<< HEAD
 
+=======
+>>>>>>> c718acaeb71e2282080750d75eae13750b5a8466
 
 class SYS {
 public:

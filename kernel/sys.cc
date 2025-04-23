@@ -315,7 +315,10 @@ int fstat(int fd, struct stat *buf) {
     return 0;
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> c718acaeb71e2282080750d75eae13750b5a8466
 extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     //Debug::printf("*** syscall #%d\n",eax);
     uint32_t *user_sp = (uint32_t*)frame[3];
@@ -364,10 +367,17 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     case 418:
         Debug::printf("*** I'm a teapot\n");
         return -1;
+<<<<<<< HEAD
     case 200:
         return stat((const char*)user_sp[1], (struct stat*) user_sp[2]);
     case 201:
         return fstat(user_sp[1], (struct stat*) user_sp[2]);
+=======
+    // case 200:
+    //     return stat((const char*)user_sp[1], (struct stat*) user_sp[2]);
+    // case 201:
+    //     return fstat(user_sp[1], (struct stat*) user_sp[2]);
+>>>>>>> c718acaeb71e2282080750d75eae13750b5a8466
     default:
         Debug::printf("*** unknown system call %d\n",eax);
         return -1;
