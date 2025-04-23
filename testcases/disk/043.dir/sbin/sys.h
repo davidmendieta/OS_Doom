@@ -18,7 +18,7 @@ extern void exit(int rc);
 
 /* open */
 /* opens a file, returns file descriptor, flags is ignored */
-extern int open(const char* fn, int flags);
+extern int open(const char* fn, int flags, uint16_t mode);
 
 /* len */
 /* returns number of bytes in the file, negative indicates error or a console device */
