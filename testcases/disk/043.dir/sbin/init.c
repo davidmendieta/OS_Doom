@@ -15,15 +15,15 @@
 int main(int argc, char **argv) {
   // Tests whether we can write to a file,
   // jump to the beginning, and read can actually see the changes
-  int fd = open("write", 0);
+  int fd = open("/sbin/write", 0x0200, 0644);
   char* src = "*** stdout\n";
   write(fd, src, 11);
-  seek(fd, 0);
+  close(fd);
+  int fd2= open("/sbin/write", 0x0200, 0644);
   char result[12];
-  int n = read(fd, result, 11);
+  int n = read(fd2, result, 11);
   result[n] = 0;
   printf("%s", result);
   shutdown();
-
   return 0;
 }

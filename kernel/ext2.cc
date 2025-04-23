@@ -89,6 +89,13 @@ uint32_t Node::get_offset() {
         uint32_t table = fs->iNodeTables[group];
         return table * block_size + idxGroup * fs->iNodeSize;
 }
+uint32_t Node::get_specific_offset(uint32_t num) {
+        uint32_t idx = num - 1;
+        uint32_t group = idx / fs->iNodesPerGroup;
+        uint32_t idxGroup = idx % fs->iNodesPerGroup;
+        uint32_t table = fs->iNodeTables[group];
+        return table * block_size + idxGroup * fs->iNodeSize;
+}
 uint32_t Ext2::alloc_block() {
     char bitmap[blockSize];
     for (uint32_t bg = 0;  bg < nGroups; bg++) {
@@ -108,13 +115,7 @@ uint32_t Ext2::alloc_block() {
                 groupTable[bg].free_blocks_count--;
                 // put the updated superblock on disk
                 buffer_cache->write_all(1024, sizeof(sb), (char*) &sb);
-                uint32_t table_start; 
-                if (blockSize == 1024) {
-                    table_start = 2048;
-                }
-                else {
-                    table_start = blockSize;
-                }
+                uint32_t table_start = (sb.first_data_block + 1) * blockSize;
                 buffer_cache->write_all(table_start + bg * sizeof(BlockGroup),
                 sizeof(BlockGroup), (char*) &groupTable[bg]);
                 return sb.first_data_block + bg * bpg + i;
@@ -124,6 +125,34 @@ uint32_t Ext2::alloc_block() {
     // we did not find a suitable block
     return -1;
 }
+uint32_t Ext2::alloc_inode() {
+    char bitmap[blockSize];
+    for (uint32_t bg = 0; bg < nGroups; bg++) {
+        uint32_t inbmp = groupTable[bg].inode_bitmap;
+        buffer_cache->read_all(inbmp * blockSize, blockSize, bitmap);
+        uint32_t ipg = sb.inodes_per_group;
+        for (uint32_t i = 0; i < ipg; i++) {
+            uint32_t byte = i / 8;
+            uint32_t bit = i % 8;
+            if ((bitmap[byte] & (1 << bit)) == 0) {
+                bitmap[byte] |= (1 << bit);
+                // put the updated bitmap on disk
+                buffer_cache->write_all(inbmp * blockSize, blockSize, bitmap);
+                sb.free_inodes_count--;
+                groupTable[bg].free_inodes_count--;
+                // put the updated superblock on disk
+                buffer_cache->write_all(1024, sizeof(sb), (char*) &sb);
+                uint32_t table_start = (sb.first_data_block + 1) * blockSize;
+                buffer_cache->write_all(table_start + bg * sizeof(BlockGroup),
+                sizeof(BlockGroup), (char*) &groupTable[bg]);
+                return bg * ipg + i + 1;
+            }
+        }
+    }
+    // couldn't find an inode
+    return -1;
+}
+
 
 StrongPtr<Node> Ext2::get_node(uint32_t number) {
     if (number == 0) return {};
@@ -143,6 +172,36 @@ StrongPtr<Node> Ext2::get_node(uint32_t number) {
     auto out = StrongPtr<Node>::make(this, buffer_cache,number,blockSize);
     buffer_cache->read(nodeOffset,out->data);
     return out;
+}
+
+// used in open create mode and similar things
+StrongPtr<Node> Ext2::create_inode(StrongPtr<Node> parent, char* name, uint16_t mode) {
+    uint32_t inode = alloc_inode();
+    StrongPtr<Node> ret = StrongPtr<Node>::make(this, buffer_cache, inode,
+    blockSize);
+    bzero(&ret->data,sizeof(NodeData));
+    ret->data.mode = mode;
+    if ((mode >> 12) == 4) {
+        // . and ..
+        ret->data.n_links = 2;
+    }
+    else {
+        ret->data.n_links = 1;
+    }
+    if ((mode >> 12 ) == 4) {
+        ret->data.size_low = blockSize;
+    }
+    else {
+        ret->data.size_low = 0;
+    }
+    buffer_cache->write_all(ret->get_specific_offset(inode), sizeof(NodeData),
+    (char*) &ret->data);
+    if ((mode >> 12) == 4) {
+        parent->data.n_links++;
+        buffer_cache->write_all(parent->get_offset(), sizeof(NodeData), (char*) &parent->data);
+    }
+    parent->update_dir(inode, name, (mode >> 12));
+    return ret;
 }
 
 StrongPtr<Node> Ext2::find_one(StrongPtr<Node> dir, char* name) {
@@ -319,7 +378,67 @@ void Node::write_block(uint32_t lbn, const char* buffer) {
     buffer_cache->write_all(get_offset(), sizeof(NodeData), (char*) &data);
 }
 
+void Node::update_dir(uint32_t entry_number, char* name, uint16_t type) {
+    uint32_t dir_block = 0;
+    if (data.size_low > 0) {
+        dir_block =  (data.size_low - 1) / block_size;
+    }
+    uint32_t offset = dir_block * block_size;
+    char* block = new char[block_size];
+    read_block(dir_block, block);
 
+    // Get the last entry
+    // The last entry has a rec lan that spans the rest of the block
+    // We need to adjust this
+    uint32_t curr = 0;
+    uint32_t prev = 0;
+    struct DirectoryEntry
+    {
+        uint32_t inode;
+        uint16_t rec_len;
+        uint8_t name_len;
+        uint8_t file_type;
+    };
+    DirectoryEntry* t = nullptr;
+    while (curr < block_size) {
+        t = (DirectoryEntry*) (block + curr);
+        prev = curr;
+        curr += t->rec_len;
+    }
+    uint16_t add = 0;
+    uint16_t name_len = t->name_len;
+    if (name_len % 4 > 0) {
+        add += 4 - (name_len % 4);
+    }
+    uint16_t adjusted = 8 + name_len + add;
+    t->rec_len = adjusted;
+    write_block(dir_block, block);
+
+    // place the new entry here
+    uint32_t place = offset + prev + adjusted;
+    name_len = K::strlen(name);
+    uint32_t rec_len = block_size - ((place - offset) % block_size);
+   
+    DirectoryEntry de;
+    de.inode = entry_number;
+    de.rec_len = rec_len;
+    de.name_len = name_len;
+    // change into a switch statement
+    if (type == 4) de.file_type = 2;
+    else if (type == 8) de.file_type = 1;
+    else if (type == 0xA) de.file_type = 7;
+    else if (type == 0x2) de.file_type = 3;
+    else if (type == 0x6) de.file_type = 4;
+    else if (type == 0xC) de.file_type = 6;
+    else if (type == 1) de.file_type = 5;
+    else {
+        de.file_type = 0;
+    }
+    this->write_all(place, sizeof(de), (char*) &de);
+    this->write_all(place + 8, name_len, name);
+    data.size_low = place + rec_len;
+    buffer_cache->write_all(get_offset(), sizeof(NodeData), (char*) &data);
+}
 uint32_t Node::entry_count() {
     ASSERT(is_dir());
     uint32_t count = 0;

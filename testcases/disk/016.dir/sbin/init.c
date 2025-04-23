@@ -5,7 +5,7 @@
 void test_writev() {
     // open a file for writing
     const char* filename = "testfile.txt";
-    uint32_t fd = open(filename, 0);
+    uint32_t fd = open(filename, 0, 0);
     if (fd < 0) {
         printf("failed to open file: %s\n", filename);
         return;
@@ -24,9 +24,9 @@ void test_writev() {
     iov[2].iov_base = (void*)str3;
     iov[2].iov_len = 30;
 
-    printf("iov[0] base: %p, len: %d\n", iov[0].iov_base, iov[0].iov_len);
-    printf("iov[1] base: %p, len: %d\n", iov[1].iov_base, iov[1].iov_len);
-    printf("iov[2] base: %p, len: %d\n", iov[2].iov_base, iov[2].iov_len);
+    printf("iov[0] base: %p, len: %ld\n", iov[0].iov_base, iov[0].iov_len);
+    printf("iov[1] base: %p, len: %ld\n", iov[1].iov_base, iov[1].iov_len);
+    printf("iov[2] base: %p, len: %ld\n", iov[2].iov_base, iov[2].iov_len);
 
     // call writev
     uint32_t total_written = writev(fd, (void*)iov, 3);

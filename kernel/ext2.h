@@ -125,6 +125,8 @@ class Node : public BlockIO {  // we implement BlockIO because we
     //    - for a symbolic link, the length of the name
     uint32_t size_in_bytes() override { return data.size_low; }
     uint32_t get_offset();
+    uint32_t get_specific_offset(uint32_t num);
+    void update_dir(uint32_t entry_number, char* name, uint16_t type);
     
     // read the given block (panics if the block number is not valid)
     // remember that block size is defined by the file system not the device
@@ -251,6 +253,8 @@ class Ext2 {
     // The root directory for this file system
     StrongPtr<Node> root;
     uint32_t alloc_block();
+    uint32_t alloc_inode();
+    StrongPtr<Node> create_inode(StrongPtr<Node> parent, char* loc, uint16_t mode);
 
    private:
 

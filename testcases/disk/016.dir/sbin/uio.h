@@ -1,8 +1,13 @@
+// filepath: /u/kelly16/OS-Doom/kernel/uio.h
+#ifndef UIO_H
+#define UIO_H
+
 #include "sys.h"
 #include "stdint.h"
 
-// struct for iovec
 struct iovec {
     void  *iov_base;    /* Starting address */
-    size_t iov_len;     /* Number of bytes to transfer */
+    uint32_t iov_len;   /* Number of bytes to transfer */
 };
+
+#endif // UIO_H
