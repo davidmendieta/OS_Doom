@@ -56,7 +56,8 @@ NETWORK_MODE=CLIENT #  HOST or CLIENT
 HOST_IP = 128.83.144.128 # Change to actual Host IP, only needed for client mode
 
 
-RANDOM_MAC := $(shell echo 52:54:$$((RANDOM%256)):$$((RANDOM%256)):$$((RANDOM%256)):$$((RANDOM%256)) | sed 's/ /:/g')
+RANDOM_MAC := $(shell printf '52:54:%02x:%02x:%02x:%02x\n' \
+    $$((RANDOM%256)) $$((RANDOM%256)) $$((RANDOM%256)) $$((RANDOM%256)))
 
 QEMU_FLAGS_NETWORKING_HOST = -netdev socket,id=net0,listen=:1234 \
     -device rtl8139,netdev=net0,mac=$(RANDOM_MAC)
