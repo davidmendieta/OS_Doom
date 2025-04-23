@@ -35,6 +35,7 @@
 
     uint32_t write(uint32_t fd, void* buf, int32_t nbyte) {
         if(nbyte < 0 || !address_valid((uint32_t)buf, nbyte) || fd >= PCB_ARR_SIZE) {
+            // Debug::printf("*** bytes_Written from syscall = -1\n");
             return -1;
         }
 
@@ -48,6 +49,7 @@
     if (open_file->offset > data->size_low) {
         data->size_low = open_file->offset;
     }
+    // Debug::printf("*** bytes_Written from syscall = %d\n", bytes_written);
     return bytes_written;
 }
 
