@@ -174,7 +174,6 @@ int getsockname(uint32_t sockfd, struct sockaddr *addr, socklen_t *addrlen) {
     }
     StrongPtr<UDPSocket> socket = me->pcb->sockdt[sockfd];
 
-    uint32_t length = *addrlen;
     return socket->getsockname((struct sockaddr_in*)addr);
 }
 
