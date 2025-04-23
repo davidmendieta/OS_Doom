@@ -24,6 +24,7 @@ int main(int argc, char **argv) {
   int n = read(fd2, result, 11);
   result[n] = 0;
   printf("%s", result);
+  close(fd);
   shutdown();
   return 0;
 }

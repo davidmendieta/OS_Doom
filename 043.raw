@@ -5,8 +5,8 @@ iPXE (http://ipxe.org) 00:03.0 CA00 PCI2.10 PnP PMM+06FD0FC0+06F30FC0 CA00
 Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
 
 
-Booting from Hard Disk..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Booting from Hard Disk..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 | What just happened? Why am I here?
 | Discovering my identity and features
 |     CPUID: AuthenticAMD
@@ -22,8 +22,8 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 | physical range 0x600000 0x7fe0000
 | pitInit freq 1000Hz
 | pitInit divider 59659
-| APIT running at 1000054732Hz
-| APIT counter=1000054 for 1000Hz
+| APIT running at 1000070095Hz
+| APIT counter=1000070 for 1000Hz
 
 - PCI ENUMERATING DEVICES -
 | Expected Device Found: Vendor 0x8086, Device 0x1237
@@ -46,16 +46,16 @@ xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 | reset 2
 |      eip:0x8000
 | initializing TSS:ss0 for 1
+| initializing TSS:ss0 for 2
 | initialize 3
 | 1 enabling interrupts, I'm scared
-| initializing TSS:ss0 for 2
+| 2 enabling interrupts, I'm scared
 | reset 3
 |      eip:0x8000
-| 2 enabling interrupts, I'm scared
-| initializing TSS:ss0 for 0
-| 0 enabling interrupts, I'm scared
 | initializing TSS:ss0 for 3
+| initializing TSS:ss0 for 0
 | 3 enabling interrupts, I'm scared
-vaddr:80000000 memsz:0x401d00 filesz:0x1cd4 fileoff:80
+| 0 enabling interrupts, I'm scared
+vaddr:80000000 memsz:0x401d20 filesz:0x1cfc fileoff:80
 *** stdout
 shutdown

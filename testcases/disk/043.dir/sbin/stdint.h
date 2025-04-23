@@ -1,4 +1,4 @@
-#ifndef _STDINT_H_
+qq#ifndef _STDINT_H_
 #define _STDINT_H_
 
 typedef unsigned char uint8_t;
