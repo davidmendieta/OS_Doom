@@ -150,7 +150,9 @@ void process_start(char* command) {
                 free(command);
             }
             free(buffer);
-        }
+        } else {
+            printf("couldn't execute file %s\n", tokens.argv[0]);
+        } 
     }
     close(fd);
 
