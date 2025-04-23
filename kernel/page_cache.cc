@@ -8,7 +8,7 @@ namespace page_cache {
     uint32_t hashtable [1024]; // the 
 
     void cache_init() { // call init for page cache?? 
-
+        
     }
 
     uint32_t hash(uint32_t va) {
@@ -58,5 +58,4 @@ namespace page_cache {
     
     // uint32_t copy_on_write(uint32_t /*some addr here*/);
     // idk how to do this one
-
 }

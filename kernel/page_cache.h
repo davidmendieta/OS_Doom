@@ -34,7 +34,6 @@ struct CacheEntry {
 class Cache {
 private:
     uint32_t* hash_table;
-    CacheEntry* entries; // arr of cache entries
     uint32_t cache_size; 
     uint32_t clock_hand; // clock algo
     BlockingLock lock; // protect cache access
@@ -50,6 +49,8 @@ public:
     ~Cache();
 
     // page cache methods imple. in page)cache.cc
+    
+    CacheEntry* entries; // arr of cache entries
     uint32_t get_page(uint32_t va, StrongPtr<Node> file, uint32_t file_offset, bool write_access);
     void release_page(uint32_t va);
     void flush_page(uint32_t va);

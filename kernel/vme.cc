@@ -202,7 +202,6 @@ void VME<Lock>::remove_entry(uint32_t va, bool user) {
     StrongPtr<VMEEntry> prev{nullptr};
     StrongPtr<VMEEntry> curr = entries;
 
-
     while (!(curr == nullptr)) {
         if (va >= curr->start && va < curr->start + curr->num_pages * PhysMem::FRAME_SIZE && (!user || curr->user == user)) {
             uint32_t start = curr->start;
