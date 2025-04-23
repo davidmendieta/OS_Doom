@@ -58,7 +58,7 @@
         }
         else {
             if(me->pcb->cwd == nullptr) checkIn = fs->root;
-            checkIn = me->pcb->cwd;
+            else checkIn = me->pcb->cwd;
         }
         StrongPtr<Node> new_node = fs->find(checkIn, fd);
         // check if the creat flag is passed in
@@ -331,6 +331,7 @@
         case 6:
             return close(user_sp[1]);
         case 7: /* shutdown */
+            fs->buffer_cache->flush();
             Debug::shutdown();
             return -1;
         case 8:

@@ -243,10 +243,11 @@ class STDERR : public STDIO {
 class Ext2 {
     // The device on which the file system resides
     StrongPtr<Ide> ide_;
-    StrongPtr<impl::ext2::BufferCache> buffer_cache{};
+    
    
 
    public:
+   StrongPtr<impl::ext2::BufferCache> buffer_cache{};
   
     BlockGroup* groupTable = nullptr;
     
