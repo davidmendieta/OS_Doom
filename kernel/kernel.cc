@@ -6,6 +6,7 @@
 #include "libk.h"
 #include "config.h"
 #include "shared.h"
+#include "ps2.h"
 
 StrongPtr<Ext2> fs{};
 
@@ -38,6 +39,22 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
 }
 
 void kernelMain(void) {
+    // //ADDED
+    // PS2::init();
+    // PS2::setup_ps2_irqs();
+
+    // uint8_t mask = inb(0x21);
+    // mask &= ~(1 << 1); // enable IRQ1
+    // outb(0x21, mask);
+
+    // sti();
+    // Debug::printf("Waiting for keyboard input...\n");
+
+    // // TEMPORARY LOOP FOR TESTING
+    // while (true) {
+    //     asm volatile ("hlt");
+    // }
+
     auto d = StrongPtr<Ide>::make(1,0);
     fs = StrongPtr<Ext2>::make(d);
     auto init = fs->find(fs->root, "/sbin/init");
@@ -66,9 +83,12 @@ void kernelMain(void) {
 
     // char** argv = (char**)((uint32_t*)userEsp)[1];
 
-    // Debug::printf("HERE %s\n", argv[0]);
+    Debug::printf("HERE %s\n", argv[0]);
 
-
+    // while (true) {
+    //     PS2::read_ps2_data();
+    //     //Debug::printf("0X%x\n", PS2::read_ps2_data());
+    // }
 
     ASSERT(userEsp % 16 == 0);
 
