@@ -1,6 +1,7 @@
 #include "idt.h"
 #include "ps2.h"
 #include "smp.h"
+#include "mouse.h"
 namespace PS2 {
 volatile bool debug_on = true;
 
@@ -280,6 +281,41 @@ extern "C" void mouse_handler() {
         // Print raw values directly (0-255), so you see 156 for -100
         Debug::printf("left: %d, middle: %d, right: %d, x: %u, y (raw): %u, y (disp): %u, abs x: %u, abs y: %u\n", (mouse_bytes[2] & 0x01), 
             (mouse_bytes[2] & 0x04), (mouse_bytes[2] & 0x02), rawX, rawY, y, mouse_x_pos, mouse_y_pos);
+
+                       
+// Extract button states from byte 0 (not byte 2!)
+uint8_t buttons = mouse_bytes[2] & 0x07;  // First 3 bits are button states
+
+
+// Extract X and Y movement
+int16_t x_delta = mouse_bytes[1];
+int16_t y_delta = mouse_bytes[0];
+
+
+// Handle sign extension for negative movement
+if (mouse_bytes[2] & 0x10) {
+   x_delta |= 0xFF00;  // X sign bit is set, extend to 16 bits
+}
+
+
+if (mouse_bytes[2] & 0x20) {
+   y_delta |= 0xFF00;  // Y sign bit is set, extend to 16 bits
+}
+
+
+// Y is inverted in PS/2, so negate it
+y_delta = -y_delta;
+
+
+// Call the mouseHandler to translate PS/2 data to SDL events
+mouseHandler(buttons, x_delta, y_delta);
+
+
+
+
+
+
+
 
     }
 
