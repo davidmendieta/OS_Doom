@@ -4,7 +4,8 @@ UTCS_OPT=-O3 make clean $1 $1.data
 
 time `make qemu_cmd` `make qemu_config_flags` \
              -no-reboot \
-             -nographic \
+             -smp 2 \
+             -vga virtio -display sdl,gl=on \
              --monitor stdio \
              --serial file:$*.raw \
              -drive file=kernel/build/kernel.img,index=0,media=disk,format=raw \
