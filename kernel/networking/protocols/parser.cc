@@ -56,13 +56,17 @@ uint16_t udp_checksum(const IPv4Header* ip, const UDPHeader* udp,
 
     // sum pseudo‑header
     uint32_t sum = 0;
-    sum += checksum(&ph, sizeof(ph));  // fold inside
+    // sum += checksum(&ph, sizeof(ph));  // fold inside
+    sum += (uint32_t)(~checksum(&ph,       sizeof(ph)));
 
     // sum UDP header
-    sum += checksum(udp, sizeof(UDPHeader));
+    // sum += checksum(udp, sizeof(UDPHeader));
+    sum += (uint32_t)(~checksum(udp,       sizeof(UDPHeader)));
 
     // sum payload (and pad if odd)
-    sum += checksum(payload, payload_len);
+    // sum += checksum(payload, payload_len);
+    sum += (uint32_t)(~checksum(payload,   payload_len));
+
 
     return fold_checksum(sum);
 }
