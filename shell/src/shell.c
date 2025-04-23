@@ -137,12 +137,19 @@ void process_start(char* command) {
     // pistash script
     fd = open(tokens.argv[0], 0);
     if (fd >= 0) {
-        char shebang[14]; 
-        read(fd, shebang, 14); // read first 14 bytes of the file (13 + \n)
-        shebang[13] = '\0'; 
-        if (streq(shebang, "#!bin/pistash")) { // when we have more interpreters, replace with check for #!
+        char shebang[15]; 
+        read(fd, shebang, 15); // read first 15 bytes of the file (14 + \n)
+        shebang[14] = '\0'; 
+        if (streq(shebang, "#!/bin/pistash")) { // when we have more interpreters, replace with check for #!
             char *buffer = (void*) malloc(4096);
             read(fd, (void*) buffer, 4096);
+            int len_of_file = len(fd) - strlen(shebang) - 1; // for shebang and new line
+            if (buffer[len_of_file - 1] == '\n') {
+                // file ends in \n
+                buffer[len_of_file - 1] = '\0'; 
+            } else {
+                buffer[len_of_file] = '\0';
+            }
             while (*buffer != '\0') {
                 char* command = malloc(4096);
                 buffer = input_line(command, buffer);
