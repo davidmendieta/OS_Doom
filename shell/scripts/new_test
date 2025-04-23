@@ -22,7 +22,8 @@ touch "t${COUNT}.ok"
 cp -l ./env/sbin/* "$TESTDIR_NAME/sbin/"
 
 # copy from src
-cp -l ../src/* "$TESTDIR_NAME/sbin/"
+# ignore the error lol
+cp -l ../src/* 2>/dev/null "$TESTDIR_NAME/sbin/"
 cp -l ../src/bin/* "$TESTDIR_NAME/bin"
 
 # make input file (not hardlinked)

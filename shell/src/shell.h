@@ -9,13 +9,18 @@ struct Command {
 } typedef Command;
 
 enum CMD_CODES {
-    CMD_IGNORE,
-    CMD_CD,
-    CMD_PATH,
-    CMD_EXIT,
-    CMD_ECHO,
-    CMD_PWD,
-    CMD_EXTERNAL
+    CMD_IGNORE,     // comments
+    CMD_CD,         // cd
+    CMD_PATH,       // path??
+    CMD_EXIT,       // exit with status 0
+    CMD_ECHO,       // prints
+    CMD_PWD,        // print cwd
+    CMD_FALSE,      // set exit status to 1 in command chain
+    CMD_TRUE,       // set exit status to 0 in command chain
+    CMD_LS,         // ls
+    CMD_SH,         // start a new shell
+    CMD_SLEEP,      // sleep
+    CMD_EXTERNAL    // external command
 };
 
 Command commands[] = {
@@ -24,6 +29,11 @@ Command commands[] = {
     {"exit", CMD_EXIT},
     {"echo", CMD_ECHO},
     {"pwd", CMD_PWD},
+    {"false", CMD_FALSE},
+    {"true", CMD_TRUE},
+    {"ls", CMD_LS},
+    {"sh", CMD_SH},
+    {"sleep", CMD_SLEEP},
     {NULL, CMD_EXTERNAL}  // default
 };
 

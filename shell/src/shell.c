@@ -159,9 +159,19 @@ void process_start(char* command) {
     tokens_free(&tokens);
 }
 
-int main(int argc, char** argv) {
-    printf("welcome to the pistash shell\n");
+void welcome() {
+    // this font is so funny
+    printf("   _ __     _              _                      _         _            \n");
+    printf("  | '_ \\   (_)     ___    | |_    __ _     ___   | |_      (_)     ___   \n");
+    printf("  | .__/   | |    (_-<    |  _|  / _` |   (_-<   | ' \\     | |    / _ \\  \n");
+    printf("  |_|__   _|_|_   /__/_   _\\__|  \\__,_|   /__/_  |_||_|   _|_|_   \\___/  \n");
+    printf("_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"| \n");
+    printf("`'-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-'  \n");
+}
 
+int main(int argc, char** argv) {
+    welcome();
+    
     char* buffer;
     Hashmap* shell_vars = (Hashmap*) malloc(sizeof(Hashmap));
     hash_init(shell_vars);
@@ -180,4 +190,6 @@ int main(int argc, char** argv) {
         free(command);
         // TODO be able to send input to process and display their output
     }
+
+    shutdown(); // should never get here
 }
