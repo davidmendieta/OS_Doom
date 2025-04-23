@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 
     close(fd);
     int fd1 = open("/pride_and_prejudice", 0, 0);
-    char buf[33];
+    char buf[40];
     seek(fd1, 50000);
 
     int n = read(fd1, buf, 39);
