@@ -1,0 +1,17 @@
+[binaries]
+c = '/opt/homebrew/bin/i686-elf-gcc'
+cpp = '/opt/homebrew/bin/i686-elf-g++'
+ar = '/opt/homebrew/bin/i686-elf-ar'
+strip = '/opt/homebrew/bin/i686-elf-strip'
+
+[built-in options]
+c_args = ['-m32']
+cpp_args = ['-m32']
+c_link_args = ['-m32']
+cpp_link_args = ['-m32']
+
+[host_machine]
+system = 'doom-new-os'
+cpu_family = 'x86'
+cpu = 'i386'
+endian = 'little'

@@ -1,11 +1,17 @@
+#define _GNU_SOURCE
 #include <mlibc/arch-defs.hpp>
+#include "../x86/elf.hpp"
 #include <stdint.h>
 #include <string.h>
+//#include "elf.h"
+#include "../..//elf/include/elf.h"
 
 // keep a list of optional generic relocation types
+#ifndef R_OFFSET
 enum {
 	R_OFFSET =  (uintptr_t) -1,
 };
+#endif
 
 
 #include <frg/manual_box.hpp>
@@ -18,8 +24,29 @@ enum {
 #include <abi-bits/fcntl.h>
 #include <internal-config.h>
 
-#include "elf.hpp"
+//#include <elf.hpp>
 #include "linker.hpp"
+
+#ifndef DT_SYMBOLIC
+#define DT_SYMBOLIC 16
+#endif
+#ifndef DT_BIND_NOW
+#define DT_BIND_NOW 24
+#endif
+#ifndef DT_FLAGS
+#define DT_FLAGS 30
+#endif
+#ifndef DF_SYMBOLIC
+#define DF_SYMBOLIC 0x02
+#endif
+#ifndef DF_BIND_NOW
+#define DF_BIND_NOW 0x08
+#endif
+#ifndef DF_STATIC_TLS
+#define DF_STATIC_TLS 0x100
+#endif
+
+
 
 #if !MLIBC_MMAP_ALLOCATE_DSO
 uintptr_t libraryBase = 0x41000000;

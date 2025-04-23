@@ -1,85 +1,124 @@
-project('os_port', 'c', 'cpp', version: '1.0.0')
+#add_project_arguments('-D_GNU_SOURCE', language: 'cpp')
 
-cc = meson.get_compiler('c')
-cpp = meson.get_compiler('cpp')
+sysdep_supported_options = {
+	'posix': true,
+	'linux': false,
+	'bsd': false,
+	'glibc': false
+}
 
-CFLAGS = ['-std=c99', '-m32', '-nostdlib', '-nostdinc', '-g', '-O3', '-Wall', '-Werror', '-mno-sse']
-CCFLAGS = ['-std=c++20', '-fno-exceptions', '-fno-rtti', '-m32', '-ffreestanding', '-nostdlib', '-g', '-O3', '-Wall', '-Werror', '-mno-sse']
+arch_dir = host_machine.cpu_family()
 
-CFILES = files('*.c')
-CCFILES = files('*.cc')
-SFILES = files('*.S', '*.s')
+doom_include_dirs = [
+  include_directories('include'),
+  include_directories('../../options/rtld/x86'),
+  include_directories('include/mlibc/'),
+  include_directories('../../options/elf/include'),
+  include_directories('../../../kernel/'),
+]
 
-ALL_OFILES = []
-foreach src : CFILES
-  ALL_OFILES += [src.splitext()[0] + '.o']
-endforeach
+rtld_include_dirs += doom_include_dirs
+libc_include_dirs += doom_include_dirs
 
-foreach src : CCFILES
-  ALL_OFILES += [src.splitext()[0] + '.o']
-endforeach
-
-foreach src : SFILES
-  ALL_OFILES += [src.splitext()[0] + '.o']
-endforeach
-
-KERNEL_OFILES = ALL_OFILES - files('crtn.o', 'crti.o')
-
-B = 'build'
-build_dir = meson.build_root() / B 
-
-# Compile the C, C++, and Assembly files (with custom targets)
-foreach src : CFILES
-  object_file = build_dir / src.basename() + '.o'
-  custom_target(src.basename() + '_obj', 
-    input: src,
-    output: object_file,
-    command: [cc, '-I.', '-c', '-MD', '-MF', object_file + '.d', '-o', object_file] + CFLAGS
-  )
-endforeach
-
-foreach src : CCFILES
-  object_file = build_dir / src.basename() + '.o'
-  custom_target(src.basename() + '_obj', 
-    input: src,
-    output: object_file,
-    command: [cpp, '-I.', '-c', '-MD', '-MF', object_file + '.d', '-o', object_file] + CCFLAGS
-  )
-endforeach
-
-foreach src : SFILES
-  object_file = build_dir / src.basename() + '.o'
-  custom_target(src.basename() + '_obj', 
-    input: src,
-    output: object_file,
-    command: [cc, '-I.', '-c', '-MD', '-MF', object_file + '.d', '-o', object_file, '-m32'] 
-  )
-endforeach
-
-# Link the kernel object files and create the kernel image
-kernel_output = build_dir / 'kernel'
-executable('kernel', KERNEL_OFILES, 
-  link_with: [cc],
-  cflags: CFLAGS + ['-nostdlib', '-T', 'script.ld', '-e', 'start'],
-  install: false
+# Include only low-level syscall handling
+libc_sources += files(
+	# Uncomment if you have this
+	# arch_dir / 'syscall.cpp',
 )
 
-# Convert kernel to binary
-custom_target('kernel_bin', 
-  input: kernel_output,
-  output: build_dir / 'kernel.bin',
-  command: ['objcopy', '-O', 'binary', kernel_output, build_dir / 'kernel.bin']
-)
+# You can add thread support later
+# if get_option('posix_option').allowed()
+# 	libc_sources += files(
+# 		'generic/thread.cpp',
+# 		arch_dir / 'cp_syscall.S',
+# 		arch_dir / 'thread_entry.S'
+# 	)
+# endif
 
-# Create kernel image
-custom_target('kernel_img', 
-  input: build_dir / 'kernel.bin',
-  output: build_dir / 'kernel.img',
-  command: ['dd', 'if=' + build_dir / 'kernel.bin', 'of=' + build_dir / 'kernel.img', 'bs=512', 'conv=sync']
-)
+libc_sources += files('internal-sysdeps.cpp')
+#libc_sources += files('generic/syscalls.cpp')
 
-# Clean the build directory
-clean_target = custom_target('clean', 
-  command: ['rm', '-rf', build_dir]
-)
 
+# Install ABI headers
+if not no_headers
+	install_headers(
+		'include/abi-bits/auxv.h',
+		'include/abi-bits/seek-whence.h',
+		'include/abi-bits/time.h',
+		'include/abi-bits/errno.h',
+		'include/abi-bits/fcntl.h',
+		'include/abi-bits/stat.h',
+		'include/abi-bits/suseconds_t.h',
+		'include/abi-bits/dev_t.h',
+		'include/abi-bits/gid_t.h',
+		'include/abi-bits/ino_t.h',
+		'include/abi-bits/mode_t.h',
+		'include/abi-bits/nlink_t.h',
+		'include/abi-bits/pid_t.h',
+		'include/abi-bits/uid_t.h',
+		subdir: 'abi-bits',
+		follow_symlinks: true
+	)
+
+	install_headers('include/syscall.h')
+	install_headers('include/sys/syscall.h', subdir: 'sys')
+	install_headers(
+		'include/bits/syscall.h',
+		'include/bits/syscall_aliases.h',
+		subdir: 'bits'
+	)
+endif
+
+# CRT objects
+if not headers_only
+	crt = custom_target('crt1',
+		build_by_default: true,
+		command: c_compiler.cmd_array() + ['-c', '-o', '@OUTPUT@', '@INPUT@'],
+		input: arch_dir / 'crt-src/crt1.S',
+		output: 'crt1.o',
+		install: true,
+		install_dir: get_option('libdir')
+	)
+
+	crt_pie = custom_target('Scrt1',
+		build_by_default: true,
+		command: c_compiler.cmd_array() + ['-fPIE', '-c', '-o', '@OUTPUT@', '@INPUT@'],
+		input: arch_dir / 'crt-src/Scrt1.S',
+		output: 'Scrt1.o',
+		install: true,
+		install_dir: get_option('libdir')
+	)
+
+	custom_target('crti',
+		build_by_default: true,
+		command: c_compiler.cmd_array() + ['-c', '-o', '@OUTPUT@', '@INPUT@'],
+		input: arch_dir / 'crt-src/crti.S',
+		output: 'crti.o',
+		install: true,
+		install_dir: get_option('libdir')
+	)
+
+	custom_target('crtn',
+		build_by_default: true,
+		command: c_compiler.cmd_array() + ['-c', '-o', '@OUTPUT@', '@INPUT@'],
+		input: arch_dir / 'crt-src/crtn.S',
+		output: 'crtn.o',
+		install: true,
+		install_dir: get_option('libdir')
+	)
+
+	wrapper_conf = configuration_data()
+	wrapper_conf.set('LIBDIR', get_option('libdir'))
+	wrapper_conf.set('PREFIX', get_option('prefix'))
+
+	specs = configure_file(input: 'mlibc-gcc.specs.in',
+		output: 'mlibc-gcc.specs',
+		configuration: wrapper_conf)
+
+	wrapper_script = configure_file(input: 'mlibc-gcc.in',
+		output: 'mlibc-gcc',
+		configuration: wrapper_conf)
+
+	install_data(specs, install_dir: get_option('libdir'))
+	install_data(wrapper_script, install_dir: get_option('bindir'))
+endif

@@ -6,7 +6,7 @@
 
 #include <mlibc/debug.hpp>
 #include <mlibc/posix-sysdeps.hpp>
-
+#if 0
 int creat(const char *pathname, mode_t mode) {
 	return open(pathname, O_CREAT|O_WRONLY|O_TRUNC, mode);
 }
@@ -116,3 +116,4 @@ int open(const char *pathname, int flags, ...) {
 }
 
 [[gnu::alias("open")]] int open64(const char *pathname, int flags, ...);
+#endif 

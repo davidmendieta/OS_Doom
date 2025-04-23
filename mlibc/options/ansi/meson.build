@@ -61,7 +61,7 @@ ansi_sources = files(
 	'generic/stdio.cpp',
 	'generic/stdlib.cpp',
 	'generic/string.cpp',
-	'generic/threads.cpp',
+	#'generic/threads.cpp',
 	'generic/time.cpp',
 	'generic/uchar.cpp',
 	'generic/wchar.cpp',

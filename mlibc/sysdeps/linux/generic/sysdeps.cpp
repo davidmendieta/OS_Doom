@@ -9,7 +9,7 @@
 #include <bits/ensure.h>
 #include <abi-bits/fcntl.h>
 #include <abi-bits/socklen_t.h>
-#if __MLIBC_LINUX_OPTION
+#if __MLIBC_LINUX_OPTION 
 #  include <abi-bits/statx.h>
 #endif
 #include <mlibc/allocator.hpp>

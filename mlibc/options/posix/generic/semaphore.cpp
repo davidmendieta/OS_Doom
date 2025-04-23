@@ -1,4 +1,5 @@
-#include <semaphore.h>
+//#include <semaphore.h>
+#include "../include/semaphore.h"
 #include <errno.h>
 
 #include <bits/ensure.h>

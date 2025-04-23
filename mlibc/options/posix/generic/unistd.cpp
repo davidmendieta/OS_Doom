@@ -17,7 +17,9 @@
 #include <mlibc/arch-defs.hpp>
 #include <mlibc/debug.hpp>
 #include <mlibc/posix-sysdeps.hpp>
-#include <mlibc/bsd-sysdeps.hpp>
+// #ifdef __MLIBC_BSD_OPTION
+// #include <mlibc/bsd-sysdeps.hpp>
+// #endif
 #include <mlibc/thread.hpp>
 
 #if __MLIBC_LINUX_OPTION

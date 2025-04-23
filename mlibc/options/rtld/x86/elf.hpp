@@ -1,6 +1,9 @@
 #pragma once
+#define _GNU_SOURCE  // Needed to expose GNU extensions like DF_BIND_NOW
+//#include "elf.h"
+#include "../../elf/include/elf.h"
 
-#include <elf.h>
+
 
 #define ELF_CLASS ELFCLASS32
 #define ELF_MACHINE EM_386
