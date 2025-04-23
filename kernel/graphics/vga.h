@@ -1,21 +1,29 @@
 #ifndef __VGA_H
 #define __VGA_H
 
+// Remove the kernel/debug.h include since we're not using it
+// #include "../debug.h"
+
 typedef unsigned char  uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int size_t;
 
-static inline uint8_t inb(uint16_t port) {
+// Rename these functions to avoid conflicts with machine.h
+static inline uint8_t vga_inb(uint16_t port) {
     uint8_t ret;
     __asm__ volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
 
-static inline void outb(uint16_t port, uint8_t val) {
+static inline void vga_outb(uint16_t port, uint8_t val) {
     __asm__ volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
 }
 
 #define VGA_ADDRESS 0xA0000
+#define VGA_MEMORY VGA_ADDRESS
+
+// VGA modes
+#define VGA_MODE_GRAPHICS 0x13  // 320x200 256 colors
 
 extern void vga_clear_screen();
 extern void vga_plot_pixel(int x, int y, unsigned short color);
@@ -44,5 +52,10 @@ extern void write_regs(unsigned char *regs);
 #define VGA_NUM_CRTC_REGS   25
 #define VGA_NUM_GC_REGS     9
 #define VGA_NUM_SEQ_REGS    5
+
+// Additional functions needed by fb.cc
+extern void vga_init(void);
+extern void vga_set_mode(uint8_t mode);
+extern void vga_set_palette(uint8_t index, uint8_t r, uint8_t g, uint8_t b);
 
 #endif // __VGA_H

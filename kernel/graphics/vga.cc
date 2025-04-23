@@ -25,6 +25,35 @@ unsigned char g_320x200x256[] =
     0x41, 0x00, 0x0F, 0x00, 0x00
 };
 
+// Initialize VGA hardware
+void vga_init(void) {
+    // Set up VGA mode 13h (320x200 256 colors)
+    write_regs(g_320x200x256);
+    vga_clear_screen();
+}
+
+// Set VGA mode
+void vga_set_mode(uint8_t mode) {
+    if (mode == VGA_MODE_GRAPHICS) {
+        write_regs(g_320x200x256);
+    }
+    // Add other modes as needed
+}
+
+// Set palette color
+void vga_set_palette(uint8_t index, uint8_t r, uint8_t g, uint8_t b) {
+    // Wait for vertical retrace
+    while (vga_inb(VGA_INSTAT_READ) & 0x08);
+    
+    // Set palette index
+    vga_outb(VGA_AC_WRITE, index);
+    
+    // Write RGB values
+    vga_outb(VGA_AC_WRITE, r >> 2);  // Scale down from 0-255 to 0-63
+    vga_outb(VGA_AC_WRITE, g >> 2);
+    vga_outb(VGA_AC_WRITE, b >> 2);
+}
+
 void draw_rectangle(int x, int y, int width, int height) {
 	for (int i = 0; i < width; i++) {
 		for (int j = 0; j < height; j++) {
@@ -78,55 +107,89 @@ void vga_display_image(const unsigned char* image, size_t width, size_t height) 
 void write_regs(unsigned char *regs)
 {
     unsigned i;
-    outb(VGA_MISC_WRITE, *regs);
+    vga_outb(VGA_MISC_WRITE, *regs);
     regs++;
     for(i = 0; i < VGA_NUM_SEQ_REGS; i++) {
-        outb(VGA_SEQ_INDEX, i);
-        outb(VGA_SEQ_DATA, *regs);
+        vga_outb(VGA_SEQ_INDEX, i);
+        vga_outb(VGA_SEQ_DATA, *regs);
         regs++;
     }
-    outb(VGA_CRTC_INDEX, 0x03);
-    outb(VGA_CRTC_DATA, inb(VGA_CRTC_DATA) | 0x80);
-    outb(VGA_CRTC_INDEX, 0x11);
-    outb(VGA_CRTC_DATA, inb(VGA_CRTC_DATA) & ~0x80);
+    vga_outb(VGA_CRTC_INDEX, 0x03);
+    vga_outb(VGA_CRTC_DATA, vga_inb(VGA_CRTC_DATA) | 0x80);
+    vga_outb(VGA_CRTC_INDEX, 0x11);
+    vga_outb(VGA_CRTC_DATA, vga_inb(VGA_CRTC_DATA) & ~0x80);
     regs[0x03] |= 0x80;
     regs[0x11] &= ~0x80;
     for(i = 0; i < VGA_NUM_CRTC_REGS; i++) {
-        outb(VGA_CRTC_INDEX, i);
-        outb(VGA_CRTC_DATA, *regs);
+        vga_outb(VGA_CRTC_INDEX, i);
+        vga_outb(VGA_CRTC_DATA, *regs);
         regs++;
     }
     for(i = 0; i < VGA_NUM_GC_REGS; i++) {
-        outb(VGA_GC_INDEX, i);
-        outb(VGA_GC_DATA, *regs);
+        vga_outb(VGA_GC_INDEX, i);
+        vga_outb(VGA_GC_DATA, *regs);
         regs++;
     }
     for(i = 0; i < VGA_NUM_AC_REGS; i++) {
-        (void)inb(VGA_INSTAT_READ);
-        outb(VGA_AC_INDEX, i);
-        outb(VGA_AC_WRITE, *regs);
+        (void)vga_inb(VGA_INSTAT_READ);
+        vga_outb(VGA_AC_INDEX, i);
+        vga_outb(VGA_AC_WRITE, *regs);
         regs++;
     }
-    (void)inb(VGA_INSTAT_READ);
-    outb(VGA_AC_INDEX, 0x20);
+    (void)vga_inb(VGA_INSTAT_READ);
+    vga_outb(VGA_AC_INDEX, 0x20);
 }
 
 void vga_test() {
-    write_regs(g_320x200x256);
+    // Initialize VGA
+    vga_init();
+    
+    // Clear the screen
     vga_clear_screen();
-	// draw rectangle
-	draw_rectangle(150, 10, 100, 50);
-	// draw some faces
-	draw_happy_face(10,10);
-	draw_happy_face(100,100);
-	draw_happy_face(300,150);
-	// bounds
-	vga_plot_pixel(0, 0, 15);
-	vga_plot_pixel(319, 199, COLOR_PURPLE);
-	// see some colors
-	for (int i = 0; i < 15; i++) {
-		for (int j = 0; j < 100; j++) {
-			vga_plot_pixel(i, 50+j, i);
-		}
-	}
+    
+    // Test basic pixel plotting
+    for (int i = 0; i < 320; i += 10) {
+        vga_plot_pixel(i, 0, 15);  // White pixels at top
+    }
+    
+    for (int i = 0; i < 200; i += 10) {
+        vga_plot_pixel(0, i, 4);   // Red pixels at left
+    }
+    
+    // Test drawing a rectangle
+    for (int x = 100; x < 200; x++) {
+        for (int y = 50; y < 100; y++) {
+            vga_plot_pixel(x, y, 2);  // Green rectangle
+        }
+    }
+    
+    // Test palette setting
+    vga_set_palette(5, 63, 0, 0);    // Bright red
+    vga_set_palette(6, 0, 63, 0);    // Bright green
+    vga_set_palette(7, 0, 0, 63);    // Bright blue
+    
+    // Draw some pixels with our custom palette colors
+    for (int i = 0; i < 100; i++) {
+        vga_plot_pixel(50 + i, 150, 5);  // Red line
+        vga_plot_pixel(50 + i, 160, 6);  // Green line
+        vga_plot_pixel(50 + i, 170, 7);  // Blue line
+    }
+    
+    // Test mode setting
+    vga_set_mode(VGA_MODE_GRAPHICS);
+    
+    // Draw a border around the screen
+    for (int i = 0; i < 320; i++) {
+        vga_plot_pixel(i, 0, 15);       // Top border
+        vga_plot_pixel(i, 199, 15);     // Bottom border
+    }
+    for (int i = 0; i < 200; i++) {
+        vga_plot_pixel(0, i, 15);       // Left border
+        vga_plot_pixel(319, i, 15);     // Right border
+    }
+    
+    // Draw some happy faces
+    draw_happy_face(10, 10);
+    draw_happy_face(100, 100);
+    draw_happy_face(300, 150);
 }
