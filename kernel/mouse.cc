@@ -27,32 +27,26 @@ void mouseHandler(uint8_t buttons, int16_t x_delta, int16_t y_delta)
     int right_state = 0;
 
     // left button
-    if (buttons & 0x01)
-    {
+    if (buttons & 0x01){
         left_state = 1;
     }
-    else
-    {
+    else{
         left_state = 0;
     }
 
     // middle button
-    if (buttons & 0x04)
-    {
+    if (buttons & 0x04){
         middle_state = 1;
     }
-    else
-    {
+    else{
         middle_state = 0;
     }
 
     // right buttin
-    if (buttons & 0x02)
-    {
+    if (buttons & 0x02){
         right_state = 1;
     }
-    else
-    {
+    else{
         right_state = 0;
     }
 
@@ -64,42 +58,33 @@ void mouseHandler(uint8_t buttons, int16_t x_delta, int16_t y_delta)
     mouse_y += y_delta;
 
     //position changed?
-    if (x_delta != 0 || y_delta != 0)
-    {
-        uint32_t sdl_event_type = SDL_MOUSEMOTION;
-        uint8_t sdl_button_state = 0;
+    if (x_delta != 0 || y_delta != 0){
+		uint32_t sdl_event_type = SDL_MOUSEMOTION;
+		uint8_t sdl_button_state = 0;
 
-        //convert to sdl
-if (buttons & 0x01) //left
-{
+		//convert to sdl
+		if (buttons & 0x01){ //left
+			sdl_button_state = sdl_button_state + 1; 
+		}
 
-    sdl_button_state = sdl_button_state + 1; 
-}
+		if (buttons & 0x04){ //middle
+			sdl_button_state = sdl_button_state + 2;  
+		}
 
-if (buttons & 0x04)  // Middle
-{
-    sdl_button_state = sdl_button_state + 2;  
-}
-
-if (buttons & 0x02)  // right
-{
-    sdl_button_state = sdl_button_state + 4; 
-}
-
-        Debug::printf("SDL MOUSEMOTION: type=%d, state=%d, x=%d, y=%d, xrel=%d, yrel=%d\n",
-                      sdl_event_type, sdl_button_state, mouse_x, mouse_y, x_delta, y_delta);
+		if (buttons & 0x02){ //right
+			sdl_button_state = sdl_button_state + 4; 
+		}
+		Debug::printf("SDL MOUSEMOTION: type=%d, state=%d, x=%d, y=%d, xrel=%d, yrel=%d\n",
+							sdl_event_type, sdl_button_state, mouse_x, mouse_y, x_delta, y_delta);
     }
-
 
     uint8_t changed_buttons = buttons ^ last_buttons;
 
-    for (int i = 0; i < 3; i++)
-    {
+    for (int i = 0; i < 3; i++){
         uint8_t ps2_mask = 0;
         uint8_t sdl_button = 0;
 
-        switch (i)
-        {
+        switch (i){
         case 0: 
             ps2_mask = 0x01;
             sdl_button = SDL_BUTTON_LEFT;
@@ -114,31 +99,18 @@ if (buttons & 0x02)  // right
             break;
         }
 
-        if (changed_buttons & ps2_mask)
-        {
+        if (changed_buttons & ps2_mask){
             bool is_pressed = buttons & ps2_mask;
             uint32_t sdl_event_type = is_pressed ? SDL_MOUSEBUTTONDOWN : SDL_MOUSEBUTTONUP;
             uint8_t sdl_button_state = is_pressed ? 1 : 0;
 
-            Debug::printf("SDL %s: type=%d, button=%d, state=%d, x=%d, y=%d\n",
-
-                          is_pressed ? "MOUSEBUTTONDOWN" : "MOUSEBUTTONUP",
+            Debug::printf("SDL %s: type=%d, button=%d, state=%d, x=%d, y=%d\n", is_pressed ? "MOUSEBUTTONDOWN" : "MOUSEBUTTONUP",
                           sdl_event_type, sdl_button, sdl_button_state, mouse_x, mouse_y);
 
-            Debug::printf("Mouse button %d %s at x=%d, y=%d\n",
-
-                          sdl_button,
-                          is_pressed ? "pressed" : "released",
-                          mouse_x, mouse_y);
+            Debug::printf("Mouse button %d %s at x=%d, y=%d\n", sdl_button, is_pressed ? "pressed" : "released", mouse_x, mouse_y);
         }
     }
 
-
-    Debug::printf("left: %d, middle: %d, right: %d, x: %d, y:%d\n",
-        
-                  buttons & 0x1, (buttons & 0x4) >> 2, (buttons & 0x2) >> 1,
-                  mouse_x, mouse_y);
-
-
+    Debug::printf("left: %d, middle: %d, right: %d, x: %d, y:%d\n", buttons & 0x1, (buttons & 0x4) >> 2, (buttons & 0x2) >> 1, mouse_x, mouse_y);
     last_buttons = buttons;
 }
