@@ -1,2 +1,3 @@
+# this is testing our cat, in src/bin
 cat /user/t1.raw
 exit
