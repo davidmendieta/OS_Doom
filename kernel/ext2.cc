@@ -122,7 +122,7 @@ StrongPtr<Node> Ext2::find_one(StrongPtr<Node> dir, char* name) {
             if(i != name_length) {
                 dir->read<char>(full_offset + 8 + i, c);
             }
-            // Debug::printf("%c", c);
+            // Debug::printf("%c\n", c);
             if (c != name[i]) {
                 // Debug::printf(" - NOT THE SAME: %d != %d\n", c, name[i]);
                 break; // Not the same name
@@ -150,20 +150,21 @@ StrongPtr<Node> Ext2::find(StrongPtr<Node> dir, const char* name) {
         if(count >= 100) return StrongPtr<Node>{}; // break cycles
         
         char* str = curr->get();
-        // Debug::printf("HERE 1 %s | %s\n", name, str);
+        Debug::printf("HERE 1 %s | %s\n", name, str);
         if(str[0] == '/') {
-            // Debug::printf("HERE 2.1 %s | %s\n", name, str);
+            Debug::printf("HERE 2.1 %s | %s\n", name, str);
             node = root;
         } else {
-            // Debug::printf("HERE 2.2 %s | %s\n", name, str);
+            Debug::printf("HERE 2.2 %s | %s\n", name, str);
             if(!node->is_dir()) return StrongPtr<Node>{};
             StrongPtr<Node> next_node = find_one(node, str);
-            // Debug::printf("HERE 2.22 %s | %s\n", name, str);
+            Debug::printf("HERE 2.22 %s | %s\n", name, str);
             if(next_node == nullptr) return StrongPtr<Node>();
             
             if(next_node->is_symlink()) {
                 count++;
             }
+            
 
             // Symlink
             if(!path.isEmpty() && next_node->is_symlink()) {
@@ -175,17 +176,19 @@ StrongPtr<Node> Ext2::find(StrongPtr<Node> dir, const char* name) {
             } 
             // File / Dir
             else {
-                // Debug::printf("HERE 3 %s | %s\n", name, str);
+                Debug::printf("HERE 3 %s | %s\n", name, str);
                 node = next_node;
             }
 
         }
 
+            Debug::printf("HERE QM %s | %s\n", name, str);
+
         delete[] str;
         curr = path.remove();
     }
 
-    // Debug::printf("END OF FIND %s\n", name);
+    Debug::printf("END OF FIND %s\n", name);
 
     return node;
 }

@@ -136,14 +136,19 @@ void kernelMain(void) {
 
 // ── WAV PLAYBACK TEST ────────────────────────────────────────────────────
 
-auto d = StrongPtr<Ide>::make(1,0);
+auto d = StrongPtr<Ide>::make(1,3);
 fs = StrongPtr<Ext2>::make(d);
 
 Debug::printf("*** launching WAV audio test\n");
 
 // 1) find the file
 
-StrongPtr<Node> node = fs->find(fs->root, "test.wav");
+Debug::printf("*** root: %x\n", fs->root);
+// StrongPtr<Node> node = fs->find(fs->root, "./testcases/audio/test.wav");
+// StrongPtr<Node> node = fs->find(fs->root, "./kernel/audio/audio.cc");
+StrongPtr<Node> node = fs->find(fs->root, "./test.wav");
+
+
 Debug::printf("*** erm\n");
 if (node == nullptr) {
     Debug::printf("*** WAV: file not found\n");
