@@ -2,8 +2,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "../../queue.h"
 #include "../../shared.h"
+
+template<typename T>
+class BB;   
 
 namespace sockets {
 
@@ -42,24 +44,26 @@ struct sockaddr_in {
     char pad[8];
 };
 
-struct RecievedPacket {
+struct ReceivedPacket {
     void* buffer;
+
+    //Everything will be in host byte order
     size_t payload_len;
     uint32_t src_ip;
     uint16_t src_port;
-    RecievedPacket* next = nullptr;
+    ReceivedPacket* next = nullptr;
 
-    RecievedPacket(void* buffer, size_t payload_len, uint32_t src_ip, uint16_t src_port)
+    ReceivedPacket(void* buffer, size_t payload_len, uint32_t src_ip, uint16_t src_port)
         : buffer(buffer), payload_len(payload_len), src_ip(src_ip), src_port(src_port) {}
 
-    ~RecievedPacket() { next = nullptr; }
+    ~ReceivedPacket() { next = nullptr; }
 };
 
 class UDPSocket {
    private:
     bool isbound = false;
     sockaddr_in sockaddr_info;
-    Queue<RecievedPacket, SpinLock> recieve_queue{};
+    StrongPtr<BB<ReceivedPacket*>> recieve_queue;
 
    public:
     UDPSocket();

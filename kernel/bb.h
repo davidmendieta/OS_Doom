@@ -1,6 +1,9 @@
+
 #pragma once
 
 #include "semaphore.h"
+#include "shared.h"
+
 
 template <typename T>
 class BB {
@@ -16,7 +19,7 @@ public:
     ~BB() {
         delete[] data;
     }
-    void put(T& v) {
+    void put(const T& v) {
         n_empty.down();
         spin.lock();
         data[back] = v;
@@ -24,6 +27,29 @@ public:
         spin.unlock();
         n_full.up();
     }
+    
+    //Networking
+    bool peekNoWait(T& ret) {
+        spin.lock();
+        if (n_full.downPossible()) {
+            ret = data[front];
+            spin.unlock();
+            return true;
+        } else {
+            spin.unlock();
+            return false;
+        }
+    }
+
+    T peek() {
+        n_full.down();
+        spin.lock();
+        auto v = data[front];
+        spin.unlock();
+        n_full.up();
+        return v;
+    }
+
 
     T get() {
         n_full.down();
@@ -33,5 +59,21 @@ public:
         spin.unlock();
         n_empty.up();
         return v;
+    }
+
+
+        
+    //Networking
+    bool getNoWait(T& ret) {
+        if (!n_full.trydown()) {
+            return false;
+        }
+        spin.lock();
+        auto v = data[front];
+        ret = v;
+        front = (front + 1) % n;
+        spin.unlock();
+        n_empty.up();
+        return true;
     }
 };
