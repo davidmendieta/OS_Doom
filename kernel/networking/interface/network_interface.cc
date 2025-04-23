@@ -18,9 +18,10 @@ void NetworkInterface::handle_arp(ARPHeader* packet, char* sender_mac) {
     uint32_t sender_ip;
     uint32_t decode = ARP::decode_arp(packet, &target_ip, &sender_ip);
     
-    if(decode < 0) {
+    if(decode == ARP_REQUEST) {
         return;
     }
+    
 
     if (target_ip != my_IP) { // not for us
         Debug::printf("Not for us my the target_ip = %x my IP is %x\n", target_ip, my_IP);
