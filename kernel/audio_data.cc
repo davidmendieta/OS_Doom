@@ -14,7 +14,7 @@ int16_t sine_table[TABLE_SIZE];
 void init_sine_table() {
     for (int i = 0; i < TABLE_SIZE; i++) {
         double angle = (2.0 * 3.141592653589793 * i) / TABLE_SIZE;
-        sine_table[i] = (int16_t)(AMPLITUDE * angle);  // FIXME: replace with sin(angle)
+        sine_table[i] = (int16_t)(AMPLITUDE * angle);
     }
     // You’ll replace this with actual sine values, see below
 }

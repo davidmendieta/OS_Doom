@@ -7,9 +7,27 @@
 #include "config.h"
 #include "shared.h"
 #include "ac97.h"
+#include "libk.h"
 #include "audio_data.h"
 
+#define SAMPLE_RATE 48000
+
 StrongPtr<Ext2> fs{};
+
+// at top of kernel.cc, before kernelMain
+struct WavFmtHeader {
+    char     riff_id[4];
+    uint32_t riff_sz;
+    char     wave_id[4];
+    char     fmt_id[4];
+    uint32_t fmt_sz;
+    uint16_t audio_fmt;
+    uint16_t channels;
+    uint32_t sample_rate;
+    uint32_t byte_rate;
+    uint16_t block_align;
+    uint16_t bits_per_sample;
+};
 
 uint32_t* load_args(uint32_t* userEsp, const char** argv) {
     uint32_t argc = 0;
@@ -40,6 +58,7 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
 }
 
 void kernelMain(void) {
+    /*
 	Debug::printf("im here in kernel main\n");
     Debug::printf("f sdfkj sadhfkjdash flkjsadhfkljsdah flkjsdahf lkajds \n");
 
@@ -113,5 +132,87 @@ void kernelMain(void) {
     // calls.
     switchToUser(e,userEsp,0);
     Debug::panic("*** implement switchToUser in machine.S\n");
+    */
+
+// ── WAV PLAYBACK TEST ────────────────────────────────────────────────────
+
+auto d = StrongPtr<Ide>::make(1,0);
+fs = StrongPtr<Ext2>::make(d);
+
+Debug::printf("*** launching WAV audio test\n");
+
+// 1) find the file
+
+StrongPtr<Node> node = fs->find(fs->root, "test.wav");
+Debug::printf("*** erm\n");
+if (node == nullptr) {
+    Debug::printf("*** WAV: file not found\n");
+} else {
+    // 2) mmap + read header
+    uint8_t *map = (uint8_t*)VMM::naive_mmap(4096, true, {}, 0, false);
+    int64_t got = node->read_all(0, 4096, (char*)map);
+    if (got < 0) {
+        Debug::printf("*** WAV: read_all failed (%d)\n", got);
+        VMM::naive_munmap(map, true);
+    } else {
+        // 3) parse the header
+        WavFmtHeader *hdr = (WavFmtHeader*)map;
+        bool riffOK = hdr->riff_id[0]=='R' &&
+                      hdr->riff_id[1]=='I' &&
+                      hdr->riff_id[2]=='F' &&
+                      hdr->riff_id[3]=='F';
+        bool waveOK = hdr->wave_id[0]=='W' &&
+                      hdr->wave_id[1]=='A' &&
+                      hdr->wave_id[2]=='V' &&
+                      hdr->wave_id[3]=='E';
+        bool fmtOK  = hdr->fmt_id[0]=='f' &&
+                      hdr->fmt_id[1]=='m' &&
+                      hdr->fmt_id[2]=='t' &&
+                      hdr->fmt_id[3]==' ';
+        if (!riffOK || !waveOK || !fmtOK || hdr->audio_fmt != 1) {
+            Debug::printf("*** WAV: unsupported format\n");
+        } else {
+            // 4) find "data" chunk
+            uint8_t *ptr = map + 12 + 8 + hdr->fmt_sz;
+            uint32_t data_sz = 0;
+            while (true) {
+                char id0 = ptr[0], id1 = ptr[1], id2 = ptr[2], id3 = ptr[3];
+                ptr += 4;
+                uint32_t sz = *(uint32_t*)ptr;
+                ptr += 4;
+                if (id0=='d' && id1=='a' && id2=='t' && id3=='a') {
+                    data_sz = sz;
+                    break;
+                }
+                ptr += sz;
+            }
+
+            // 5) copy PCM samples
+            uint16_t *pcm = (uint16_t*)ptr;
+            uint32_t maxS = SAMPLE_RATE * 2;
+            uint32_t nS   = data_sz / (hdr->bits_per_sample/8);
+            num_samples   = (nS > maxS ? maxS : nS);
+            for (uint32_t i = 0; i < num_samples; i++) {
+                audio_samples[i] = pcm[i];
+            }
+            Debug::printf("*** WAV: loaded %u samples\n", num_samples);
+
+            // 6) play
+            if (init_ac97() == 0) {
+                Debug::printf("*** audio init success\n");
+                poll_ac97_loop();  // never returns
+            } else {
+                Debug::printf("*** audio init failed\n");
+            }
+            shutdown_ac97();
+            Debug::printf("*** audio shutdown success\n");
+        }
+
+        VMM::naive_munmap(map, true);
+    }
+}
+// ──────────────────────────────────────────────────────────────────────────
+
+
 }
 

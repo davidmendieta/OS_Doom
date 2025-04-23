@@ -1,0 +1,80 @@
+c[?7l[2J[0mSeaBIOS (version rel-1.16.3-0-ga6ed6b701f0a-prebuilt.qemu.org)
+
+
+iPXE (http://ipxe.org) 00:03.0 CA00 PCI2.10 PnP PMM+06FD0F70+06F30F70 CA00
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
+
+
+Booting from Hard Disk..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+xxxxxxxxxxxxxxxx
+| What just happened? Why am I here?
+| Discovering my identity and features
+|     CPUID: AuthenticAMD
+|     has SSE3
+|     has MONITOR/MWAIT
+|     running on hypervisor
+| totalProcs 4
+| memSize 0x7fe0000 127MB
+| localAPIC fee00000
+| ioAPIC fec00000
+| heap range 0x100000 0x600000
+| switched to new UART
+| physical range 0x600000 0x7fe0000
+| pitInit freq 1000Hz
+| pitInit divider 59659
+| APIT running at 1000070724Hz
+| APIT counter=1000070 for 1000Hz
+| ENUMERATING DEVICES
+Finding device id
+Found device id
+| Expected Device Found: Vendor 0x8086, Device 0x1237
+Finding device id
+Found device id
+| Expected Device Found: Vendor 0x8086, Device 0x7000
+Finding device id
+Found device id
+| Expected Device Found: Vendor 0x8086, Device 0x7010
+    | BAR[4]: 0x0000c541
+Finding device id
+Found device id
+| Expected Device Found: Vendor 0x8086, Device 0x7113
+Finding device id
+Found device id
+| Expected Device Found: Vendor 0x1234, Device 0x1111
+    | BAR[0]: 0xfd000008
+    | BAR[2]: 0xfebf0000
+Finding device id
+Found device id
+| Expected Device Found: Vendor 0x8086, Device 0x100e
+    | BAR[0]: 0xfebc0000
+    | BAR[1]: 0x0000c501
+Finding device id
+Found device id
+| Expected Device Found: Vendor 0x8086, Device 0x2415
+    | BAR[0]: 0x0000c001
+    | BAR[1]: 0x0000c401
+- FOUND ALL EXPECTED DEVICES - 
+
+| initialize 1
+| reset 1
+|      eip:0x8000
+| initialize 2
+| initializing TSS:ss0 for 1
+| reset 2
+|      eip:0x8000
+| 1 enabling interrupts, I'm scared
+| initialize 3
+| reset 3
+|      eip:0x8000
+| initializing TSS:ss0 for 2
+| initializing TSS:ss0 for 3
+| 2 enabling interrupts, I'm scared
+| 3 enabling interrupts, I'm scared
+| initializing TSS:ss0 for 0
+| 0 enabling interrupts, I'm scared
+im here
+im here 2
+*** launching WAV audio test
+*** erm
+*** WAV: file not found
+shutdown

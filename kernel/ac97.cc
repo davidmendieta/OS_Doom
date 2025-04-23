@@ -89,8 +89,9 @@ uint32_t init_ac97() {
     Debug::printf("We found our nabm: 0x%x\n", nabm);
 
     //reset the codec
-    outl(nabm + AC97_RESET_REG, 0x02);  // Set reset bit
+    // outl(nabm + AC97_RESET_REG, 0x02);  // Set reset bit
     // Wait for reset to complete
+    outl(nam  + AC97_RESET_REG, 0x01);
     for (int i = 0; i < 1000; i++) {
         uint32_t status = inl(nabm + AC97_GLOBAL_STAT);
         if (status & 0x100) {  // Check if ready
@@ -101,6 +102,7 @@ uint32_t init_ac97() {
             return 1;
         }
     }
+    outl(nam  + AC97_RESET_REG, 0x00);
 
     bdl = (BufferDescriptor*)VMM::naive_mmap(sizeof(BufferDescriptor) * BDL_ENTRY_COUNT, true, {}, 0, false);
 
@@ -110,6 +112,12 @@ uint32_t init_ac97() {
     for (int i = 0; i < BDL_ENTRY_COUNT; i++) {
         // Allocate memory for each buffer
         buffers[i] = (uint32_t*)PhysMem::alloc_frame();
+        buffers[i] = (uint32_t*) VMM::naive_mmap(
+            BUFFER_SIZE, true, /*file*/{}, 0, false
+        );
+        // 2) touch it so the VMM backs it with a real frame
+        buffers[i][0] = 0;
+        
         Debug::printf("We mmapped our buffer[%d]: 0x%x\n", i, buffers[i]);
         // Set up the corresponding BufferDescriptor
         bdl[i].buffer_addr = get_phys_addr((uint32_t)buffers[i]);
@@ -125,6 +133,8 @@ uint32_t init_ac97() {
     fill_ac97_buffers();
 
     // 2. Set up the BDL (Buffer Descriptor List) in the AC'97 controller
+    outb(nam + 0x2A, 0x08); // left master vol (0–0x3F)
+    outb(nam + 0x2B, 0x08); // right master vol
     outl(nabm + AC97_PCM_OUT_BDBAR, get_phys_addr((uint32_t)bdl));
     outb(nabm + AC97_PCM_OUT_STATUS, 0xFF); // Clear status
     outb(nabm + AC97_PCM_OUT_CIV, 0);    // Current index (set to 0)
@@ -140,12 +150,13 @@ uint32_t init_ac97() {
 void poll_ac97_loop() {
     Debug::printf("Starting audio playback loop\n");
     
+    // last index we refilled 
     uint8_t last_civ = 0;
     
     while (true) {
         // Read current index value
-        uint8_t civ = inb(nabm + AC97_PCM_OUT_CIV);
-        uint8_t status = inb(nabm + AC97_PCM_OUT_STATUS);
+        uint8_t civ = inb(nabm + AC97_PCM_OUT_CIV); // current index value 
+        uint8_t status = inb(nabm + AC97_PCM_OUT_STATUS);   // status flags
         
         // Check if we've moved to a new buffer
         if (civ != last_civ) {
@@ -160,6 +171,7 @@ void poll_ac97_loop() {
                 if (sample_index < num_samples * 2) {
                     buf[j] = audio_samples[sample_index++];
                     buf[j + 1] = audio_samples[sample_index++];
+                    
                 } else {
                     // Loop back to start of audio if we've reached the end
                     sample_index = 0;
@@ -168,7 +180,7 @@ void poll_ac97_loop() {
                 }
             }
             
-            // Update LVI to include our refilled buffer
+            // Update LVI to include our refilled buffer (aliding window logic do we need this? might just have to set in init)
             outb(nabm + AC97_PCM_OUT_LVI, buffer_to_refill);
             
             // Remember the current position
@@ -199,6 +211,7 @@ void fill_ac97_buffers() {
             if (sample_index < num_samples * 2) {
                 buf[j] = audio_samples[sample_index++];     // Left channel
                 buf[j + 1] = audio_samples[sample_index++]; // Right channel
+                Debug::printf("Filling buffer %d, status: 0x%x\n", j, buf[j]);
             } else {
                 buf[j] = buf[j + 1] = 0; // Fill silence after the audio samples have ended
             }

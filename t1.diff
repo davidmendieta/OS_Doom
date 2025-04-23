@@ -1,0 +1,9 @@
+1,3c1,3
+< *** launching WAV audio test
+< *** erm
+< *** WAV: file not found
+---
+> *** launching AC97 audio test
+> *** audio init success
+> *** audio shutdown success
+\ No newline at end of file
