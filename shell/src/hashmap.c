@@ -38,13 +38,18 @@ HashValue* hash_get(Hashmap* map, const char* key) {
     return NULL;
 }
 
+// overwrites existing keys, manages allocated memory on removal
+// this means you CANNOT pass const char* types
 void hash_put(Hashmap* map, const char* key, ValueType type, Value p) {
     uint32_t hash = hash_hash(key) % ROWS;
     uint32_t start = hash * COLS;
 
     for (int i = start; i < ROWS * COLS; i++) {
         HashValue* node = &map->table[i];
-        if (node->tag == NULL) {
+        if (node->tag == NULL || streq(node->tag, key)) {
+            if (node->tag && node->type == TYPE_STRING) {
+                free(node->data.sdata);
+            }
             node->tag = key;
             node->type = type;
             memcpy(&node->data, &p, sizeof(void*));
@@ -55,7 +60,10 @@ void hash_put(Hashmap* map, const char* key, ValueType type, Value p) {
     // second chance for linear probing
     for (int i = 0; i < start; i++) {
         HashValue* node = &map->table[i];
-        if (node->tag == NULL) {
+        if (node->tag == NULL || streq(node->tag, key)) {
+            if (node->tag && node->type == TYPE_STRING) {
+                free(node->data.sdata);
+            }
             node->tag = key;
             node->type = type;
             memcpy(&node->data, &p, sizeof(void*));
@@ -66,14 +74,16 @@ void hash_put(Hashmap* map, const char* key, ValueType type, Value p) {
     // panic!!!!
 }
 
-void hash_remove(Hashmap* map, const char* key) {
-    uint32_t hash = hash_hash(key);
+// removes a key, returns the old value, NULL if none
+HashValue* hash_remove(Hashmap* map, const char* key) {
+    uint32_t hash = hash_hash(key) % ROWS;
     uint32_t start = hash * COLS;
 
     for (int i = start; i < ROWS * COLS; i++) {
         HashValue* node = &map->table[i];
         if (node->tag && streq(key, node->tag)) {
             node->tag = NULL;
+            return node;
         }
     }
 
@@ -81,8 +91,10 @@ void hash_remove(Hashmap* map, const char* key) {
         HashValue* node = &map->table[i];
         if (node->tag && streq(key, node->tag)) {
             node->tag = NULL;
+            return node;
         }
     }
 
     // it's like it was never even there
+    return NULL;
 }

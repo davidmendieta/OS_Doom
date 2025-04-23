@@ -19,7 +19,7 @@ typedef struct {
     const char* tag;
 } HashValue;
 
-// Hashmap that implements linear probing
+// Hashmap that implements linear probing and memory management
 typedef struct {
     HashValue table[ROWS * COLS]; // easier for linear probing
 } Hashmap;
@@ -29,4 +29,4 @@ void hash_init(Hashmap* map);
 
 HashValue* hash_get(Hashmap* map, const char* key);
 void hash_put(Hashmap* map, const char* key, ValueType type, Value p);
-void hash_remove(Hashmap* map, const char* key);
+HashValue* hash_remove(Hashmap* map, const char* key);
