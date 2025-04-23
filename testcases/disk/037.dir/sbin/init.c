@@ -7,7 +7,7 @@ int main(int argc, char** argv) {
     char* src = "*** i am writing to the first indirect\n";
     seek(fd, 50000);
 
-    int bytes_written = write(fd, src, 32);
+    int bytes_written = write(fd, src, 39);
     if (bytes_written == -1) {
         printf("*** write returned - 1\n");
     }
@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
     char buf[33];
     seek(fd1, 50000);
 
-    int n = read(fd1, buf, 32);
+    int n = read(fd1, buf, 39);
     if (n == -1) {
         printf("*** read returned - 1\n");
     }
