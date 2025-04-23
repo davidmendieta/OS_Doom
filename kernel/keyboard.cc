@@ -6,13 +6,18 @@
 //#include "d_event.h"
 //#include "doomkeys.h"
 
-// PS/2 Controller ports
-constexpr uint16_t PS2_DATA_PORT = 0x60;
-constexpr uint16_t PS2_STATUS_PORT = 0x64;
-constexpr uint16_t PS2_COMMAND_PORT = 0x64;
+
+
 
 #define SDL_KEYDOWN 0x300
 #define SDL_KEYUP   0x301
+
+
+
+
+uint8_t buffer[3]; // buffer for keyboard input
+
+
 
 
 // Converts SDL scancode to string representation for debugging purposes
@@ -45,7 +50,7 @@ const char* sdlScancodeToString(SDL_Scancode scancode) {
         case SDL_SCANCODE_X: return "SDL_SCANCODE_X";
         case SDL_SCANCODE_Y: return "SDL_SCANCODE_Y";
         case SDL_SCANCODE_Z: return "SDL_SCANCODE_Z";
-        
+       
         // numbers
         case SDL_SCANCODE_1: return "SDL_SCANCODE_1";
         case SDL_SCANCODE_2: return "SDL_SCANCODE_2";
@@ -57,7 +62,7 @@ const char* sdlScancodeToString(SDL_Scancode scancode) {
         case SDL_SCANCODE_8: return "SDL_SCANCODE_8";
         case SDL_SCANCODE_9: return "SDL_SCANCODE_9";
         case SDL_SCANCODE_0: return "SDL_SCANCODE_0";
-        
+       
         // special keys
         case SDL_SCANCODE_RETURN: return "SDL_SCANCODE_RETURN";
         case SDL_SCANCODE_ESCAPE: return "SDL_SCANCODE_ESCAPE";
@@ -76,71 +81,102 @@ const char* sdlScancodeToString(SDL_Scancode scancode) {
         case SDL_SCANCODE_PERIOD: return "SDL_SCANCODE_PERIOD";
         case SDL_SCANCODE_SLASH: return "SDL_SCANCODE_SLASH";
         case SDL_SCANCODE_RSHIFT: return "SDL_SCANCODE_RSHIFT";
-        
+       
         // Modifier keys
         case SDL_SCANCODE_LCTRL: return "SDL_SCANCODE_LCTRL";
         case SDL_SCANCODE_LSHIFT: return "SDL_SCANCODE_LSHIFT";
         case SDL_SCANCODE_LALT: return "SDL_SCANCODE_LALT";
-        
+       
         // arrow keys
         case SDL_SCANCODE_UP: return "SDL_SCANCODE_UP";
         case SDL_SCANCODE_DOWN: return "SDL_SCANCODE_DOWN";
         case SDL_SCANCODE_LEFT: return "SDL_SCANCODE_LEFT";
         case SDL_SCANCODE_RIGHT: return "SDL_SCANCODE_RIGHT";
-        
+       
         // default case
         case SDL_SCANCODE_UNKNOWN: return "SDL_SCANCODE_UNKNOWN";
         default: return "UNKNOWN_SCANCODE";
     }
 }
 
+
+
+
 void keyboardHandler(uint8_t scancode) {
+   
+    for(uint32_t i=0; i< 3; i++){
+        if(buffer[0] == 0){
+            buffer[0] = scancode;
+            break;
+        }
+        if(buffer[1] == 0){
+            buffer[1] = scancode;
+            break;
+        }
+        if(buffer[2] == 0){
+            buffer[2] = scancode;
+            break;
+        }
+        buffer[0] = 0;
+        buffer[1] = 0;
+        buffer[2] = 0;
+    }
+
+
     bool is_release = scancode & 0x80;
     uint8_t keycode = scancode & 0x7F;
 
+
+
+
+    static bool is_break = false;
+
+
+
+
     SDL_Scancode sdl_scancode;
-    
+   
     switch (keycode) {
         // letters
-        case 0x1C: sdl_scancode = SDL_SCANCODE_A; break; // 'a'
-        case 0x32: sdl_scancode = SDL_SCANCODE_B; break; // 'b'
-        case 0x21: sdl_scancode = SDL_SCANCODE_C; break; // 'c'
-        case 0x23: sdl_scancode = SDL_SCANCODE_D; break; // 'd'
-        case 0x24: sdl_scancode = SDL_SCANCODE_E; break; // 'e'
-        case 0x2B: sdl_scancode = SDL_SCANCODE_F; break; // 'f'
-        case 0x34: sdl_scancode = SDL_SCANCODE_G; break; // 'g'
-        case 0x33: sdl_scancode = SDL_SCANCODE_H; break; // 'h'
-        case 0x43: sdl_scancode = SDL_SCANCODE_I; break; // 'i'
-        case 0x3B: sdl_scancode = SDL_SCANCODE_J; break; // 'j'
-        case 0x42: sdl_scancode = SDL_SCANCODE_K; break; // 'k'
-        case 0x4B: sdl_scancode = SDL_SCANCODE_L; break; // 'l'
-        case 0x3A: sdl_scancode = SDL_SCANCODE_M; break; // 'm'
-        case 0x31: sdl_scancode = SDL_SCANCODE_N; break; // 'n'
-        case 0x44: sdl_scancode = SDL_SCANCODE_O; break; // 'o'
-        case 0x4D: sdl_scancode = SDL_SCANCODE_P; break; // 'p'
-        case 0x15: sdl_scancode = SDL_SCANCODE_Q; break; // 'q'
-        case 0x2D: sdl_scancode = SDL_SCANCODE_R; break; // 'r'
-        case 0x1B: sdl_scancode = SDL_SCANCODE_S; break; // 's'
-        case 0x2C: sdl_scancode = SDL_SCANCODE_T; break; // 't'
-        case 0x3C: sdl_scancode = SDL_SCANCODE_U; break; // 'u'
-        case 0x2A: sdl_scancode = SDL_SCANCODE_V; break; // 'v'
-        case 0x1D: sdl_scancode = SDL_SCANCODE_W; break; // 'w'
-        case 0x22: sdl_scancode = SDL_SCANCODE_X; break; // 'x'
-        case 0x35: sdl_scancode = SDL_SCANCODE_Y; break; // 'y'
-        case 0x1A: sdl_scancode = SDL_SCANCODE_Z; break; // 'z'
-        
+        case 0x1C: sdl_scancode = SDL_SCANCODE_A; break;
+        case 0x32: sdl_scancode = SDL_SCANCODE_B; break;
+        case 0x21: sdl_scancode = SDL_SCANCODE_C; break;
+        case 0x23: sdl_scancode = SDL_SCANCODE_D; break;
+        case 0x24: sdl_scancode = SDL_SCANCODE_E; break;
+        case 0x2B: sdl_scancode = SDL_SCANCODE_F; break;
+        case 0x34: sdl_scancode = SDL_SCANCODE_G; break;
+        case 0x33: sdl_scancode = SDL_SCANCODE_H; break;
+        case 0x43: sdl_scancode = SDL_SCANCODE_I; break;
+        case 0x3B: sdl_scancode = SDL_SCANCODE_J; break;
+        case 0x42: sdl_scancode = SDL_SCANCODE_K; break;
+        case 0x4B: sdl_scancode = SDL_SCANCODE_L; break;
+        case 0x3A: sdl_scancode = SDL_SCANCODE_M; break;
+        case 0x31: sdl_scancode = SDL_SCANCODE_N; break;
+        case 0x44: sdl_scancode = SDL_SCANCODE_O; break;
+        case 0x4D: sdl_scancode = SDL_SCANCODE_P; break;
+        case 0x15: sdl_scancode = SDL_SCANCODE_Q; break;
+        case 0x2D: sdl_scancode = SDL_SCANCODE_R; break;
+        case 0x1B: sdl_scancode = SDL_SCANCODE_S; break;
+        case 0x2C: sdl_scancode = SDL_SCANCODE_T; break;
+        case 0x3C: sdl_scancode = SDL_SCANCODE_U; break;
+        case 0x2A: sdl_scancode = SDL_SCANCODE_V; break;
+        case 0x1D: sdl_scancode = SDL_SCANCODE_W; break;
+        case 0x22: sdl_scancode = SDL_SCANCODE_X; break;
+        case 0x35: sdl_scancode = SDL_SCANCODE_Y; break;
+        case 0x1A: sdl_scancode = SDL_SCANCODE_Z; break;
+       
         // number
-        case 0x16: sdl_scancode = SDL_SCANCODE_1; break; // '1'
-        case 0x1E: sdl_scancode = SDL_SCANCODE_2; break; // '2'
-        case 0x26: sdl_scancode = SDL_SCANCODE_3; break; // '3'
-        case 0x25: sdl_scancode = SDL_SCANCODE_4; break; // '4'
-        case 0x2E: sdl_scancode = SDL_SCANCODE_5; break; // '5'
-        case 0x36: sdl_scancode = SDL_SCANCODE_6; break; // '6'
-        case 0x3D: sdl_scancode = SDL_SCANCODE_7; break; // '7'
-        case 0x3E: sdl_scancode = SDL_SCANCODE_8; break; // '8'
-        case 0x46: sdl_scancode = SDL_SCANCODE_9; break; // '9'
-        case 0x45: sdl_scancode = SDL_SCANCODE_0; break; // '0'
-        
+        case 0x16: sdl_scancode = SDL_SCANCODE_1; break;
+        case 0x1E: sdl_scancode = SDL_SCANCODE_2; break;
+        case 0x26: sdl_scancode = SDL_SCANCODE_3; break;
+        case 0x25: sdl_scancode = SDL_SCANCODE_4; break;
+        case 0x2E: sdl_scancode = SDL_SCANCODE_5; break;
+        case 0x36: sdl_scancode = SDL_SCANCODE_6; break;
+        case 0x3D: sdl_scancode = SDL_SCANCODE_7; break;
+        case 0x3E: sdl_scancode = SDL_SCANCODE_8; break;
+        case 0x46: sdl_scancode = SDL_SCANCODE_9; break;
+        case 0x45: sdl_scancode = SDL_SCANCODE_0; break;
+       
         // special keys
         case 0x5A: sdl_scancode = SDL_SCANCODE_RETURN; break; // enter
         case 0x76: sdl_scancode = SDL_SCANCODE_ESCAPE; break; // escape
@@ -155,22 +191,26 @@ void keyboardHandler(uint8_t scancode) {
         // semicolon
         // apostrophe
         // grave
-        
+
+
+
+
         case 0x41: sdl_scancode = SDL_SCANCODE_COMMA; break; // comma
         case 0x49: sdl_scancode = SDL_SCANCODE_PERIOD; break; // period
         // slash
         case 0x59: sdl_scancode = SDL_SCANCODE_RSHIFT; break; // right shift
-    
+   
         // modifer keys
         case 0x14: sdl_scancode = SDL_SCANCODE_LCTRL; break; // left control
         case 0x12: sdl_scancode = SDL_SCANCODE_LSHIFT; break; // left shift
         case 0x11: sdl_scancode = SDL_SCANCODE_LALT; break; // alt
-        
+       
         // arrow keys
-        
         // default case
         default: sdl_scancode = SDL_SCANCODE_UNKNOWN; break;
     }
+
+
 
 
     // determine the ascii value
@@ -178,44 +218,90 @@ void keyboardHandler(uint8_t scancode) {
     int sym = (int) ascii_val;
 
 
+
+
     // determine modifier keys
     uint16_t mod = 0;
-    if (keycode == 0x2A || keycode == 0x36) mod |= 1; // Shift
-    if (keycode == 0x1D) mod |= 2; // Ctrl
+    if (keycode == 0x2A || keycode == 0x36) mod |= 1; // shift
+    if (keycode == 0x1D) mod |= 2; // ctrl
+
+
+
 
     // create the event with all fields
     SDL_KeyEvent event = {
-        static_cast<uint32_t>(is_release ? SDL_KEYUP : SDL_KEYDOWN),  // type
+        uint32_t(is_release ? SDL_KEYUP : SDL_KEYDOWN),  // type
         0,                                      // timestamp
         {                                       // keysym
             sdl_scancode,                       // scancode
             sym,                                // sym
             mod,                                // mod
-            0                                   // unused
         }
     };
 
-    // Store the event in the buffer
-    // event_buffer[buf_head] = event;
-    // buf_head = (buf_head + 1) % 128;
 
-    Debug::printf("Key [%s]: scancode=%x, ascii=%c, sdl_code=%s\n",
-        event.type == SDL_KEYDOWN ? "pressed" : "released",
-        scancode,
-        (sym > 0 && sym < 128) ? sym : '?', sdlScancodeToString(sdl_scancode));
+    event = event;
+
+
+     bool second = false;
+
+
+    if(buffer[0] == buffer[1] && buffer[2] == 0xF0){
+        // this is a break code
+        // we need to set the break flag
+        is_break = true;
+    } else if(buffer[0]!= buffer[1]){
+        // this is a make code
+        // we need to clear the break flag
+        is_break = false;
+    }else{
+        second = true;
+    }
+    if(!second){
+    if(!is_break){
+
+
+            Debug::printf("Key [%s]: scancode=%x, ascii=%c, sdl_code=%s\n",
+                "pressed",
+                scancode,
+                (sym > 0 && sym < 128) ? sym : '?', sdlScancodeToString(sdl_scancode));    
+   
+    } else {
+        Debug::printf("Key [%s]: scancode=%x%x, ascii=%c, sdl_code=%s\n",
+            "released",
+            scancode,buffer[1],
+            (sym > 0 && sym < 128) ? sym : '?', sdlScancodeToString(sdl_scancode));    
+    }
+}
+
+
+
+
+
+
+
 
 
 
     // int doom_key = get_doom_key(sym);
 
+
+
+
     // // convert sdl to event_t for doom
     // event_t doom_event;
     // doom_event.type = (is_release ? ev_keyup : ev_keydown);
     // doom_event.data1 = doom_key;
-    // doom_event.data2 = sym; 
+    // doom_event.data2 = sym;
+
+
+
 
     // D_PostEvent(&doom_event);   // pass the event to Doom
 }
+
+
+
 
 // int get_doom_key(int sym){
 //     if (sym >= 'a' && sym <= 'z') {
@@ -224,14 +310,14 @@ void keyboardHandler(uint8_t scancode) {
 //     if (sym >= '0' && sym <= '9') {
 //         return sym;
 //     }
-    
+   
 //     //special keys
 //     switch(sym) {
 //         case 27: return KEY_ESCAPE;
 //         case '\r': return KEY_ENTER;
 //         case '\t': return KEY_TAB;
 //         case '\b': return KEY_BACKSPACE;
-//         case ' ': return ' '; 
+//         case ' ': return ' ';
 //         case '-': return KEY_MINUS;
 //         case '=': return KEY_EQUALS;
 //         case '[': return '[';
@@ -245,5 +331,17 @@ void keyboardHandler(uint8_t scancode) {
 //         case '/': return '/';
 //     }
 
+
+
+
 //     return 0;  // Unknown key
 // }
+
+
+
+
+
+
+
+
+
