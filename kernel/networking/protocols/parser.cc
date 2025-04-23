@@ -18,23 +18,7 @@
 // const uint16_t src_port = 1234;  // source udp port
 // const uint16_t dest_port = 5678;  // dest udp port
 
-static inline uint16_t ntohs(uint16_t netshort) {
-    return (netshort << 8) | (netshort >> 8);
-}
 
-static inline uint16_t htons(uint16_t hostshort) {
-    return (hostshort << 8) | (hostshort >> 8);
-}
-
-static inline uint32_t ntohl(uint32_t netlong) {
-    return ((netlong & 0x000000FF) << 24) | ((netlong & 0x0000FF00) << 8) |
-           ((netlong & 0x00FF0000) >> 8) | ((netlong & 0xFF000000) >> 24);
-}
-
-static inline uint32_t htonl(uint32_t hostlong) {
-    return ((hostlong & 0x000000FF) << 24) | ((hostlong & 0x0000FF00) << 8) |
-           ((hostlong & 0x00FF0000) >> 8) | ((hostlong & 0xFF000000) >> 24);
-}
 
 namespace Parser {
 
@@ -193,17 +177,17 @@ char* decode_ip_udp(const void* packet, size_t packet_len,
     *src_ip = ntohl(ip->src_ip);
     *src_port = ntohs(udp->src_port);
     *dest_port = ntohs(udp->dest_port);
-    *out_payload_len = payload_len;
+   // *out_payload_len = payload_len; //TODO: Not Needed...-David
 
     // 5) finally, extract payload
     char* payload = (char*)malloc(payload_len);
 
     memcpy(payload, payload_ptr, payload_len);
 
-    // SOCKET STUFF
-    *src_port = ntohs(udp->src_port);
-    *dest_port = ntohs(udp->dest_port);
-    *src_ip = ntohs(ip->src_ip);
+    // // SOCKET STUFF
+    // *src_port = ntohs(udp->src_port);
+    // *dest_port = ntohs(udp->dest_port);
+    // *src_ip = ntohs(ip->src_ip);
 
     *out_payload_len = payload_len;
 

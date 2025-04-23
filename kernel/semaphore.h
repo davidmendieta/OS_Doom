@@ -14,6 +14,29 @@ public:
 
     }
 
+    //Yes has race condition. No I will not control for it at this point
+    //Networking
+    bool downPossible() {
+        spin.lock();
+        if (n > 0) {  
+            spin.unlock();            
+           return true;
+        }
+        return false;
+    }
+
+    //Networking
+    bool trydown() {
+        spin.lock();
+        if (n > 0) {            // O(1)
+            n = n - 1;          // O(1)
+            spin.unlock();    // O(1)
+            return true;
+        }
+        spin.unlock();    // O(1)
+        return false;
+    }
+
     void down() {
         using namespace impl::threads;
 
