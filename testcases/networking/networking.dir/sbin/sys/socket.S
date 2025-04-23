@@ -39,6 +39,15 @@ setsockopt:
 
 
 
+	# extern int getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+	.global getsockname
+getsockname:
+	mov $204,%eax
+	int $45
+	ret
+
+
+
 	# int close(int id)
 	.global close
 close:

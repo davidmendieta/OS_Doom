@@ -73,6 +73,7 @@ class UDPSocket {
     virtual int bind(const sockaddr_in* addr);
     virtual ssize_t sendto(const void* buf, size_t len, const sockaddr_in* dst);
     virtual ssize_t recvfrom(void* buf, size_t len, sockaddr_in* src, int flags);
+    virtual int getsockname(sockaddr_in* addr);
 };
 
 }  // namespace sockets

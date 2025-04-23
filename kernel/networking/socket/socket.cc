@@ -50,6 +50,17 @@ int UDPSocket::bind(const sockaddr_in* addr) {
     return 0;
 }
 
+
+int UDPSocket::getsockname(sockaddr_in* addr) {
+    if (!(this->isbound)) {
+        return -1;
+    }
+    addr->sa_family =  this->sockaddr_info.sa_family;
+    addr->sin_addr.s_addr = htonl(this->sockaddr_info.sin_addr.s_addr);
+    addr->sin_port = htons(this->sockaddr_info.sin_port);
+    return 0;
+}
+
 //Flags not implmeneted...do I need to?
 ssize_t UDPSocket::sendto(const void* buf, size_t len, const sockaddr_in* dst) {
     void* send = malloc(len);

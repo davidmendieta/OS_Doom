@@ -16,5 +16,6 @@ extern ssize_t sendto(uint32_t sockfd, const void* buf, size_t len, int flags,
 
 extern ssize_t recvfrom(uint32_t sockfd, void* buf, size_t len,
         int flags, struct sockaddr *src, socklen_t *srclen);
-
+        
+extern int getsockname(uint32_t sockfd, struct sockaddr *sraddr, socklen_t *addrlen);
 }  // namespace sockets
