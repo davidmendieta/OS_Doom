@@ -14,10 +14,8 @@ void mouse_init()
     mouse_y = 0;
     last_buttons = 0;
     Debug::printf("Mouse initialized, translating PS/2 to SDL events\n");
-    Debug::printf("SDL Button codes: LEFT=%d, MIDDLE=%d, RIGHT=%d\n",
-                  SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT);
-    Debug::printf("SDL Event types: MOTION=%d, BUTTONDOWN=%d, BUTTONUP=%d\n",
-                  SDL_MOUSEMOTION, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP);
+    Debug::printf("SDL Button codes: LEFT=%d, MIDDLE=%d, RIGHT=%d\n", SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT);
+    Debug::printf("SDL Event types: MOTION=%d, BUTTONDOWN=%d, BUTTONUP=%d\n", SDL_MOUSEMOTION, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP);
 }
 
 void mouseHandler(uint8_t buttons, int16_t x_delta, int16_t y_delta)
