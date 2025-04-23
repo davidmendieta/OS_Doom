@@ -1,17 +1,18 @@
     #include <stdint.h>
 
-    #include "sys.h"
-    #include "stdint.h"
-    #include "debug.h"
-    #include "idt.h"
-    #include "machine.h"
-    #include "ext2.h"
-    #include "kernel.h"
-    #include "threads.h"
-    #include "vme.h"
-    #include "libk.h"
-    #include "elf.h"
-    #include "promise.h"
+#include "sys.h"
+#include "stdint.h"
+#include "debug.h"
+#include "idt.h"
+#include "machine.h"
+#include "ext2.h"
+#include "kernel.h"
+#include "threads.h"
+#include "vme.h"
+#include "libk.h"
+#include "elf.h"
+#include "promise.h"
+#include "uio.h" // new code
 
     bool address_valid(uint32_t addr, uint32_t size) {
         return addr >= 0x80000000 && addr + size <= 0xFFFFFFFF;
@@ -34,70 +35,164 @@
 
     uint32_t write(uint32_t fd, void* buf, int32_t nbyte) {
         if(nbyte < 0 || !address_valid((uint32_t)buf, nbyte) || fd >= PCB_ARR_SIZE) {
+            // Debug::printf("*** bytes_Written from syscall = -1\n");
             return -1;
         }
 
         auto me = impl::threads::state.current();
         auto open_file = me->pcb->fdt[fd];
 
-        if(open_file == nullptr || open_file->node == nullptr) return -1; // File doesn't exist
-        uint32_t bytes_written = open_file->node->write_all(open_file->offset, nbyte, (char*)buf);
-        open_file->offset += bytes_written;
-        auto data = &open_file->node->data;
-        if (open_file->offset > data->size_low) {
-            data->size_low = open_file->offset;
-        }
-        return bytes_written;
+    if(open_file == nullptr || open_file->node == nullptr) return -1; // File doesn't exist
+    uint32_t bytes_written = open_file->node->write_all(open_file->offset, nbyte, (char*)buf);
+    open_file->offset += bytes_written;
+    auto data = &open_file->node->data;
+    if (open_file->offset > data->size_low) {
+        data->size_low = open_file->offset;
     }
+    // Debug::printf("*** bytes_Written from syscall = %d\n", bytes_written);
+    return bytes_written;
+}
 
-    uint32_t open(const char* fd, int flags, uint16_t mode) {
-        auto me = impl::threads::state.current();
-        StrongPtr<Node> checkIn;
-        if (fd[0] == '/') {
-            checkIn = fs->root;
-        }
-        else {
-            if(me->pcb->cwd == nullptr) checkIn = fs->root;
-            else checkIn = me->pcb->cwd;
-        }
-        StrongPtr<Node> new_node = fs->find(checkIn, fd);
-        // check if the creat flag is passed in
-        if (new_node == nullptr && (flags & 0x0200)) {;
-            int lastSlash = -1;
-            for (int i = 0; i < K::strlen(fd); i++) {
-                if (fd[i] == '/') lastSlash = i;
-            }
-            char* name;
-            StrongPtr<Node> parent;
-            if (lastSlash != -1) {
-                char* parentPath = (char*) malloc(lastSlash + 1);
-                memcpy(parentPath, fd, lastSlash);
-                parentPath[lastSlash] = 0;
-                parent = fs->find(checkIn, parentPath);
-                name = (char*) malloc(K::strlen(fd) - lastSlash);
-                memcpy(name, fd + lastSlash + 1, K::strlen(fd) - lastSlash - 1);
-                name[K::strlen(fd) - lastSlash - 1] = 0;
-            }
-            else {
-                parent = checkIn;
-                name = (char*) malloc(K::strlen(fd) + 1);
-                memcpy(name, fd, K::strlen(fd));
-                name[K::strlen(fd)] = 0;
-            }
-            if (parent == nullptr || !parent->is_dir()) return -1;
-            new_node = fs->create_inode(parent, name, mode);
-        }
-        if (new_node == nullptr) return -1;
-        StrongPtr<OpenFile> new_open_file = StrongPtr<OpenFile>::make(new_node);
-        for(uint32_t i = 0; i < PCB_ARR_SIZE; i++) {
-            if(me->pcb->fdt[i] == nullptr) { // Found empty file
-                me->pcb->fdt[i] = new_open_file;
-                return i;
-            }
-        }
-        Debug::printf("FDT IS FULL!\n");
+// new code
+// write data from multiple buffers to a fd
+uint32_t writev(uint32_t fd, const iovec* iov, uint32_t iovcnt) {
+    if (fd >= PCB_ARR_SIZE || !address_valid((uint32_t)iov, sizeof(iovec) * iovcnt)) {
         return -1;
     }
+
+    auto me = impl::threads::state.current();
+    auto open_file = me->pcb->fdt[fd];
+    
+    if (open_file == nullptr || open_file->node == nullptr) {
+        return -1; // file doesn't exist
+    }
+
+    uint32_t total_written = 0;
+    for (uint32_t i = 0; i < iovcnt; i++) {
+        if (!address_valid((uint32_t)iov[i].iov_base, iov[i].iov_len)) {
+            return -1;
+        }
+        
+        uint32_t bytes_written = open_file->node->write_all(open_file->offset, iov[i].iov_len, (char*)iov[i].iov_base);
+        
+        open_file->offset += bytes_written;
+        total_written += bytes_written;
+        
+        if (bytes_written < iov[i].iov_len) {
+            break; // couldn't write all data
+        }
+    }
+    
+    auto data = &open_file->node->data;
+    if (open_file->offset > data->size_low) {
+        data->size_low = open_file->offset;
+    }
+    
+    return total_written;
+}
+
+// new code
+// system call to make a directory
+// do this by creating a new inode with the directory type, and initializing metadata (permissions and . ..)
+uint32_t mkdir(const char* path) {
+    auto me = impl::threads::state.current();
+
+        StrongPtr<Node> base;
+    if (path[0] == '/') {
+        base = fs->root;
+    } else if (me->pcb->cwd != nullptr) {
+        base = me->pcb->cwd;
+    } else {
+        base = fs->root;
+    }
+
+    // Find the last '/' in the path
+    int lastSlash = -1;
+    for (int i = 0; i < K::strlen(path); i++) {
+        if (path[i] == '/') lastSlash = i;
+    }
+
+    StrongPtr<Node> parent;
+    char* name;
+    if (lastSlash != -1) {
+        // parentPath = path[0..lastSlash-1]
+        char* parentPath = (char*) malloc(lastSlash + 1);
+        memcpy(parentPath, path, lastSlash);
+        parentPath[lastSlash] = '\0';
+        parent = fs->find(base, parentPath);
+        // name = path[lastSlash+1..end]
+        size_t nameLen = K::strlen(path) - lastSlash - 1;
+        name = (char*) malloc(nameLen + 1);
+        memcpy(name, path + lastSlash + 1, nameLen);
+        name[nameLen] = '\0';
+    } else {
+        parent = base;
+        size_t nameLen = K::strlen(path);
+        name = (char*) malloc(nameLen + 1);
+        memcpy(name, path, nameLen);
+        name[nameLen] = '\0';
+    }
+
+    // Validate parent
+    if (parent == nullptr || !parent->is_dir()) return -1;
+    // Check for existing entry
+    if (fs->find(parent, name) != nullptr) return -1;
+
+    auto dirNode = fs->create_inode(parent, name, (4 << 12));
+    if (dirNode == nullptr) 
+        return -1;
+    return 0;
+}
+
+
+uint32_t open(const char* fd, int flags, uint16_t mode) {
+    auto me = impl::threads::state.current();
+    StrongPtr<Node> checkIn;
+    if (fd[0] == '/') {
+        checkIn = fs->root;
+    }
+    else {
+        if(me->pcb->cwd == nullptr) checkIn = fs->root;
+        else checkIn = me->pcb->cwd;
+    }
+    StrongPtr<Node> new_node = fs->find(checkIn, fd);
+    // check if the creat flag is passed in
+    if (new_node == nullptr && (flags & 0x0200)) {;
+        int lastSlash = -1;
+        for (int i = 0; i < K::strlen(fd); i++) {
+            if (fd[i] == '/') lastSlash = i;
+        }
+        char* name;
+        StrongPtr<Node> parent;
+        if (lastSlash != -1) {
+            char* parentPath = (char*) malloc(lastSlash + 1);
+            memcpy(parentPath, fd, lastSlash);
+            parentPath[lastSlash] = 0;
+            parent = fs->find(checkIn, parentPath);
+            name = (char*) malloc(K::strlen(fd) - lastSlash);
+            memcpy(name, fd + lastSlash + 1, K::strlen(fd) - lastSlash - 1);
+            name[K::strlen(fd) - lastSlash - 1] = 0;
+        }
+        else {
+            parent = checkIn;
+            name = (char*) malloc(K::strlen(fd) + 1);
+            memcpy(name, fd, K::strlen(fd));
+            name[K::strlen(fd)] = 0;
+        }
+        if (parent == nullptr || !parent->is_dir()) return -1;
+        new_node = fs->create_inode(parent, name, mode);
+    }
+    if (new_node == nullptr) return -1;
+    StrongPtr<OpenFile> new_open_file = StrongPtr<OpenFile>::make(new_node);
+    for(uint32_t i = 0; i < PCB_ARR_SIZE; i++) {
+        if(me->pcb->fdt[i] == nullptr) { // Found empty file
+            me->pcb->fdt[i] = new_open_file;
+            return i;
+        }
+    }
+    Debug::printf("FDT IS FULL!\n");
+    return -1;
+}
 
     uint32_t len(uint32_t fd) {
         if(fd >= PCB_ARR_SIZE) {
@@ -307,61 +402,64 @@
         VMM::naive_munmap(p, true);
     }
 
-    extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
-        //Debug::printf("*** syscall #%d\n",eax);
-        uint32_t *user_sp = (uint32_t*)frame[3];
-        if((uint32_t)user_sp < 0x80000000 || (uint32_t)user_sp >= 0xF0000000) {
-            Debug::printf("USER ESP IS INVALID\n");
-            exit(-1);
-        }
-        switch (eax) {
-        case 0:
-            exit(user_sp[1]);    
-            return -1;
-        case 1:
-            return write(user_sp[1], (void*)user_sp[2], user_sp[3]);
-        case 2:
-            return fork(frame);
-        case 3:
-            return sem(user_sp[1]);
-        case 4:
-            return up(user_sp[1] - PCB_ARR_SIZE);
-        case 5:
-            return down(user_sp[1] - PCB_ARR_SIZE);
-        case 6:
-            return close(user_sp[1]);
-        case 7: /* shutdown */
-            fs->buffer_cache->flush();
-            Debug::shutdown();
-            return -1;
-        case 8:
-            return wait(user_sp[1] - PCB_ARR_SIZE * 2, (uint32_t*)user_sp[2]);
-        case 9:
-            return execl((const char*)user_sp[1], (const char**)((char*)user_sp + 8));
-        case 10:
-            return open((const char*)user_sp[1], (int) user_sp[2], (uint16_t) user_sp[3]);
-        case 11:
-            return len(user_sp[1]);
-        case 12:
-            return read(user_sp[1], (void*)user_sp[2], user_sp[3]);
-        case 13:
-            return seek(user_sp[1], user_sp[2]);
-        case 100:
-            return chdir((const char*)user_sp[1]);
-        case 101:
-            return (uint32_t)naive_mmap(user_sp[1], user_sp[2], user_sp[3], user_sp[4]);
-        case 102:
-            naive_unmap((void*)user_sp[1]);
-            return 0;
-        case 418:
-            Debug::printf("*** I'm a teapot\n");
-            return -1;
-        default:
-            Debug::printf("*** unknown system call %d\n",eax);
-            return -1;
-        }
-        
-    }   
+extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
+    //Debug::printf("*** syscall #%d\n",eax);
+    uint32_t *user_sp = (uint32_t*)frame[3];
+    if((uint32_t)user_sp < 0x80000000 || (uint32_t)user_sp >= 0xF0000000) {
+        Debug::printf("USER ESP IS INVALID\n");
+        exit(-1);
+    }
+    switch (eax) {
+    case 0:
+        exit(user_sp[1]);    
+        return -1;
+    case 1:
+        return write(user_sp[1], (void*)user_sp[2], user_sp[3]);
+    case 2:
+        return fork(frame);
+    case 3:
+        return sem(user_sp[1]);
+    case 4:
+        return up(user_sp[1] - PCB_ARR_SIZE);
+    case 5:
+        return down(user_sp[1] - PCB_ARR_SIZE);
+    case 6:
+        return close(user_sp[1]);
+    case 7: /* shutdown */
+        Debug::shutdown();
+        return -1;
+    case 8:
+        return wait(user_sp[1] - PCB_ARR_SIZE * 2, (uint32_t*)user_sp[2]);
+    case 9:
+        return execl((const char*)user_sp[1], (const char**)((char*)user_sp + 8));
+    case 10:
+        return open((const char*)user_sp[1], (int) user_sp[2], (uint16_t) user_sp[3]);
+    case 11:
+        return len(user_sp[1]);
+    case 12:
+        return read(user_sp[1], (void*)user_sp[2], user_sp[3]);
+    case 13:
+        return seek(user_sp[1], user_sp[2]);
+    case 14: // new code
+        return writev(user_sp[1], (iovec*)user_sp[2], user_sp[3]);
+    case 15: // new code
+        return mkdir((const char*)user_sp[1]);
+    case 100:
+        return chdir((const char*)user_sp[1]);
+    case 101:
+        return (uint32_t)naive_mmap(user_sp[1], user_sp[2], user_sp[3], user_sp[4]);
+    case 102:
+        naive_unmap((void*)user_sp[1]);
+        return 0;
+    case 418:
+        Debug::printf("*** I'm a teapot\n");
+        return -1;
+    default:
+        Debug::printf("*** unknown system call %d\n",eax);
+        return -1;
+    }
+    
+}   
 
     void SYS::init(void) {
         IDT::trap(48,(uint32_t)sysHandler_,3);

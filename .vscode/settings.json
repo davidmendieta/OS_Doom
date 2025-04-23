@@ -10,7 +10,6 @@
         "vector": "cpp",
         "functional": "cpp",
         "ranges": "cpp",
-        "variant": "cpp",
-        "cstddef": "cpp"
+        "variant": "cpp"
     }
 }
