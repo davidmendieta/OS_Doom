@@ -15,14 +15,16 @@ void NetworkInterface::send(const char* payload, uint32_t length) {
 
 void NetworkInterface::handle_arp(ARPHeader* packet, char* sender_mac) {
     uint32_t target_ip;
-    uint32_t decode = ARP::decode_arp(packet, &target_ip);
+    uint32_t sender_ip;
+    uint32_t decode = ARP::decode_arp(packet, &target_ip, &sender_ip);
     
-    if(decode < 0) {
+    if(decode == ARP_REQUEST) {
         return;
     }
+    
 
     if (target_ip != my_IP) { // not for us
-        Debug::printf("Not for us\n");
+        Debug::printf("Not for us my the target_ip = %x my IP is %x\n", target_ip, my_IP);
         return;
     }
 
@@ -33,7 +35,7 @@ void NetworkInterface::handle_arp(ARPHeader* packet, char* sender_mac) {
     rtl8139.get_mac_addr(my_mac);
     
     uint32_t packet_length;
-    void* payload = ARP::encode_arp(my_IP, my_mac, target_ip, sender_mac, ARP_REPLY, &packet_length); // ARP reply
+    void* payload = ARP::encode_arp(my_IP, my_mac, sender_ip, sender_mac, ARP_REPLY, &packet_length); // ARP reply
     rtl8139.send_packet(payload, packet_length);
 }
 

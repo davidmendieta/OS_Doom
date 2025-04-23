@@ -22,5 +22,5 @@ struct ARPHeader {
 
 namespace ARP {
     char* encode_arp(uint32_t sender_ip, char* sender_mac, uint32_t target_ip, char* target_mac, uint16_t opcode, uint32_t* packet_length);
-    uint32_t decode_arp(ARPHeader* packet, uint32_t* target_ip);
+    uint32_t decode_arp(ARPHeader* packet, uint32_t* target_ip, uint32_t *sender_ip);
 }

@@ -4,19 +4,24 @@
 #include "../protocols/parser.h"
 #include "../arp/arp.h"
 #include "../../heap.h"
+#include "../arp/arp_cache.h"
 
 enum EtherType { ARP_VALUE = 0x0806, IPV4_VALUE = 0x0800, };
 
 class NetworkInterface {
     uint32_t my_IP;
     RTL8139 rtl8139{};
-
+    
+    
     void handle_arp(ARPHeader* packet, char* sender_mac);
     void handle_ip_udp(IPv4Header* packet, uint32_t packet_length);
     
     public:
-
-    NetworkInterface(uint32_t ip): my_IP(ip){};
+    
+    ARPCache arp_cache{};
+    NetworkInterface(uint32_t ip): my_IP(ip){
+        
+    };
 
     void send(const char* payload, uint32_t length);
 
@@ -27,7 +32,14 @@ class NetworkInterface {
     void send_ip_udp(const void* payload, size_t payload_length, uint32_t src_ip, uint16_t src_port, uint32_t dest_ip, uint16_t dest_port, size_t* out_length) {
         char* src_mac = (char*)malloc(6);
         rtl8139.get_mac_addr(src_mac);
-        unsigned char dest_mac[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; //! GET FROM HASHMAP / ARP REQUEST IF NOT
+        unsigned char dest_mac[6];
+        char* dest = arp_cache.get(dest_ip); //! GET FROM HASHMAP / ARP REQUEST IF NOT
+        if (dest == nullptr){
+            Debug::printf("could not find MAC address for %x\n", dest_ip);
+            return;
+        }
+        memcpy(dest_mac, dest, 6);
+        Debug::printf("Sending packet to %x\n", dest_ip);
         uint32_t packet_length;
         char* packet = Parser::encode_ip_udp(payload, payload_length, src_ip, src_mac, src_port, dest_ip, (char*)dest_mac, dest_port, &packet_length);
         send(packet, packet_length);

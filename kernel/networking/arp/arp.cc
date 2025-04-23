@@ -42,21 +42,31 @@ char* encode_arp(uint32_t sender_ip, char* sender_mac, uint32_t target_ip, char*
     return arp_packet;
 }
 
-uint32_t decode_arp(ARPHeader* arp_head, uint32_t* target_ip){
+uint32_t decode_arp(ARPHeader* arp_head, uint32_t* target_ip, uint32_t *sender_ip) {
     Debug::printf("Received ARP packet\n");
+    
+    if (arp_head->opcode != ARP_REQUEST && arp_head->opcode != ARP_REPLY) { // ARP request
+        Debug::printf("Not an ARP request\n");
+        return -1;
+    }
+
+    *target_ip = arp_head->target_ip;
+    *sender_ip = arp_head->sender_ip;
 
     if (arp_head->opcode == ARP_REPLY){
         Debug::printf("Received ARP reply\n");
+
+        Debug::printf("Sender IP That we got APR NAMESPACE: %08x\n", arp_head->sender_ip);    
+        Debug::printf("Sender MAC: %02x:%02x:%02x:%02x:%02x:%02x\n", 
+            arp_head->sender_mac[0], arp_head->sender_mac[1], arp_head->sender_mac[2], 
+            arp_head->sender_mac[3], arp_head->sender_mac[4], arp_head->sender_mac[5]);
+        if (network_interface->arp_cache.p[arp_head->sender_ip & 0xFF] == nullptr) {
+            network_interface->arp_cache.p[arp_head->sender_ip & 0xFF] = StrongPtr<PromiseWithTimeout>::make(1);
+        }
         network_interface->arp_cache.p[arp_head->sender_ip & 0xFF]->set((char*)arp_head->sender_mac);
         return ARP_REPLY; // Magic value 
     }
     
-    if (arp_head->opcode != ARP_REQUEST) { // ARP request
-        Debug::printf("Not an ARP request\n");
-        return -1;
-    }
-    
-    *target_ip = arp_head->target_ip;
     Debug::printf("Target IP is %08x\n", target_ip);
     return ARP_REQUEST;
 }
