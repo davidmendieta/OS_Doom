@@ -12,6 +12,16 @@
 
 namespace VMM {
 
+    #define NONE  0x0       
+    #define READ  0x1       
+    #define WRITE 0x2       
+    #define EXEC  0x4       
+
+    #define SHARED     0x01  
+    #define PRIVATE    0x02  
+    #define FIXED      0x10  
+    #define ANON       0x20  
+
 BlockingLock* shared_vme_lock = nullptr;
 VME<BlockingLock>* shared_vme = nullptr;
 
@@ -202,6 +212,43 @@ void* naive_mmap(uint32_t sz_, bool shared, StrongPtr<Node> node, uint32_t offse
     } 
     return (void*)shared_vme->add_entry(sz_, node, offset_, user);
 }
+
+void* naive_mmap_location(uint32_t sz_, bool shared, StrongPtr<Node> node, uint32_t offset_, bool user, uint32_t location) {
+    if(!shared) {
+        auto me = impl::threads::state.current();
+        ASSERT(!(me->vme == nullptr));
+        return (void*)me->vme->add_entry_location(sz_, node, offset_, user, location);
+    } 
+    return (void*)shared_vme->add_entry_location(sz_, node, offset_, user, location);
+}
+
+    void* mmap(uint32_t* location, uint32_t size, uint32_t permissions, uint32_t flags, uint32_t fd, uint32_t offset) {
+        void* mapped_region = nullptr;
+        auto me = impl::threads::state.current();
+        if(location) {
+            if(flags & SHARED) {
+                // normal shared mapping and shared anon mapping
+                mapped_region = flags & ANON ? naive_mmap_location(size, true, (StrongPtr<Node>)nullptr, offset, true, (uint32_t)location) : 
+                    naive_mmap_location(size, true, me->pcb->fdt[fd]->node, offset, true, (uint32_t)location);
+            } else {
+                // private mapping and private anon mapping
+                mapped_region = flags & ANON ? naive_mmap_location(size, false, (StrongPtr<Node>)nullptr, offset, true, (uint32_t)location) : 
+                    naive_mmap_location(size, false, me->pcb->fdt[fd]->node, offset, true, (uint32_t)location);
+            }
+        } else {
+            if(flags & SHARED) {
+                // normal shared mapping and shared anon mapping
+                mapped_region = flags & ANON ? naive_mmap(size, true, (StrongPtr<Node>)nullptr, offset, true) : 
+                    naive_mmap(size, true, me->pcb->fdt[fd]->node, offset, true);
+            } else {
+                // private mapping and private anon mapping
+                mapped_region = flags & ANON ? naive_mmap(size, false, (StrongPtr<Node>)nullptr, offset, true) : 
+                    naive_mmap(size, false, me->pcb->fdt[fd]->node, offset, true);
+            }
+        }
+        // set premissions 
+        return mapped_region;
+    }
 
 } /* namespace vmm */
 

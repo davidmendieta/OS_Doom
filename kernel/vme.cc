@@ -23,7 +23,8 @@ template uint32_t VME<BlockingLock>::add_entry(uint32_t, StrongPtr<Node>, uint32
 template void VME<BlockingLock>::remove_entry(uint32_t, bool);
 // template StrongPtr<VME<BlockingLock>> VME<BlockingLock>::duplicate(StrongPtr<VME<BlockingLock>>);
 
-VMEEntry::VMEEntry(uint32_t start, uint32_t num_pages, uint32_t size, StrongPtr<Node> file, uint32_t file_offset, bool user): start(start), num_pages(num_pages), size(size), file(file), file_offset(file_offset), user(user) {};
+VMEEntry::VMEEntry(uint32_t start, uint32_t num_pages, uint32_t size, StrongPtr<Node> file, uint32_t file_offset, bool user, uint32_t permissions, uint32_t flags): 
+    start(start), num_pages(num_pages), size(size), file(file), file_offset(file_offset), user(user), permissions(permissions), flags(flags) {};
 VMEEntry::~VMEEntry(){
     for(uint32_t i = 0; i < num_pages; i++) {
         VMM::remove_mapping((uint32_t*)getCR3(), ((uint32_t)start + i * PhysMem::FRAME_SIZE) >> 12);
@@ -52,7 +53,7 @@ void VME<Lock>::insert_entry_sorted(uint32_t start, uint32_t num_pages, uint32_t
 
 
     StrongPtr<VMEEntry> new_node =
-        StrongPtr<VMEEntry>::make(start, num_pages, size, file, file_offset, user);
+        StrongPtr<VMEEntry>::make(start, num_pages, size, file, file_offset, user, 0, 0);
     new_node->next = curr;
     if (prev == nullptr) {
         entries = new_node;
@@ -153,6 +154,47 @@ uint32_t VME<Lock>::add_entry(uint32_t size, StrongPtr<Node> file, uint32_t file
     return va;
 }
 
+template <typename Lock>
+uint32_t VME<Lock>::add_entry_location(uint32_t size, StrongPtr<Node> file, uint32_t file_offset, bool user, uint32_t location) {
+    LockGuard g{lock};
+    StrongPtr<FreeEntry> prev{nullptr};
+    StrongPtr<FreeEntry> curr = free_entries;
+
+    uint32_t va = 0;
+
+    
+    uint32_t required_pages =
+    (size + PhysMem::FRAME_SIZE - 1) / PhysMem::FRAME_SIZE;
+    
+    while (!(curr == nullptr) && curr->start >= location) {
+        if (curr->num_pages >= required_pages) {
+            va = curr->start;
+            curr->start += required_pages * PhysMem::FRAME_SIZE;
+            curr->num_pages -= required_pages;
+
+            if (curr->num_pages == 0) {
+                if (prev == nullptr) {
+                    free_entries = curr->next;
+                } else {
+                    prev->next = curr->next;
+                }
+            }
+            break;
+        }
+        prev = curr;
+        curr = curr->next;
+    }
+
+    
+    if (va == 0) {
+        if (avail + size > limit) return 0;  //! NO MORE SPACE
+        va = avail;
+        avail += PhysMem::FRAME_SIZE * required_pages;
+    }
+    
+    insert_entry_sorted(va, required_pages, size, file, file_offset, user);
+    return va;
+}
 
 template <typename Lock>
 void VME<Lock>::remove_entry(uint32_t va, bool user) {
@@ -200,7 +242,8 @@ StrongPtr<VMEEntry> VMEEntry::duplicate(StrongPtr<VMEEntry> vme_entry) {
     if(vme_entry == nullptr) return StrongPtr<VMEEntry>();
     // Debug::printf("HERE\n");
     // Debug::printf("START: %x | NUM_PAGES: %d | SIZE: %d | FILE: %d | OFFSET: %d\n", vme_entry->start, vme_entry->num_pages, vme_entry->size, vme_entry->file, vme_entry->file_offset);
-    StrongPtr<VMEEntry> new_vme_entry = StrongPtr<VMEEntry>::make(vme_entry->start, vme_entry->num_pages, vme_entry->size, vme_entry->file, vme_entry->file_offset, vme_entry->user);
+    StrongPtr<VMEEntry> new_vme_entry = StrongPtr<VMEEntry>::make(vme_entry->start, vme_entry->num_pages, 
+        vme_entry->size, vme_entry->file, vme_entry->file_offset, vme_entry->user, vme_entry->permissions, vme_entry->flags);
     // Debug::printf("AFTER CREATION\n");
     new_vme_entry->next = VMEEntry::duplicate(vme_entry->next);
     return new_vme_entry;
