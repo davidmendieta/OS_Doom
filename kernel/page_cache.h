@@ -58,11 +58,14 @@ public:
     void release_page(uint32_t va);
     void flush_page(uint32_t va);
     void evict_page(uint32_t va);
-    void add_page(uint32_t va, uint32_t pa, uint32_t permissions, uint32_t flags, StrongPtr<Node> file, uint32_t offset);
+    
     // uint32_t copy_on_write(uint32_t va);
     // void preload(uint32_t va, uint32_t size, StrongPtr<Node> file, uint32_t file_offset);
     void flush_all();
 };
+
+// namespace PageCache {
+void add_page(uint32_t va, uint32_t pa, uint32_t permissions, uint32_t flags, StrongPtr<Node> file, uint32_t offset);
 
 // global page cache instance
 extern Cache* global_cache;

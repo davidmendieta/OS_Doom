@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "ext2.h"
 #include "sys.h"
+#include "page_cache.h"
 
 namespace VMM {
 
@@ -265,7 +266,7 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     if(va_ >= 0xF0000000) { // SHARED
         unlock = true;
         VMM::shared_vme_lock->lock();
-        if(VMM::check_VPN((uint32_t*)(getCR3()), va_ >> 12)) {
+        if(VMM::check_VPN((uint32_t*)(getCR3()), va_ >> 12)) { // idk why this is here, checks if vpn is present and exits
             VMM::shared_vme_lock->unlock();
             return;
         }
@@ -276,16 +277,15 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
         vme_entry = me->vme->get(va_);
     }
     // if(vme_entry == nullptr) Debug::panic("*** can't handle page fault at %x\n",va_);
-    if(vme_entry == nullptr) {
+    if(vme_entry == nullptr) {// what to do here
         Debug::printf("VME ENTRY IS NULL\n");
         // couldve gotten here because a shared mapping was trying to be accessed
         exit(-1);
     }
     
-    uint32_t new_page = PhysMem::alloc_frame();
+    uint32_t new_page = PhysMem::alloc_frame();//pa
     
     // if(chunk_size > PhysMem::FRAME_SIZE) chunk_size = PhysMem::FRAME_SIZE;
-    
     VMM::add_mapping((uint32_t*)(getCR3()), (va_ >> 12), new_page >> 12, false, true, true);
     if(unlock) VMM::shared_vme_lock->unlock();
     
@@ -307,7 +307,8 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
         // Debug::printf("IN PAGE FAULT HANDLER | r_BUFFER: %s\n", (char*)(buffer));
     }
     // Debug::printf("VA: %x | NEW PAGE: %x\n", va_, new_page);
-
+    
+    // PageCache::add_page(va_, new_page, vme_entry->permissions, vme_entry->flags, vme_entry->file, vme_entry->file_offset);
     return;
     // memcpy((void*)new_page, (void*)(vme_entry->start + page_offset), PhysMem::FRAME_SIZE);
     // Debug::panic("*** can't handle page fault at %x\n",va_);
