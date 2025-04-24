@@ -426,6 +426,7 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     case 6:
         return close(user_sp[1]);
     case 7: /* shutdown */
+        fs->buffer_cache->flush();
         Debug::shutdown();
         return -1;
     case 8:
