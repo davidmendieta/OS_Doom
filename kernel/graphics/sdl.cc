@@ -15,7 +15,36 @@
 
 uint32_t *vga;
 
+#define VGA_DAC_WRITE_INDEX 0x3C8
+#define VGA_DAC_DATA 0x3C9
 
+// NOTE: We had duplicate definitions of outb one in our sdl.h and machine.h, I kept the one in machine.h, 
+// included machine.h into sdl.h and commented out the def in sdl.h
+int SDL_SetPalette(SDL_Surface *surface, int flags, SDL_Color *colors, int firstcolor, int ncolors){
+    // Basic bounds checking
+    if (!surface || !colors || firstcolor < 0 || ncolors <= 0 || firstcolor + ncolors > 256)
+    {
+        return -1;
+    }
+
+    // tells the VGA which palette index to start writing at
+    outb(VGA_DAC_WRITE_INDEX, (uint8_t)firstcolor);
+
+    // VGA DAC uses 6 bits per channel so just shift 8-bit SDL_Color down by 2
+    // drops the lowest 2 bits to go from 8-bit to 6-bit per channel and spits 
+    // out three bytes for R G & B to the DAC data port (0x3C9).
+    for (int i = 0; i < ncolors; i++) {
+        uint8_t r6 = (uint8_t)(colors[i].r >> 2);
+        uint8_t g6 = (uint8_t)(colors[i].g >> 2);
+        uint8_t b6 = (uint8_t)(colors[i].b >> 2);
+
+        outb(VGA_DAC_DATA, r6);
+        outb(VGA_DAC_DATA, g6);
+        outb(VGA_DAC_DATA, b6);
+    }
+
+    return 0;
+}
 
 void SDL_init(){
 
