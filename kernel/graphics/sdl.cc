@@ -8,9 +8,21 @@
 #include "sdl.h"
 #include "vga.h"
 #include <heap.h>
+#include "vmm.h"
 
-// Color management
-int SDL_SetPalette(SDL_Surface *surface, int flags, SDL_Color *colors, int firstcolor, int ncolors);
+
+
+
+uint32_t *vga;
+
+
+
+void SDL_init(){
+
+
+    write_regs(g_320x200x256);
+    vga = (uint32_t *) VMM::map_vga();
+}
 
 // 2. Surface management
 SDL_Surface *SDL_Set_Video_Mode(int width, int height, int bpp, uint32_t flags)
@@ -49,6 +61,8 @@ void SDL_Flip(SDL_Surface *surface)
     // Return success/failure
 
     // Mode 13h video memory is 200 rows of 320 bytes
+
+    
 
     if (surface == nullptr)
     {
