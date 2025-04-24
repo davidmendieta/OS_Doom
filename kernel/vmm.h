@@ -29,6 +29,8 @@ namespace VMM {
     // naive mmap
     extern void* naive_mmap(uint32_t size, bool shared, StrongPtr<Node> file, uint32_t file_offset, bool user);
 
+    extern void* map_vga();
+
     // naive munmap
     void naive_munmap(void* p, bool user);
 
