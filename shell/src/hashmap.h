@@ -1,32 +1,23 @@
-#include <stddef.h>
+#include "value.h"
 
 #define ROWS 67
 #define COLS 10
 
-typedef enum {
-    TYPE_INT,
-    TYPE_STRING
-} ValueType;
-
-typedef union {
-    int32_t idata;
-    char* sdata;
-} Value;
-
 typedef struct {
-    ValueType type;
-    Value data;
+    valuemeta_t type;
+    value_t data;
     const char* tag;
 } HashValue;
 
 // Hashmap that implements linear probing and memory management
 typedef struct {
     HashValue table[ROWS * COLS]; // easier for linear probing
+    uint32_t avail;
 } Hashmap;
 
 void hash_init(Hashmap* map);
 // no hash free because variables are forever
 
 HashValue* hash_get(Hashmap* map, const char* key);
-void hash_put(Hashmap* map, const char* key, ValueType type, Value p);
+void hash_put(Hashmap* map, const char* key, valuemeta_t type, value_t p);
 HashValue* hash_remove(Hashmap* map, const char* key);

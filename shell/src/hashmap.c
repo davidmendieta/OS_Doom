@@ -14,6 +14,7 @@ void hash_init(Hashmap* map) {
     for (int i = 0; i < ROWS * COLS; i++) {
         map->table[i].tag = NULL;
     }
+    map->avail = ROWS * COLS;
 }
 
 HashValue* hash_get(Hashmap* map, const char* key) {
@@ -40,7 +41,12 @@ HashValue* hash_get(Hashmap* map, const char* key) {
 
 // overwrites existing keys, manages allocated memory on removal
 // this means you CANNOT pass const char* types
-void hash_put(Hashmap* map, const char* key, ValueType type, Value p) {
+void hash_put(Hashmap* map, const char* key, valuemeta_t type, value_t p) {
+    if (map->avail == 0) {
+        printf("brother how do you need more than %d variables\n", ROWS*COLS);
+        return;
+    }
+
     uint32_t hash = hash_hash(key) % ROWS;
     uint32_t start = hash * COLS;
 
@@ -53,6 +59,7 @@ void hash_put(Hashmap* map, const char* key, ValueType type, Value p) {
             node->tag = key;
             node->type = type;
             memcpy(&node->data, &p, sizeof(void*));
+            map->avail--;
             return;
         }
     }
@@ -67,6 +74,7 @@ void hash_put(Hashmap* map, const char* key, ValueType type, Value p) {
             node->tag = key;
             node->type = type;
             memcpy(&node->data, &p, sizeof(void*));
+            map->avail--;
             return;
         }
     }
