@@ -168,7 +168,7 @@ char * tokenize_and_process(char *buffer) {
         output_prompt();
         printf("%s\n", command); // print command again
     }
-    node_t* ast = list_to_tree(input_to_list(command));
+    node_t* ast = list_to_tree(input_to_list(command, &environment_variables));
     post_order_process(ast);
     // process_start(command);                      // start a process from the command
     return buffer;

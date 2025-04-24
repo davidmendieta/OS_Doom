@@ -10,7 +10,7 @@ typedef struct {
 } HashValue;
 
 // Hashmap that implements linear probing and memory management
-typedef struct {
+typedef struct Hashmap {
     HashValue table[ROWS * COLS]; // easier for linear probing
     uint32_t avail;
 } Hashmap;

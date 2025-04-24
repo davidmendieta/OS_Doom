@@ -1,5 +1,6 @@
 #include "libc.h"
 #include "tokenizer.h"
+#include "hashmap.h"
 
 bool is_newline(char c) {
     return c == '\n' || c == '\r';
@@ -90,7 +91,7 @@ enum NodeType get_operator(const char* s, int i) {
     }
 }
 
-node_t* buffer_to_node(const char* buffer) {
+node_t* buffer_to_node(const char* buffer, Hashmap* env_vars) {
     node_t* out = malloc(sizeof(node_t));
     // memset(out, 0, sizeof(node_t));
     char* temp = malloc(4096);
@@ -114,8 +115,18 @@ node_t* buffer_to_node(const char* buffer) {
         memcpy((void *)out->tokens.argv[i], (void *)temp, len + 1);
         if (out->tokens.argv[i][0] == '&') {
             out->background_job = true;
+        } else if (out->tokens.argv[i][0] == '$') { // might be a var
+            HashValue* value = hash_get(env_vars, out->tokens.argv[i]+1);
+            if(value != NULL) {
+                // replace - only works for strings
+                int val_len = strlen(value->data.sdata) + 1;
+                out->tokens.argv[i] = malloc(val_len);
+                memcpy((void *)out->tokens.argv[i], value->data.sdata, val_len);
+                // out->tokens.argv[i][val_len] = 0;
+            } else {
+                printf("err var %s not found\n", out->tokens.argv[i]);
+            }
         }
-        // printf("Copied into node\n\n");
     }
     // printf("out of loop\n");
 
@@ -145,7 +156,7 @@ node_t* buffer_to_node(const char* buffer) {
     return out;
 }
 
-queue_t* input_to_list(char* s) {
+queue_t* input_to_list(char* s, Hashmap* env_vars) {
     char* buf = malloc(4096);
     int write = 0;
     queue_t *q = malloc(sizeof(queue_t));
@@ -164,7 +175,7 @@ queue_t* input_to_list(char* s) {
             // process !!!
             // buffer has something like `echo hi > out.txt`
             buf[write] = 0;
-            node_t* new_node = buffer_to_node(buf);
+            node_t* new_node = buffer_to_node(buf, env_vars);
             new_node->type = NODE_COMMAND;
             enqueue(q, new_node); // left cmd
 
@@ -179,7 +190,7 @@ queue_t* input_to_list(char* s) {
         }
     }
     buf[write] = 0;
-    node_t* new_node = buffer_to_node(buf);
+    node_t* new_node = buffer_to_node(buf, env_vars);
     new_node->type = NODE_COMMAND;
     enqueue(q, new_node); 
     return q;
