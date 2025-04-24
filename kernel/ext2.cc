@@ -364,18 +364,131 @@ void Node::read_block(uint32_t lbn, char* buffer) {
         ASSERT(cnt == block_size);
     }
 }
-void Node::write_block(uint32_t lbn, const char* buffer) {
-    uint32_t* direct = &data.direct0;
-    uint32_t& pbn = direct[lbn];
-    if (pbn == 0) {
-        pbn = fs->alloc_block(); 
+
+void Node::write_indirect1(uint32_t lbn, const char* buffer) {
+    if (data.indirect_1 == 0) {
+        data.indirect_1 = fs->alloc_block(); 
     }
+   
+    char buf[block_size];
+    buffer_cache->read_all(data.indirect_1 * block_size, block_size, buf);
+    uint32_t * table = reinterpret_cast<uint32_t*> (buf);
+    if (table[lbn] == 0) {
+        table[lbn] = fs->alloc_block(); 
+        buffer_cache->write_all(data.indirect_1 * block_size, block_size, (char*)table);
+    }
+    uint32_t pbn = table[lbn];
     buffer_cache->write_all(pbn * block_size, block_size, const_cast<char*> (buffer));
-    uint32_t newSize = (lbn + 1) * block_size;
-    if (newSize > data.size_low) {
-        data.size_low = newSize;
+
+}
+
+void Node::write_indirect2(uint32_t d1, uint32_t d0, const char* buffer) {
+    if (data.indirect_2 == 0) {
+        data.indirect_2 = fs->alloc_block(); 
     }
-    buffer_cache->write_all(get_offset(), sizeof(NodeData), (char*) &data);
+   
+    char buf1[block_size];
+    buffer_cache->read_all(data.indirect_2 * block_size, block_size, buf1);
+    uint32_t * table = reinterpret_cast<uint32_t*> (buf1);
+    if (table[d1] == 0) {
+        table[d1] = fs->alloc_block(); 
+        buffer_cache->write_all(data.indirect_2 * block_size, block_size, buf1);
+    }
+
+    char buf0[block_size];
+    buffer_cache->read_all(table[d1] * block_size, block_size, buf0);
+    uint32_t* table1 = reinterpret_cast<uint32_t*> (buf0);
+    if (table1[d0] == 0){
+        table1[d0] = fs->alloc_block(); 
+        buffer_cache->write_all(table[d1] * block_size, block_size, buf0);
+    }
+
+    uint32_t pbn = table1[d0];
+    buffer_cache->write_all(pbn * block_size, block_size, const_cast<char*> (buffer));
+
+}
+
+void Node::write_indirect3(uint32_t d2, uint32_t d1, uint32_t d0, const char* buffer) {
+    if (data.indirect_3 == 0) {
+        data.indirect_3 = fs->alloc_block(); 
+    }
+    char buf2[block_size];
+    buffer_cache->read_all(data.indirect_3 * block_size, block_size, buf2);
+    uint32_t * table2 = reinterpret_cast<uint32_t*> (buf2);
+    if (table2[d2] == 0) {
+        table2[d2] = fs->alloc_block(); 
+        buffer_cache->write_all(data.indirect_3 * block_size, block_size, buf2);
+    }
+
+    char buf1[block_size];
+    buffer_cache->read_all(table2[d2] * block_size, block_size, buf1);
+    uint32_t * table1 = reinterpret_cast<uint32_t*> (buf1);
+    if (table1[d1] == 0) {
+        table1[d1] = fs->alloc_block();
+        buffer_cache->write_all(table2[d2] * block_size, block_size, buf1);
+    }
+
+    char buf0[block_size];
+    buffer_cache->read_all(table1[d1] * block_size, block_size, buf0);
+    uint32_t * table0 = reinterpret_cast<uint32_t*> (buf0);
+    if (table0[d0] == 0) {
+        table0[d0] = fs->alloc_block();
+        buffer_cache->write_all(table1[d1] * block_size, block_size, buf0);
+    }
+    uint32_t pbn = table0[d0];
+    buffer_cache->write_all(pbn * block_size, block_size, const_cast<char*>(buffer));
+
+
+
+}
+
+void Node::write_block(uint32_t lbn, const char* buffer) {
+    auto refs_per_block = block_size / 4;
+    uint32_t newSize = 0;
+    // Debug::printf("*** entered write block, lbn is: %d\n", lbn);
+    if (lbn < 12) {
+        uint32_t* direct = &data.direct0;
+        uint32_t& pbn = direct[lbn];
+        if (pbn == 0) {
+            pbn = fs->alloc_block(); 
+        }
+        buffer_cache->write_all(pbn * block_size, block_size, const_cast<char*> (buffer));
+        uint32_t newSize = (lbn + 1) * block_size;
+        if (newSize > data.size_low) {
+            data.size_low = newSize;
+        }
+        buffer_cache->write_all(get_offset(), sizeof(NodeData), (char*) &data);
+    }
+    else {
+        lbn -= 12;
+        if (lbn < refs_per_block) {
+            write_indirect1(lbn, buffer);
+            newSize = (lbn + 12 + 1) * block_size;
+        }
+        else {
+            lbn -= refs_per_block;
+            if (lbn < (refs_per_block * refs_per_block)) {
+                uint32_t d1 = lbn / refs_per_block;
+                uint32_t d0 = lbn % refs_per_block;
+                write_indirect2(d1, d0, buffer);
+                newSize = (lbn + 12 + 1 + refs_per_block) * block_size;
+            }
+            else {
+                lbn -= refs_per_block * refs_per_block;
+                auto d0 = lbn % refs_per_block;
+                auto t = lbn / refs_per_block;
+                auto d1 = t % refs_per_block;
+                auto d2 = t / refs_per_block;
+                write_indirect3(d2, d1, d0, buffer);
+                newSize = (lbn + 12 + 1 + refs_per_block + (refs_per_block * refs_per_block)) * block_size;
+
+            }
+        }
+        if (newSize > data.size_low) {
+            data.size_low = newSize;
+        }
+        buffer_cache->write_all(get_offset(), sizeof(NodeData), (char*) &data);
+    }
 }
 
 void Node::update_dir(uint32_t entry_number, char* name, uint16_t type) {

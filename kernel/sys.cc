@@ -35,6 +35,7 @@
 
     uint32_t write(uint32_t fd, void* buf, int32_t nbyte) {
         if(nbyte < 0 || !address_valid((uint32_t)buf, nbyte) || fd >= PCB_ARR_SIZE) {
+            // Debug::printf("*** bytes_Written from syscall = -1\n");
             return -1;
         }
 
@@ -48,7 +49,7 @@
     if (open_file->offset > data->size_low) {
         data->size_low = open_file->offset;
     }
-    // fs->buffer_cache->write_all(open_file->node->get_offset(), sizeof(NodeData), (char*) &open_file->node->data);
+    // Debug::printf("*** bytes_Written from syscall = %d\n", bytes_written);
     return bytes_written;
 }
 
@@ -89,6 +90,60 @@ uint32_t writev(uint32_t fd, const iovec* iov, uint32_t iovcnt) {
     
     return total_written;
 }
+
+// new code
+// system call to make a directory
+// do this by creating a new inode with the directory type, and initializing metadata (permissions and . ..)
+uint32_t mkdir(const char* path) {
+    auto me = impl::threads::state.current();
+
+        StrongPtr<Node> base;
+    if (path[0] == '/') {
+        base = fs->root;
+    } else if (me->pcb->cwd != nullptr) {
+        base = me->pcb->cwd;
+    } else {
+        base = fs->root;
+    }
+
+    // Find the last '/' in the path
+    int lastSlash = -1;
+    for (int i = 0; i < K::strlen(path); i++) {
+        if (path[i] == '/') lastSlash = i;
+    }
+
+    StrongPtr<Node> parent;
+    char* name;
+    if (lastSlash != -1) {
+        // parentPath = path[0..lastSlash-1]
+        char* parentPath = (char*) malloc(lastSlash + 1);
+        memcpy(parentPath, path, lastSlash);
+        parentPath[lastSlash] = '\0';
+        parent = fs->find(base, parentPath);
+        // name = path[lastSlash+1..end]
+        size_t nameLen = K::strlen(path) - lastSlash - 1;
+        name = (char*) malloc(nameLen + 1);
+        memcpy(name, path + lastSlash + 1, nameLen);
+        name[nameLen] = '\0';
+    } else {
+        parent = base;
+        size_t nameLen = K::strlen(path);
+        name = (char*) malloc(nameLen + 1);
+        memcpy(name, path, nameLen);
+        name[nameLen] = '\0';
+    }
+
+    // Validate parent
+    if (parent == nullptr || !parent->is_dir()) return -1;
+    // Check for existing entry
+    if (fs->find(parent, name) != nullptr) return -1;
+
+    auto dirNode = fs->create_inode(parent, name, (4 << 12));
+    if (dirNode == nullptr) 
+        return -1;
+    return 0;
+}
+
 
 // Updated implementation of ftruncate system call
 uint32_t ftruncate(uint32_t fd, uint32_t length) {
@@ -420,6 +475,7 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     case 6:
         return close(user_sp[1]);
     case 7: /* shutdown */
+        fs->buffer_cache->flush();
         Debug::shutdown();
         return -1;
     case 8:
@@ -436,6 +492,8 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
         return seek(user_sp[1], user_sp[2]);
     case 14: // new code
         return writev(user_sp[1], (iovec*)user_sp[2], user_sp[3]);
+    case 15: // new code
+        return mkdir((const char*)user_sp[1]);
     case 16: // new code
         return ftruncate(user_sp[1], user_sp[2]);
     case 100:

@@ -130,6 +130,9 @@ class Node : public BlockIO {  // we implement BlockIO because we
     
     // read the given block (panics if the block number is not valid)
     // remember that block size is defined by the file system not the device
+    void write_indirect1(uint32_t lbn, const char* buffer);
+    void write_indirect2(uint32_t d1, uint32_t d0, const char* buffer);
+    void write_indirect3(uint32_t d2, uint32_t d1, uint32_t d0, const char* buffer); 
     void write_block(uint32_t lbn, const char* buffer) override;
     void read_block(uint32_t number, char* buffer) override;
 
@@ -246,6 +249,7 @@ class STDERR : public STDIO {
 class Ext2 {
     // The device on which the file system resides
     StrongPtr<Ide> ide_;
+    
     
    
 

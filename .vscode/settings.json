@@ -10,16 +10,6 @@
         "vector": "cpp",
         "functional": "cpp",
         "ranges": "cpp",
-        "variant": "cpp",
-        "atomic": "c",
-        "fstream": "c",
-        "sstream": "c",
-        "bitset": "cpp",
-        "unordered_map": "cpp",
-        "unordered_set": "cpp",
-        "string_view": "cpp",
-        "ratio": "cpp",
-        "streambuf": "cpp"
-    },
-    "cmake.sourceDirectory": "/u/kelly16/OS-Doom/doom.dir/chocolate-doom/src/strife"
+        "variant": "cpp"
+    }
 }

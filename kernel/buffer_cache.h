@@ -174,6 +174,23 @@ namespace impl::ext2 {
         uint32_t size_in_bytes() override {
             return ide->size_in_bytes();
         }
+        void flush() {
+            for (uint32_t i = 0; i < size; i++) {
+                auto curr = indices[i]->getFirst();
+                while (curr != nullptr) { 
+                    if (curr->dirty) {
+                        uint32_t numSectors = block_size / 512;
+                        for (uint32_t j = 0; j < numSectors; j++) {
+                            ide->write_block(curr->block_id * numSectors + j,
+                            curr->buffer + j * 512);
+                        }
+                    }
+                    curr = curr->next;
+                }
+                delete indices[i];
+            }
+            delete[] indices;
+        }
     
         void read_block(uint32_t block_number, char* buffer) override {
             // ide->read_block(block_number, buffer);
