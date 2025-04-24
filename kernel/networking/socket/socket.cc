@@ -31,8 +31,10 @@ int UDPSocket::bind(const sockaddr_in* addr) {
     if (this->isbound) {
         return -1;
     }
+    Debug::printf("entering binding!\n");
     this->isbound = true;
     int port = ntohs(addr->sin_port);
+    Debug::printf("port %d\n", port);
     if (port == 0) {
         int port = pick_port();
         if (port == 0) {
@@ -46,7 +48,8 @@ int UDPSocket::bind(const sockaddr_in* addr) {
     if (port_table.contains(port)) {
         return -1;
     }
-    port_table.bind(addr->sin_port, StrongPtr<UDPSocket>{this});
+    Debug::printf("binding!\n");
+    port_table.bind(this->sockaddr_info.sin_port, StrongPtr<UDPSocket>{this});
     return 0;
 }
 

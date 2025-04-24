@@ -62,14 +62,16 @@ void NetworkInterface::handle_ip_udp(IPv4Header* packet, uint32_t packet_length)
     }
 
     Debug::printf("RECEIVED PACKET\n");
-    for(uint32_t i = 0; i < payload_length; i++) {
-        Debug::printf("%x", received_packet[i]);
-    }
-    Debug::printf("\n");
+    // for(uint32_t i = 0; i < payload_length; i++) {
+    //     Debug::printf("%x", received_packet[i]);
+    // }
+    // Debug::printf("\n");
 
     StrongPtr<sockets::UDPSocket> socket =
         sockets::port_table.get(dst_port);
+        Debug::printf("Socket checking exist %d\n", dst_port);
     if (socket != nullptr) {
+        Debug::printf("Socket exist\n");
         socket->add(received_packet, payload_length, src_ip, src_port);
     }
 }

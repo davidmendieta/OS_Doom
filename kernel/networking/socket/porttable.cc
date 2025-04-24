@@ -3,6 +3,7 @@
 namespace sockets {
 
 PortTable port_table{};
+
 Atomic<uint16_t> dynamic_port_num{49151};
 
 uint16_t pick_port() {
