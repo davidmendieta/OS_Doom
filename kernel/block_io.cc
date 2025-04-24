@@ -45,3 +45,38 @@ int64_t BlockIO::read_all(uint32_t offset, uint32_t n, char* buffer) {
     }
     return total_count;
 }
+int64_t BlockIO::write(uint32_t offset, uint32_t n, char* buffer) {
+    // pretty much just read but slightly altered
+    
+    auto sz = size_in_bytes();
+    if(offset > sz) return -1;
+    auto block_number = offset / block_size;
+    auto offset_in_block = offset % block_size;
+    auto actual_n = K::min(block_size - offset_in_block, n);
+    if (actual_n == block_size) {
+        // ASSERT(offset_in_block == 0);
+        write_block(block_number,buffer);
+    } else {
+        char* temp = new char[block_size];
+        //Debug::printf("reading partial block %d\n",block_number);
+        read_block(block_number, temp);
+        //Debug::printf("getting %d bytes starting at block offset %d\n",actual_n,offset_in_block);
+        ::memcpy(&temp[offset_in_block],buffer, actual_n);
+        write_block(block_number, temp);
+        delete []temp;
+    }
+    return actual_n;
+}
+int64_t BlockIO::write_all(uint32_t offset, uint32_t n, char* buffer) {
+    int64_t total_count = 0;
+    while (n > 0) {
+        int64_t cnt = write(offset,n,buffer);
+        if (cnt < 0) return cnt;
+        if (cnt == 0) return total_count;
+        total_count += cnt;
+        offset += cnt;
+        n -= cnt;
+        buffer += cnt;
+    }
+    return total_count;
+}
