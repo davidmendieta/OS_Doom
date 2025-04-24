@@ -18,6 +18,27 @@ int puts(const char* p) {
     return count+1;
 }
 
+int my_atoi(const char *str) {
+    int result = 0;
+    int sign = 1;
+
+    // Check for sign
+    if (*str == '-' || *str == '+') {
+        if (*str == '-') {
+            sign = -1;
+        }
+        str++;
+    }
+
+    // Convert digits
+    while (*str >= '0' && *str <= '9') {
+        result = result * 10 + (*str - '0');
+        str++;
+    }
+
+    return sign * result;
+}
+
 void cp(int from, int to) {
     while (1) {
         char buf[100];

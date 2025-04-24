@@ -20,7 +20,9 @@ enum CMD_CODES {
     CMD_LS,         // ls
     CMD_SH,         // start a new shell
     CMD_SLEEP,      // sleep
-    CMD_EXTERNAL    // external command
+    CMD_SET,        // set command for shell variables
+    CMD_GET,        // get command for shell variables
+    CMD_EXTERNAL   // external command
 };
 
 Command commands[] = {
@@ -34,6 +36,8 @@ Command commands[] = {
     {"ls", CMD_LS},
     {"sh", CMD_SH},
     {"sleep", CMD_SLEEP},
+    {"set", CMD_SET},
+    {"get", CMD_GET},
     {NULL, CMD_EXTERNAL}  // default
 };
 

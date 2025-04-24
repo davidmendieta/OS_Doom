@@ -2,10 +2,25 @@
 #include "tokenizer.h"
 #include "hashmap.h"
 
+Hashmap environment_variables;
+
 #define TESTING
 
 void output_prompt() {
     printf("$ ");
+}
+
+bool check_variable_is_int(char *str) {
+    int index = 0;
+    int curr_char = str[index];
+    while (curr_char) {
+        if (curr_char < '0' || curr_char > '9') {
+            return false;
+        }
+        index++;
+        curr_char = str[index];
+    }
+    return true;
 }
 
 #ifdef TESTING
@@ -69,6 +84,34 @@ void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
         case CMD_LS:
             print_dir();
             break;
+        case CMD_SET: {
+            int str_len = strlen(tokens.argv[1]) + 1;
+            char *var_name = malloc(str_len);
+            memcpy((void *)var_name, (void *) tokens.argv[1], str_len);
+            char *var_val = tokens.argv[2];
+            Value p;
+            ValueType val_type;
+            if (check_variable_is_int(var_val)) {
+                val_type = TYPE_INT;
+                p.idata = my_atoi(var_val);
+            } else {
+                val_type = TYPE_STRING;
+                p.sdata = malloc(strlen(var_val) + 1);
+                memcpy((void *)p.sdata, (void *)var_val, strlen(var_val) + 1);
+            }
+            hash_put(&environment_variables, var_name, val_type, p);
+            break;
+        }
+        case CMD_GET: {
+            char *var_name = tokens.argv[1];
+            HashValue *val = hash_get(&environment_variables, var_name);
+            if (val->type == TYPE_INT) {
+                printf("VAL: %ld\n", val->data.idata);
+            } else {
+                printf("VAL: %s\n", val->data.sdata);
+            }
+            break;
+        }
         default:
             error("how did you get here??\n");
     }
@@ -185,8 +228,7 @@ int main(int argc, char** argv) {
     welcome();
     
     char* buffer;
-    Hashmap* shell_vars = (Hashmap*) malloc(sizeof(Hashmap));
-    hash_init(shell_vars);
+    hash_init(&environment_variables);
 
     #ifdef TESTING
     int stdin = open("/user/input", 0); // our test case

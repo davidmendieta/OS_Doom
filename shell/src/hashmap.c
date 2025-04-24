@@ -30,7 +30,7 @@ HashValue* hash_get(Hashmap* map, const char* key) {
     // second chance for linear probing
     for (int i = 0; i < start; i++) {
         HashValue* node = &map->table[i];
-        if (streq(node->tag, key)) {
+        if (node->tag && streq(node->tag, key)) {
             return node;
         }
     }
