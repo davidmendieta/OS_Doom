@@ -55,6 +55,92 @@ namespace Poll {
 		return events & PE_WRITE;
 	}
 
+	struct fd_set {
+		int set[100];
+	};
+
+	const int FD_SETSIZE = 1024; // FD_SETSIZE is the maximum number of FDs, standard is 1024
+	// fd_set is a bitmask for file descriptors
+	typedef struct {
+		// each bit represents a FD
+		uint8_t fds[FD_SETSIZE / 8]; 
+	} fd_set;
+	
+	// helper functions for manipulating fd_set
+	void FD_ZERO(fd_set *set) {
+		for (int i = 0; i < FD_SETSIZE / 8; i++) {
+			set->fds[i] = 0;
+		}
+	}
+
+ 	bool FD_SET(int fd, fd_set *set) {
+		if (fd > 1023) return false; // hard limit for # of fds
+		int index = fd / 8; // find index of array
+		int mask = 1 << ((fd) % 8); // which bit in index? 
+		set->fds[index] |= mask; // flipping bit to 1
+		return true;
+	}
+
+	bool FD_ISSET(int fd, fd_set *set) {
+		if (fd > 1023) return false; 
+		int index = fd / 8; 
+		int mask = 1 << ((fd) % 8); 
+		return set->fds[index] & mask; // 0 == not set, 1 == set
+	}
+	
+	int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timespec *timeout, PCB* cur_pcb) {
+		if (nfds < 0) return -1;
+	
+		Pollfd poll_fds[FD_SETSIZE];
+		int poll_fd_count = 0;
+	
+		// Translate fd_set to Pollfd array
+		for (int fd = 0; fd < nfds; fd++) {
+			short events = 0;
+			if (readfds && FD_ISSET(fd, readfds)) events |= PE_READ; // read?
+			if (writefds && FD_ISSET(fd, writefds)) events |= PE_WRITE; // write?
+			if (exceptfds && FD_ISSET(fd, exceptfds)) events |= PE_ERR; // Exceptional conditions
+			if (events != 0) {
+				poll_fds[poll_fd_count] = {fd, events, 0};
+				poll_fd_count++;
+			}
+		}
+	
+		// Convert timeval to timeout in milliseconds
+		int timeout_ms;
+		if (!timeout) {
+			timeout_ms = -1; // Wait indefinitely
+		} else {
+			timeout_ms = timeout->tv_sec * 1000 + timeout->tv_nsec / 1000000; // Convert to ms
+		}
+	
+		// Call poll
+		int ready_fds = poll(poll_fds, poll_fd_count, timeout_ms, cur_pcb);
+	
+		// If poll failed, return error
+		if (ready_fds < 0) return -1;
+	
+		// Clear fd_sets
+		if (readfds) FD_ZERO(readfds);
+		if (writefds) FD_ZERO(writefds);
+		if (exceptfds) FD_ZERO(exceptfds);
+
+		// Update fd_sets based on poll results
+		for (int j = 0; j < poll_fd_count; j++) {
+			Pollfd &pfd = poll_fds[j];
+			if (pfd.revents & PE_READ && readfds) {
+				FD_SET(pfd.fd, readfds);
+			}
+			if (pfd.revents & PE_WRITE && writefds) {
+				FD_SET(pfd.fd, writefds);
+			}
+			if (pfd.revents & PE_ERR && exceptfds) {
+				FD_SET(pfd.fd, exceptfds);
+			}
+		}
+		return ready_fds;
+	}
+
 	//user stub is just: 
 	//int poll (Pollfd* fds, int nfds, int timeout);
 
