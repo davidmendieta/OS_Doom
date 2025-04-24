@@ -17,7 +17,6 @@ char *ARPCache::get(uint32_t ip)
     uint32_t masked_ip_index = ip & 0xFF; // Assuming a simple hash function for the sake of this example
     if (p[masked_ip_index] == nullptr)
     {
-        p[ip & 0xFF] = StrongPtr<PromiseWithTimeout>::make(1); // 1 second timeout
         network_interface->send_arp_request(ip);
     }
     Debug::printf("Getting MAC address for %x\n", ip);

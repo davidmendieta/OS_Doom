@@ -57,7 +57,7 @@ class NetworkInterface {
             Debug::printf("%x ", packet[i]);
         }
         Debug::printf("\n");
-
+        arp_cache.p[target_ip & 0xFF] = StrongPtr<PromiseWithTimeout>::make(1);
         send(packet, packet_length);
     }
 
