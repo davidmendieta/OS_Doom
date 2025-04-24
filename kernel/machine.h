@@ -53,4 +53,6 @@ extern uint32_t kernelSS;
 extern "C" void switchToUser(uint32_t pc, uint32_t esp, uint32_t eax);
 extern "C" void sysHandler_(void);
 
+extern "C" void keyboard_handler_();
+extern "C" void mouse_handler_();
 

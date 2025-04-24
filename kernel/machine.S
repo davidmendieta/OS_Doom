@@ -223,5 +223,27 @@ sysHandler_:
     add $8,%esp
     iret
 
+
+
+    .global keyboard_handler_
+keyboard_handler_:
+    pusha
+    .extern keyboard_handler
+    call keyboard_handler
+    popa
+    iret
+
+
+    .global mouse_handler_
+mouse_handler_:
+    pusha
+    .extern mouse_handler
+    call mouse_handler
+    popa
+    iret
+
+
+
+
     .section .note.GNU-stack,"",@progbits
 

@@ -1,5 +1,7 @@
 #include "libc.h"
 
+
+
 void one(int fd) {
     printf("*** fd = %d\n",fd);
     printf("*** len = %d\n",len(fd));
@@ -10,6 +12,19 @@ void one(int fd) {
 int main(int argc, char** argv) {
 
     iamateapot();
+    uint8_t b = 1;
+    while(b == 1) {
+        // printf("a");
+        
+    }
+
+    // while(true);
+    
+    // while (true) {
+    //     //     PS2::read_ps2_data();
+    //     //     //Debug::printf("0X%x\n", PS2::read_ps2_data());
+    //     // }
+    
 
     // printf("*** %d\n",argc);
     // for (int i=0; i<argc; i++) {

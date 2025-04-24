@@ -121,7 +121,7 @@ extern "C" void kernelInit(void) {
 
 
         /* Enumerate Devices */
-        Debug::printf("| ENUMERATING DEVICES\n");
+        Debug::printf("\n- PCI ENUMERATING DEVICES -\n");
         pciEnumDevices();
 
 	/* sys calls */
