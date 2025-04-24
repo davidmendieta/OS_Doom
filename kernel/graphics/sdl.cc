@@ -21,6 +21,7 @@ void SDL_init(){
 
 
     write_regs(g_320x200x256);
+
     vga = (uint32_t *) VMM::map_vga();
 }
 

@@ -227,6 +227,27 @@ namespace VMM
         }
     }
 
+    void *map_vga()
+    {
+
+        uint32_t vga_size = 0x10000;
+        uint32_t page_size = PhysMem::FRAME_SIZE;
+
+        uint32_t vga_addr = 0xA0000;
+
+        uint32_t *va_base = (uint32_t *)naive_mmap(vga_size, true, StrongPtr<Node>(nullptr), 0, true);
+
+        for (uint32_t i = 0; i < vga_size; i += 0x1000)
+        {
+            uint32_t vpn = (uint32_t)(va_base + i) >> 12;
+            uint32_t ppn = (vga_addr + i) >> 12;
+
+            add_mapping((uint32_t *)getCR3(), vpn, ppn, false, true, true);
+        }
+
+        return va_base;
+    }
+
     void *naive_mmap(uint32_t sz_, bool shared, StrongPtr<Node> node, uint32_t offset_, bool user)
     {
         if (!shared)
@@ -238,27 +259,6 @@ namespace VMM
         return (void *)shared_vme->add_entry(sz_, node, offset_, user);
     }
 
-    void *map_vga()
-    {
-
-        uint32_t vga_size = 0x10000;
-        uint32_t page_size = PhysMem::FRAME_SIZE;
-
-        uint32_t vga_addr = 0xA0000;
-
-        uint32_t *va_base = (uint32_t *) naive_mmap(vga_size, true, StrongPtr<Node>(nullptr), 0, true);
-
-
-        for(uint32_t i = 0; i < vga_size; i+=0x1000){
-            uint32_t vpn = (uint32_t) (va_base + i) >> 12;
-            uint32_t ppn = (vga_addr + i) >> 12;
-
-            add_mapping((uint32_t *) getCR3(), vpn, ppn, false, true, true);
-        }
-
-        return va_base;
-    }
-    
 }
 
 extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState)
