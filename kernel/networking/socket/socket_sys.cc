@@ -13,6 +13,7 @@ bool address_valid(uint32_t addr, uint32_t size) {
 }
 
 int socket_sys_handler(uint32_t eax, uint32_t* frame) {
+    Debug::printf("Inside handler1 \n");
     uint32_t* user_sp = (uint32_t*)frame[3];
     switch (eax) {
             // int socket(int domain, int type, int protocol);
@@ -72,6 +73,7 @@ int socket_sys_handler(uint32_t eax, uint32_t* frame) {
 
         // extern int getsockname(uint32_t sockfd, struct sockaddr *sraddr, socklen_t *addrlen);
         case 205: {
+            Debug::printf("Inside handler");
             int sockfd = user_sp[1];
             if (sockfd < 0) {
                 return -1;

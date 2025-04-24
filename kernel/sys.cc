@@ -282,7 +282,8 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
         Debug::printf("USER ESP IS INVALID\n");
         exit(-1);
     }
-    if (eax >= 200 && eax< 250) {
+    if (eax >= 200 && eax < 250) {
+        
         return sockets::socket_sys_handler(eax, frame);
     }
     switch (eax) {
