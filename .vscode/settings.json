@@ -1,21 +1,11 @@
 {
 	"files.associations": {
-		"random": "cpp",
-		"array": "cpp",
-		"string": "cpp",
-		"string_view": "cpp",
-		"ranges": "cpp",
-		"sdl.h": "c"
-        "ostream": "cpp",
-        "cstdio": "cpp",
-        "*.ipp": "cpp",
-        "*.tcc": "cpp",
-        "list": "cpp",
-        "deque": "cpp",
+        "random": "cpp",
+        "array": "cpp",
         "string": "cpp",
-        "vector": "cpp",
-        "functional": "cpp",
+        "string_view": "cpp",
         "ranges": "cpp",
-        "variant": "cpp"
-    }
+        "sdl.h": "c",
+        "*.tcc": "c"
+    },
 }
