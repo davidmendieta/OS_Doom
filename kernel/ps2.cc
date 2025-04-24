@@ -3,6 +3,7 @@
 #include "smp.h"
 #include "mouse.h"
 #include "keyboard.h"
+
 namespace PS2 {
 volatile bool debug_on = true;
 

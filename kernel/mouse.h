@@ -18,8 +18,5 @@
 
 
 void mouse_init();
-
-
-// Mouse event handler (will be called from PS2 driver)
 extern void mouseHandler(uint8_t buttons, int16_t x_delta, int16_t y_delta);
 
