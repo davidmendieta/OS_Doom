@@ -6,6 +6,8 @@
 static int16_t mouse_x = 0;
 static int16_t mouse_y = 0;
 static uint8_t last_buttons = 0;
+static int mouse_sensitivity = 10;
+static int mouse_dpi = 800;
 
 void mouse_init(){
     // Initialization code if needed
@@ -15,6 +17,25 @@ void mouse_init(){
     Debug::printf("Mouse initialized, translating PS/2 to SDL events\n");
     Debug::printf("SDL Button codes: LEFT=%d, MIDDLE=%d, RIGHT=%d\n", SDL_BUTTON_LEFT, SDL_BUTTON_MIDDLE, SDL_BUTTON_RIGHT);
     Debug::printf("SDL Event types: MOTION=%d, BUTTONDOWN=%d, BUTTONUP=%d\n", SDL_MOUSEMOTION, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP);
+	Debug::printf("Mouse Sensitivity: %d, DPI: %d\n", mouse_sensitivity, mouse_dpi);
+}
+
+void setMouseSensitivity(int new_sens){
+    if(new_sens > 0){
+        mouse_sensitivity = new_sens;
+        Debug::printf("Mouse sensitivity set to %d\n", mouse_sensitivity);
+    }else{
+        Debug::printf("Invalid sensitivity value: %d\n", new_sens);
+    }
+}
+
+void setMouseDPI(int new_dpi){
+    if(new_dpi > 0){
+        mouse_dpi = new_dpi;
+        Debug::printf("Mouse DPI set to %d\n", mouse_dpi);
+    }else{
+        Debug::printf("Invalid DPI value: %d\n", new_dpi);
+    }
 }
 
 void mouseHandler(uint8_t buttons, int16_t x_delta, int16_t y_delta){
@@ -44,9 +65,16 @@ void mouseHandler(uint8_t buttons, int16_t x_delta, int16_t y_delta){
     }
     Debug::printf("PS/2 raw: buttons=%02x (left=%d,middle=%d,right=%d), dx=%d, dy=%d\n",
                   buttons, left_state, middle_state, right_state, x_delta, y_delta);
+	 //scale the position changes with mouses current sensitivity
+    int scaled_x_delta = (x_delta * mouse_sensitivity) / 10;
+    int scaled_y_delta = (y_delta * mouse_sensitivity) / 10;
+	//multiply it by the mouses dpi factor
+    int dpi_factor = mouse_dpi / 800; //preset to 800
+    scaled_x_delta *= dpi_factor;
+    scaled_y_delta *= dpi_factor;
     // Update mouse position
-    mouse_x += x_delta;
-    mouse_y += y_delta;
+    mouse_x += scaled_x_delta;
+    mouse_y += scaled_y_delta;
     //position changed?
     if (x_delta != 0 || y_delta != 0){
 		uint32_t sdl_event_type = SDL_MOUSEMOTION;
@@ -64,7 +92,6 @@ void mouseHandler(uint8_t buttons, int16_t x_delta, int16_t y_delta){
 		Debug::printf("SDL MOUSEMOTION: type=%d, state=%d, x=%d, y=%d, xrel=%d, yrel=%d\n",
 							sdl_event_type, sdl_button_state, mouse_x, mouse_y, x_delta, y_delta);
     }
-
     uint8_t changed_buttons = buttons ^ last_buttons;
 
     for (int i = 0; i < 3; i++){
