@@ -38,8 +38,8 @@ uint32_t ELF::load(StrongPtr<Node> file) {
 
             VMM::naive_mmap(memsz, false, {}, 0, false);
 
-            Debug::printf("vaddr:%x memsz:0x%x filesz:0x%x fileoff:%x\n",
-                p,memsz,filesz,phdr.offset);
+            // Debug::printf("vaddr:%x memsz:0x%x filesz:0x%x fileoff:%x\n",
+                // p,memsz,filesz,phdr.offset);
             file->read_all(phdr.offset,filesz,p);
             bzero(p + filesz, memsz - filesz);
         }
