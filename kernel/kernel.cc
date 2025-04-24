@@ -154,8 +154,8 @@ if (node == nullptr) {
     Debug::printf("*** WAV: file not found\n");
 } else {
     // 2) mmap + read header
-    uint8_t *map = (uint8_t*)VMM::naive_mmap(4096, true, {}, 0, false);
-    int64_t got = node->read_all(0, 4096, (char*)map);
+    uint8_t *map = (uint8_t*)VMM::naive_mmap(4096*6, true, {}, 0, false);
+    int64_t got = node->read_all(0, 4096*6, (char*)map);
     if (got < 0) {
         Debug::printf("*** WAV: read_all failed (%d)\n", got);
         VMM::naive_munmap(map, true);
@@ -177,6 +177,8 @@ if (node == nullptr) {
         if (!riffOK || !waveOK || !fmtOK || hdr->audio_fmt != 1) {
             Debug::printf("*** WAV: unsupported format\n");
         } else {
+
+
             // 4) find "data" chunk
             uint8_t *ptr = map + 12 + 8 + hdr->fmt_sz;
             uint32_t data_sz = 0;
@@ -190,16 +192,22 @@ if (node == nullptr) {
                     break;
                 }
                 ptr += sz;
+
             }
 
+
             // 5) copy PCM samples
+
             uint16_t *pcm = (uint16_t*)ptr;
             uint32_t maxS = SAMPLE_RATE * 2;
             uint32_t nS   = data_sz / (hdr->bits_per_sample/8);
             num_samples   = (nS > maxS ? maxS : nS);
-            for (uint32_t i = 0; i < num_samples; i++) {
+                Debug::printf("*** num samples %u", num_samples);
+            for (uint32_t i = 0; i < 4096*2; i++) {
                 audio_samples[i] = pcm[i];
+                Debug::printf("*** WAV:  %i\n", i);
             }
+
             Debug::printf("*** WAV: loaded %u samples\n", num_samples);
 
             // 6) play

@@ -178,6 +178,8 @@ void poll_ac97_loop() {
                     buf[j] = audio_samples[sample_index++];
                     buf[j + 1] = audio_samples[sample_index++];
                 }
+                Debug::printf("Playing buffer %d, value: 0x%x\n", j, buf[j]);
+
             }
             
             // Update LVI to include our refilled buffer (aliding window logic do we need this? might just have to set in init)
@@ -211,7 +213,7 @@ void fill_ac97_buffers() {
             if (sample_index < num_samples * 2) {
                 buf[j] = audio_samples[sample_index++];     // Left channel
                 buf[j + 1] = audio_samples[sample_index++]; // Right channel
-                Debug::printf("Filling buffer %d, status: 0x%x\n", j, buf[j]);
+                Debug::printf("Filling buffer %d, value: 0x%x\n", j, buf[j]);
             } else {
                 buf[j] = buf[j + 1] = 0; // Fill silence after the audio samples have ended
             }
