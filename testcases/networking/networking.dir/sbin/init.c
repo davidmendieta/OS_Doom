@@ -1,49 +1,29 @@
 #include "libc.h"
-
-
-void one(int fd) {
-    printf("*** fd = %d\n",fd);
-    printf("*** len = %d\n",len(fd));
-
-    cp(fd,2);
-}
-
+#include "sdl_net_shim.h"
+#include "sys.h"
 int main(int argc, char** argv) {
-    printf("*** %d\n",argc);
-    for (int i=0; i<argc; i++) {
-        printf("*** %s\n",argv[i]);
-    }
-    int fd = open("/etc/data.txt",0);
-    one(fd);
+    printf("Entering main\n");
+    UDPsocket socket = SDLNet_UDP_Open(5000);
 
-    printf("*** close = %d\n",close(fd));
+    printf("Here opening\n");
+    int fd = open("/images/Abel", 0);
 
-    one(fd);
-    one(100);
-
-
-    printf("*** open again %d\n",open("/etc/data.txt",0));
-    printf("*** seek %ld\n",seek(3,17));
+    char* buffer = malloc(len(fd) + 1);
+    read(fd, buffer, len(fd) + 1);
+    write(1, buffer, len(fd) + 1);
+    printf("Here packet\n");
+    UDPpacket* packet = SDLNet_AllocPacket(len(fd) + 1);
+    packet->address.port = htons((uint16_t) 5000); 
+    packet->address.host = htonl((uint32_t) 19216811); 
     
-    int id = fork();
+    packet->len = len(fd);
+    packet->status = 1; 
+    printf("Here memcopying\n");
+    memcpy(packet->data, buffer, len(fd));
+    printf("Here sending\n");
+    SDLNet_UDP_Send(socket, 0, packet);
+    
+    
 
-    if (id < 0) {
-        printf("fork failed");
-    } else if (id == 0) {
-        /* child */
-        printf("*** in child\n");
-        int rc = execl("/sbin/shell","shell","a","b","c",0);
-        printf("*** execl failed, rc = %d\n",rc);
-    } else {
-        /* parent */
-        uint32_t status = 42;
-        wait(id,&status);
-        printf("*** back from wait %ld\n",status);
-
-        int fd = open("/etc/panic.txt",0);
-        cp(fd,1);
-    }
-
-    shutdown();
-    return 0;
+    shutdown(); 
 }

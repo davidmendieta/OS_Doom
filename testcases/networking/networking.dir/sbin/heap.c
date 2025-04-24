@@ -1,4 +1,4 @@
-#include "libc.h"
+#include "heap.h"
 
 /* A first-fit heap */
 
@@ -215,4 +215,13 @@ void* realloc(void* p, size_t newSize) {
 
     free(p);
     return newPtr;
+}
+
+void* calloc(size_t num, size_t size) {
+    size_t total = num * size;
+    void* p = malloc(total);
+    if (p) {
+        memset(p, 0, total);
+    }
+    return p;
 }
