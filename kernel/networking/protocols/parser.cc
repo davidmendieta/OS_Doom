@@ -19,27 +19,6 @@
 // const uint16_t dest_port = 5678;  // dest udp port
 
 
-static inline uint16_t ntohs(uint16_t netshort) { // network to host short
-    // swap bytes in 16-bit integer
-    return (netshort << 8) | (netshort >> 8);
-}
-
-static inline uint16_t htons(uint16_t hostshort) { // host to network short
-    // swap bytes
-    return (hostshort << 8) | (hostshort >> 8);
-}
-
-static inline uint32_t ntohl(uint32_t netlong) { // network to host long
-    // Convert from network byte order to host byte order
-    return ((netlong & 0x000000FF) << 24) | ((netlong & 0x0000FF00) << 8) |
-           ((netlong & 0x00FF0000) >> 8) | ((netlong & 0xFF000000) >> 24);
-}
-
-static inline uint32_t htonl(uint32_t hostlong) { // host to network long
-    // Convert host byte order to network byte order (big-endian)
-    return ((hostlong & 0x000000FF) << 24) | ((hostlong & 0x0000FF00) << 8) |
-           ((hostlong & 0x00FF0000) >> 8) | ((hostlong & 0xFF000000) >> 24);
-}
 
 namespace Parser {
 
