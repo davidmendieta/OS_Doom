@@ -46,7 +46,6 @@ namespace Poll {
 		return mode & (0x080 | 0x020 | 0x002);
 	}
 	
-
 	bool read (uint16_t events) {
 		return events & PE_READ;
 	}
@@ -222,10 +221,10 @@ namespace Poll {
 	//const sigset_t *_Nullable sigmask);
 
 	//sigmask represents signals from the OS (i think), i dont think this is implemented
-	//so it will be ignored (may cause issues, not sure)
+	//so it will be ignored for now (may cause issues, not sure)
 	int ppoll(Pollfd* fds, int nfds, const timespec* tmo_p, const sigset_t* sigmask, PCB* pcb) {
 		//poll but with increased time precision, and sigmask
-		//no tmo_p means wait indefinitely, stay looping untill all files are ready
+		//no tmo_p means wait indefinitely, stay looping until all files are ready
 	
 		//early return if invalid nfds
 		if (nfds < 0) {
@@ -246,7 +245,6 @@ namespace Poll {
 			timeout_in_ms += (tmo_p->tv_nsec + 999999) / 1000000; 
 		}
 	
-		// Call your existing poll implementation
 		return poll(fds, nfds, timeout_in_ms, pcb);
 	}
 	
