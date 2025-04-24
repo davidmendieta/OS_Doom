@@ -38,6 +38,7 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
     return userEsp;
 }
 
+#include "graphics/vga.h"
 void kernelMain(void) {
     networkingMain();
 
@@ -91,6 +92,9 @@ void kernelMain(void) {
     // User mode will never "return" from switchToUser. It will
     // enter the kernel through interrupts, exceptions, and system
     // calls.
+    // VGA demo
+    vga_test();
+
     switchToUser(e,userEsp,0);
     Debug::panic("*** implement switchToUser in machine.S\n");
 }
