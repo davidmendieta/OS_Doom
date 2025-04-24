@@ -30,12 +30,19 @@ bool check_variable_is_int(char *str) {
 char* input_line(char* dst, char* src) {
     int i = 0;
     char c = src[i];
-    while (c && c != '\n') {
+    while (c && c != '\n' && c != '#') {
         dst[i] = c;
         i++;
         c = src[i];
     }
     dst[i] = 0;
+    if (c == '#') {
+        // stopped at a comment, iterate to the next line
+        while (c && c != '\n') {
+            i++;
+            c = src[i];
+        }
+    }
     return src[i] ? &src[i + 1] : &src[i];
 }
 #else
@@ -156,6 +163,11 @@ char * tokenize_and_process(char *buffer) {
     output_prompt();                             // display a prompt
     buffer = input_line(command, buffer);        // get a line of input, which will become the command to execute
     printf("%s\n", command);
+    while (streq(command, "")) {
+        buffer = input_line(command, buffer); // try and read another command
+        output_prompt();
+        printf("%s\n", command); // print command again
+    }
     node_t* ast = list_to_tree(input_to_list(command));
     post_order_process(ast);
     // process_start(command);                      // start a process from the command
