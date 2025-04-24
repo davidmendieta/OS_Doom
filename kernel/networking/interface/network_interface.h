@@ -48,9 +48,9 @@ class NetworkInterface {
     void send_arp_request(uint32_t target_ip) {
         char* my_mac = (char*)malloc(6);
         rtl8139.get_mac_addr(my_mac);
-        char target_mac[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+        unsigned char target_mac[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
         uint32_t packet_length;
-        char* packet = ARP::encode_arp(my_IP, my_mac, target_ip, target_mac, ARP_REQUEST, &packet_length);
+        char* packet = ARP::encode_arp(my_IP, my_mac, target_ip, (char*)target_mac, ARP_REQUEST, &packet_length);
 
         Debug::printf("Sending ARP request to %x\n", target_ip);
         for(uint32_t i = 0; i < packet_length; i++) {

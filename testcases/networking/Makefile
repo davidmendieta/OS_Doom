@@ -53,13 +53,17 @@ QEMU_FLAGS = -no-reboot \
 # ----- NETWORKING START ------
 NETWORK_MODE=CLIENT #  HOST or CLIENT
 
-HOST_IP = 128.83.139.56 # Change to actual Host IP, only needed for client mode
+HOST_IP = 128.83.144.128 # Change to actual Host IP, only needed for client mode
+
+
+RANDOM_MAC := $(shell printf '52:54:%02x:%02x:%02x:%02x\n' \
+    $$((RANDOM%256)) $$((RANDOM%256)) $$((RANDOM%256)) $$((RANDOM%256)))
 
 QEMU_FLAGS_NETWORKING_HOST = -netdev socket,id=net0,listen=:1234 \
-    -device rtl8139,netdev=net0
+    -device rtl8139,netdev=net0,mac=$(RANDOM_MAC)
 
 QEMU_FLAGS_NETWORKING_CLIENT = -netdev socket,id=net0,connect=$(strip $(HOST_IP)):1234 \
-    -device rtl8139,netdev=net0
+    -device rtl8139,netdev=net0,mac=$(RANDOM_MAC)
 
 ifeq ($(strip $(NETWORK_MODE)),HOST)
 QEMU_FLAGS += $(QEMU_FLAGS_NETWORKING_HOST)
