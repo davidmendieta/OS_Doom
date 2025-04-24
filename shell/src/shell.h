@@ -22,7 +22,9 @@ enum CMD_CODES {
     CMD_SET,        // set command for shell variables
     CMD_UNSET,      // remove command for shell variables
     CMD_GET,        // get command for shell variables
-    CMD_EXTERNAL    // external command
+    CMD_EXTERNAL,   // external command
+    CMD_PRINT_NUT,  // print nut
+    CMD_GET_NUT_FACT // print nut fact
 };
 
 Command commands[] = {
@@ -38,6 +40,8 @@ Command commands[] = {
     {"set", CMD_SET},
     {"unset", CMD_UNSET},
     {"get", CMD_GET},
+    {"nut", CMD_PRINT_NUT},
+    {"get_nut_fact", CMD_GET_NUT_FACT},
     {NULL, CMD_EXTERNAL}  // default
 };
 

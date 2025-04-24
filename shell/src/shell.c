@@ -36,7 +36,7 @@ char* input_line(char* dst, char* src) {
         c = src[i];
     }
     dst[i] = 0;
-    return dst[i] ? &dst[i + 1] : &dst[i];
+    return src[i] ? &src[i + 1] : &src[i];
 }
 #else
 // read keyboard input into buffer
@@ -53,6 +53,9 @@ void input_line(char* buffer) {
     buffer[write] = 0;
 }
 #endif
+
+void nut();
+void nut_fact();
 
 void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
     switch (id) {
@@ -111,6 +114,12 @@ void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
             }
             break;
         }
+        case CMD_PRINT_NUT:
+            nut();
+            break;
+        case CMD_GET_NUT_FACT:
+            nut_fact();
+            break;
         default:
             error("how did you get here??\n");
     }
@@ -146,6 +155,7 @@ char * tokenize_and_process(char *buffer) {
     char* command = malloc(4096);
     output_prompt();                             // display a prompt
     buffer = input_line(command, buffer);        // get a line of input, which will become the command to execute
+    printf("%s\n", command);
     node_t* ast = list_to_tree(input_to_list(command));
     post_order_process(ast);
     // process_start(command);                      // start a process from the command
@@ -218,14 +228,7 @@ void process_start(node_t *node) {
     // tokens_free(&node->tokens);
 }
 
-void welcome() {
-    // this font is so funny
-    printf("   _ __     _              _                      _         _            \n");
-    printf("  | '_ \\   (_)     ___    | |_    __ _     ___   | |_      (_)     ___   \n");
-    printf("  | .__/   | |    (_-<    |  _|  / _` |   (_-<   | ' \\     | |    / _ \\  \n");
-    printf("  |_|__   _|_|_   /__/_   _\\__|  \\__,_|   /__/_  |_||_|   _|_|_   \\___/  \n");
-    printf("_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"| \n");
-    printf("`'-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-'  \n");
+void nut() {
     printf("                ______\n");
     printf("             .-'      `-.\n");
     printf("           .'            `.\n");
@@ -242,13 +245,27 @@ void welcome() {
     printf("               `------'\n");
 }
 
+void nut_fact() {
+    printf("Pistachio trees can live up to 300 years\n");
+}
+
+void welcome() {
+    // this font is so funny
+    printf("   _ __     _              _                      _         _            \n");
+    printf("  | '_ \\   (_)     ___    | |_    __ _     ___   | |_      (_)     ___   \n");
+    printf("  | .__/   | |    (_-<    |  _|  / _` |   (_-<   | ' \\     | |    / _ \\  \n");
+    printf("  |_|__   _|_|_   /__/_   _\\__|  \\__,_|   /__/_  |_||_|   _|_|_   \\___/  \n");
+    printf("_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"|_|\"\"\"\"\"| \n");
+    printf("`'-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-''`-0-0-'  \n");
+}
+
 void post_order_process(node_t* node) {
     if (node) {
         post_order_process(node->left);
         post_order_process(node->right);
         if (node->type == NODE_COMMAND) {
             process_start(node);
-            printf("NODE. ARGV[0]: %s TYPE: %d. Address: %p\n", node->tokens.argv[0], (int) node->type, node);
+            // printf("NODE. ARGV[0]: %s TYPE: %d. Address: %p\n", node->tokens.argv[0], (int) node->type, node);
         } else {
             int left_return = node->left->exit_status;
             int right_return = node->right->exit_status;
