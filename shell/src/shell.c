@@ -29,15 +29,14 @@ bool check_variable_is_int(char *str) {
 // advance the source buffer
 char* input_line(char* dst, char* src) {
     int i = 0;
-    char c = *(src + i);
+    char c = src[i];
     while (c && c != '\n') {
         dst[i] = c;
         i++;
-        c = *(src + i);
+        c = src[i];
     }
     dst[i] = 0;
-    if (c == '\0') return (src + i);
-    return (src + i + 1);
+    return dst[i] ? &dst[i + 1] : &dst[i];
 }
 #else
 // read keyboard input into buffer
@@ -106,7 +105,7 @@ void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
             char *var_name = tokens.argv[1];
             HashValue *val = hash_get(&environment_variables, var_name);
             if (val->type == TYPE_INT) {
-                printf("VAL: %ld\n", val->data.idata);
+                printf("VAL: %d\n", val->data.idata);
             } else {
                 printf("VAL: %s\n", val->data.sdata);
             }

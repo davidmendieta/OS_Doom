@@ -7,7 +7,7 @@ PATH := /usr/bin
 # Set GCC path explicitly
 GCC := /usr/bin/gcc
 INCLUDE = $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../)/sbin/
-UTILS = cat
+UTILS = cat grep
 CFLAGS = -std=c99 -m32 -nostdlib -g -O2 -Wall -Werror
 
 all : $(UTILS)

@@ -18,11 +18,11 @@ enum CMD_CODES {
     CMD_FALSE,      // set exit status to 1 in command chain
     CMD_TRUE,       // set exit status to 0 in command chain
     CMD_LS,         // ls
-    CMD_SH,         // start a new shell
     CMD_SLEEP,      // sleep
     CMD_SET,        // set command for shell variables
+    CMD_UNSET,      // remove command for shell variables
     CMD_GET,        // get command for shell variables
-    CMD_EXTERNAL   // external command
+    CMD_EXTERNAL    // external command
 };
 
 Command commands[] = {
@@ -34,9 +34,9 @@ Command commands[] = {
     {"false", CMD_FALSE},
     {"true", CMD_TRUE},
     {"ls", CMD_LS},
-    {"sh", CMD_SH},
     {"sleep", CMD_SLEEP},
     {"set", CMD_SET},
+    {"unset", CMD_UNSET},
     {"get", CMD_GET},
     {NULL, CMD_EXTERNAL}  // default
 };

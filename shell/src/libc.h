@@ -28,6 +28,7 @@ extern int streq(const char*, const char*);
 extern int strlen(const char*);
 extern char* strcat(char*, const char*);
 extern char* strcpy(char*, const char*);
+extern int strncmp(const char*, const char*, size_t);
 extern int my_atoi(const char* str);
 
 
