@@ -82,4 +82,6 @@ extern int chdir(const char* path);
 
 extern int shell_exec(const char* path, char** argv, uint32_t argc);
 
+extern uint32_t print_dir();
+
 #endif

@@ -119,3 +119,10 @@ chdir:
 	mov $100, %eax
 	int $48
 	ret
+
+	# int print_dir()
+	.global print_dir
+print_dir:
+	mov $1970, %eax
+	int $48
+	ret
