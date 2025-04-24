@@ -7,25 +7,33 @@
 #include "machine.h"
 #include "sdl.h"
 
-
-
+#define COLOR_RED 0x4
 
 int main(int argc, char **argv)
 {
-  SDL_Surface *screen = SDL_SetVideoMode(320, 200, 16, SDL_SWSURFACE);
 
+	SDL_Surface *screen = SDL_SetVideoMode(320, 200, 16, SDL_SWSURFACE);
 
+	SDL_init();
 
-  return 0;
+	uint8_t *pixels = (uint8_t *)screen->pixels;
+
+	for (uint32_t y = 0; y < screen->h; y++)
+	{
+		for (uint32_t x = 0; x < screen->w; x++)
+		{
+			size_t offset = y * screen->pitch + x;
+			pixels[offset] = COLOR_RED;
+		}
+	}
+
+	SDL_Flip(screen);
+
+	return 0;
 }
 
-// This does nothing.
-//
-// It's just so I don't have to change a line in `crt0.S`.
-//
-// Though, this is kinda interesting...
-// Why would the C runtime need this?
+
 void heap_init(void)
 {
-  // ...
+	// ...
 }
