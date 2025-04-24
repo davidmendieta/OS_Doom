@@ -188,6 +188,9 @@ class Node : public BlockIO {  // we implement BlockIO because we
     //
     // Panics if not a directory
     uint32_t entry_count();
+    
+    // new code
+    void truncate(uint32_t new_length = 0);
 };
 
 class STDIO : public Node {
@@ -243,11 +246,11 @@ class STDERR : public STDIO {
 class Ext2 {
     // The device on which the file system resides
     StrongPtr<Ide> ide_;
-    StrongPtr<impl::ext2::BufferCache> buffer_cache{};
+    
    
 
    public:
-  
+    StrongPtr<impl::ext2::BufferCache> buffer_cache{};
     BlockGroup* groupTable = nullptr;
     
     // The root directory for this file system

@@ -20,5 +20,6 @@
         "string_view": "cpp",
         "ratio": "cpp",
         "streambuf": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "/u/kelly16/OS-Doom/doom.dir/chocolate-doom/src/strife"
 }

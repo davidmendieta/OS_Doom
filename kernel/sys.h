@@ -17,6 +17,7 @@ extern uint32_t len(uint32_t fd); // 11
 extern uint32_t read(uint32_t fd, void* buf, uint32_t nbyte); // 12
 extern uint32_t seek(uint32_t fd, uint32_t offset); // 13;
 extern uint32_t writev(uint32_t fd, void* iov, uint32_t iovcnt); // 14
+extern uint32_t ftruncate(uint32_t fd, uint32_t length); // 16
 
 
 extern uint32_t chdir(const char* path); // 100; 

@@ -423,16 +423,32 @@ void Node::update_dir(uint32_t entry_number, char* name, uint16_t type) {
     de.inode = entry_number;
     de.rec_len = rec_len;
     de.name_len = name_len;
-    // change into a switch statement
-    if (type == 4) de.file_type = 2;
-    else if (type == 8) de.file_type = 1;
-    else if (type == 0xA) de.file_type = 7;
-    else if (type == 0x2) de.file_type = 3;
-    else if (type == 0x6) de.file_type = 4;
-    else if (type == 0xC) de.file_type = 6;
-    else if (type == 1) de.file_type = 5;
-    else {
-        de.file_type = 0;
+    // switch statement on type
+    switch (type) {
+        case 4:
+            de.file_type = 2;
+            break;
+        case 8:
+            de.file_type = 1;
+            break;
+        case 0xA:
+            de.file_type = 7;
+            break;
+        case 0x2:
+            de.file_type = 3;
+            break;
+        case 0x6:
+            de.file_type = 4;
+            break;
+        case 0xC:
+            de.file_type = 6;
+            break;
+        case 1:
+            de.file_type = 5;
+            break;
+        default:
+            de.file_type = 0;
+            break;
     }
     this->write_all(place, sizeof(de), (char*) &de);
     this->write_all(place + 8, name_len, name);
@@ -447,5 +463,158 @@ uint32_t Node::entry_count() {
         return 0;
     });
     return count;
+}
+
+// new code
+void Node::truncate(uint32_t new_length) {
+    if (!is_file()) {
+        return;  
+    }
+
+    if (new_length >= data.size_low) {
+        // just update the size
+        data.size_low = new_length;
+        buffer_cache->write_all(get_offset(), sizeof(NodeData), (char*)&data);
+        return;
+    }
+
+    // how many blocks we need to keep and deallocate the rest
+    uint32_t current_block_count = (data.size_low + block_size - 1) / block_size;
+    uint32_t new_block_count = (new_length + block_size - 1) / block_size;
+    
+    // free direct blocks 
+    uint32_t* direct = &data.direct0;
+    for (uint32_t i = new_block_count; i < 12 && i < current_block_count; i++) {
+        if (direct[i] != 0) {
+            uint32_t block_num = direct[i];
+            uint32_t group = block_num / fs->sb.blocks_per_group;
+            uint32_t block_index = block_num % fs->sb.blocks_per_group;
+            // mark block as free in block bitmap
+            char bitmap[fs->blockSize];
+            uint32_t block_bitmap = fs->groupTable[group].block_bitmap;
+            buffer_cache->read_all(block_bitmap * fs->blockSize, fs->blockSize, bitmap);
+            
+            uint32_t byte = block_index / 8;
+            uint32_t bit = block_index % 8;
+            
+            bitmap[byte] &= ~(1 << bit);  // clear the bit
+            
+            buffer_cache->write_all(block_bitmap * fs->blockSize, fs->blockSize, bitmap);
+            
+            // update sb and gdt
+            fs->sb.free_blocks_count++;
+            fs->groupTable[group].free_blocks_count++;
+            
+            // clear the direct pointer
+            direct[i] = 0;
+        }
+    }
+    
+    // free first indirect blocks
+    if (new_block_count < 12 && current_block_count > 12 && data.indirect_1 != 0) {
+        // deallocate all indirect blocks
+        uint32_t refs_per_block = block_size / 4;
+        uint32_t* indirect_block = new uint32_t[refs_per_block];
+        buffer_cache->read_all(data.indirect_1 * block_size, block_size, (char*)indirect_block);
+        
+        // free all blocks it points to
+        for (uint32_t i = 0; i < refs_per_block; i++) {
+            if (indirect_block[i] != 0) {
+                uint32_t block_num = indirect_block[i];
+                uint32_t group = block_num / fs->sb.blocks_per_group;
+                uint32_t block_index = block_num % fs->sb.blocks_per_group;
+                // mark block as free in block bitmap 
+                char bitmap[fs->blockSize];
+                uint32_t block_bitmap = fs->groupTable[group].block_bitmap;
+                buffer_cache->read_all(block_bitmap * fs->blockSize, fs->blockSize, bitmap);
+                
+                uint32_t byte = block_index / 8;
+                uint32_t bit = block_index % 8;
+                
+                bitmap[byte] &= ~(1 << bit);  // clear the bit
+                
+                buffer_cache->write_all(block_bitmap * fs->blockSize, fs->blockSize, bitmap);
+                
+                // update sb and gdt
+                fs->sb.free_blocks_count++;
+                fs->groupTable[group].free_blocks_count++;
+            }
+        }
+        
+        delete[] indirect_block; // dont need this anymore !
+        
+        // free the indirect block itself, same process again
+        uint32_t group = data.indirect_1 / fs->sb.blocks_per_group;
+        uint32_t block_index = data.indirect_1 % fs->sb.blocks_per_group;
+        // mark block as free in block bitmap 
+        char bitmap[fs->blockSize];
+        uint32_t block_bitmap = fs->groupTable[group].block_bitmap;
+        buffer_cache->read_all(block_bitmap * fs->blockSize, fs->blockSize, bitmap);
+        
+        uint32_t byte = block_index / 8;
+        uint32_t bit = block_index % 8;
+        
+        bitmap[byte] &= ~(1 << bit);  // clear the bit
+        
+        buffer_cache->write_all(block_bitmap * fs->blockSize, fs->blockSize, bitmap);
+        
+        // update sb and gdt
+        fs->sb.free_blocks_count++;
+        fs->groupTable[group].free_blocks_count++;
+        
+        data.indirect_1 = 0;
+    } else if (new_block_count >= 12 && data.indirect_1 != 0) {
+        // need to keep some indirect blocks but free others
+        uint32_t refs_per_block = block_size / 4;
+        uint32_t* indirect_block = new uint32_t[refs_per_block];
+        buffer_cache->read_all(data.indirect_1 * block_size, block_size, (char*)indirect_block);
+        
+        // free blocks beyond the new_block_count
+        for (uint32_t i = new_block_count - 12; i < refs_per_block; i++) {
+            if (indirect_block[i] != 0) {
+                uint32_t block_num = indirect_block[i];
+                uint32_t group = block_num / fs->sb.blocks_per_group;
+                uint32_t block_index = block_num % fs->sb.blocks_per_group;
+                // mark block as free in block bitmap 
+                char bitmap[fs->blockSize];
+                uint32_t block_bitmap = fs->groupTable[group].block_bitmap;
+                buffer_cache->read_all(block_bitmap * fs->blockSize, fs->blockSize, bitmap);
+                
+                uint32_t byte = block_index / 8;
+                uint32_t bit = block_index % 8;
+                
+                bitmap[byte] &= ~(1 << bit);  // clear the bit
+                
+                buffer_cache->write_all(block_bitmap * fs->blockSize, fs->blockSize, bitmap);
+                
+                // update sb and gdt
+                fs->sb.free_blocks_count++;
+                fs->groupTable[group].free_blocks_count++;
+                
+                // clear the pointer in the indirect block
+                indirect_block[i] = 0;
+            }
+        }
+        
+        // write the new indirect block
+        buffer_cache->write_all(data.indirect_1 * block_size, block_size, (char*)indirect_block);
+        
+        delete[] indirect_block;
+    }
+    
+    // TODO: still need to handle double and triple indirect blocks 
+    // follow the same pattern as the first indirect
+    
+    // update everything
+    data.size_low = new_length;
+    data.n_sectors = (new_length + 511) / 512; 
+    buffer_cache->write_all(get_offset(), sizeof(NodeData), (char*)&data); // write the updated inode back to disk
+    buffer_cache->write_all(1024, sizeof(fs->sb), (char*)&fs->sb); // update sb
+    // update gdt
+    uint32_t table_start = (fs->sb.first_data_block + 1) * fs->blockSize;
+    for (uint32_t i = 0; i < fs->nGroups; i++) {
+        buffer_cache->write_all(table_start + i * sizeof(BlockGroup),
+                              sizeof(BlockGroup), (char*)&fs->groupTable[i]);
+    }
 }
 

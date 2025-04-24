@@ -48,6 +48,7 @@
     if (open_file->offset > data->size_low) {
         data->size_low = open_file->offset;
     }
+    // fs->buffer_cache->write_all(open_file->node->get_offset(), sizeof(NodeData), (char*) &open_file->node->data);
     return bytes_written;
 }
 
@@ -89,6 +90,34 @@ uint32_t writev(uint32_t fd, const iovec* iov, uint32_t iovcnt) {
     return total_written;
 }
 
+// Updated implementation of ftruncate system call
+uint32_t ftruncate(uint32_t fd, uint32_t length) {
+    if (fd >= PCB_ARR_SIZE) {
+        return -1;
+    }
+    
+    auto me = impl::threads::state.current();
+    auto open_file = me->pcb->fdt[fd];
+    
+    if (open_file == nullptr || open_file->node == nullptr) {
+        return -1;  // File doesn't exist
+    }
+    
+    if (!open_file->node->is_file()) {
+        return -1;  // Not a file
+    }
+    
+    // Truncate the file to the specified length
+    open_file->node->truncate(length);
+    
+    // If the current offset is beyond the new size, adjust it
+    if (open_file->offset > length) {
+        open_file->offset = length;
+    }
+    
+    return 0;  // Success
+}
+
 uint32_t open(const char* fd, int flags, uint16_t mode) {
     auto me = impl::threads::state.current();
     StrongPtr<Node> checkIn;
@@ -126,8 +155,29 @@ uint32_t open(const char* fd, int flags, uint16_t mode) {
         if (parent == nullptr || !parent->is_dir()) return -1;
         new_node = fs->create_inode(parent, name, mode);
     }
+
+    // If the file was found and O_TRUNC is set, truncate the file
+    if (new_node != nullptr && (flags & 0x0400)) {
+        if (flags & 0x1 || flags & 0x2) { // check if in write mode (O_WRONLY or O_RDWR)
+            new_node->truncate(0); // set the size to 0
+        }
+    }
+
+    // check if O_EXCL is set, check for existence
+    if (new_node != nullptr && (flags & 0x0800)) {
+        return -1; // file already exists, cannot create with O_EXCL
+    }
+
     if (new_node == nullptr) return -1;
     StrongPtr<OpenFile> new_open_file = StrongPtr<OpenFile>::make(new_node);
+    
+    // check if O_APPEND is set
+    if (flags & 0x8) {
+        new_open_file->offset = new_node->size_in_bytes(); // set offset to end of file
+    } else {
+        new_open_file->offset = 0; // default to start of file
+    }
+    
     for(uint32_t i = 0; i < PCB_ARR_SIZE; i++) {
         if(me->pcb->fdt[i] == nullptr) { // Found empty file
             me->pcb->fdt[i] = new_open_file;
@@ -386,6 +436,8 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
         return seek(user_sp[1], user_sp[2]);
     case 14: // new code
         return writev(user_sp[1], (iovec*)user_sp[2], user_sp[3]);
+    case 16: // new code
+        return ftruncate(user_sp[1], user_sp[2]);
     case 100:
         return chdir((const char*)user_sp[1]);
     case 101:
