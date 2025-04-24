@@ -89,8 +89,8 @@ void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
             char *var_name = malloc(str_len);
             memcpy((void *)var_name, (void *) tokens.argv[1], str_len);
             char *var_val = tokens.argv[2];
-            Value p;
-            ValueType val_type;
+            value_t p;
+            valuemeta_t val_type;
             if (check_variable_is_int(var_val)) {
                 val_type = TYPE_INT;
                 p.idata = my_atoi(var_val);

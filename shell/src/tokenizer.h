@@ -14,4 +14,3 @@ void tokenize(Tokenized* tokens, const char* input);
 
 queue_t* input_to_list(char* s);
 node_t* list_to_tree(queue_t* list);
-void postorder(node_t* list);

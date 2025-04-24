@@ -25,7 +25,7 @@ int count_argc(const char *input) {
     return ret + 1;
 }
 
-const char* iterate_and_fill (char* dst, const char* src) {
+const char* iterate_and_fill(char* dst, const char* src) {
     int i = 0;
     char c = *(src + i);
     while (c && c != ' ') {
