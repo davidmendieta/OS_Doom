@@ -108,7 +108,7 @@ StrongPtr<VMEEntry> VME<Lock>::get(uint32_t va) {
         }
         curr = curr->next;
     }
-    return StrongPtr<VMEEntry>();
+    return StrongPtr<VMEEntry>(); 
 }
 
 template <typename Lock>

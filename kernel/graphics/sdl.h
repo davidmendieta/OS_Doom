@@ -15,6 +15,8 @@ typedef struct
     int flags;    // Surface flags
 } SDL_Surface;
 
+
+
 typedef struct
 {
     unsigned char r, g, b, a;

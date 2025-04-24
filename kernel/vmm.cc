@@ -231,7 +231,6 @@ namespace VMM
     {
 
         uint32_t vga_size = 0x10000;
-        uint32_t page_size = PhysMem::FRAME_SIZE;
 
         uint32_t vga_addr = 0xA0000;
 

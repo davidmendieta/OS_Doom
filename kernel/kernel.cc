@@ -90,7 +90,10 @@ void kernelMain(void) {
     // enter the kernel through interrupts, exceptions, and system
     // calls.
     // VGA demo
-    vga_test();
+
+
+    // NEED TO DO THIS
+    // vga_test();
 
     switchToUser(e,userEsp,0);
     Debug::panic("*** implement switchToUser in machine.S\n");

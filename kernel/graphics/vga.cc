@@ -25,6 +25,15 @@ unsigned char g_320x200x256[] =
     0x41, 0x00, 0x0F, 0x00, 0x00
 };
 
+
+void init_frame_buffer(){
+    write_regs(g_320x200x256);
+    unsigned char* VGA = (unsigned char *) VGA_ADDRESS;
+
+    vga_clear_screen();
+}
+
+
 void draw_rectangle(int x, int y, int width, int height) {
 	for (int i = 0; i < width; i++) {
 		for (int j = 0; j < height; j++) {
