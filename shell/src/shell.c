@@ -66,6 +66,9 @@ void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
             // todo ask for a syscall
             printf("i think you are in a directory ngl\n");
             break;
+        case CMD_LS:
+            print_dir();
+            break;
         default:
             error("how did you get here??\n");
     }
@@ -80,9 +83,11 @@ void handle_fork(const char* path, Tokenized* tokens) {
         error("couldn't execute command\n");
     } else {
         // parent
-        uint32_t status = 42;
-        wait(id, &status);
-        printf("process exited with status %ld\n", status);
+        if (!tokens->background_process) {
+            uint32_t status = 42;
+            wait(id, &status);
+            printf("process exited with status %ld\n", status);
+        }
     }
 }
 

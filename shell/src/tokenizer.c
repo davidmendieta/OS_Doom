@@ -60,7 +60,9 @@ void tokenize(Tokenized* tokens, const char *input) {
         int len = strlen(temp);
         tokens->argv[i] = malloc(len + 1);
         memcpy((void *)tokens->argv[i], (void *)temp, len + 1);
-        
+        if (tokens->argv[i][0] == '&') {
+            tokens->background_process = true;
+        }
         // printf("ARG %d: %s\n", i, tokens->argv[i]);
     }
     free(temp);

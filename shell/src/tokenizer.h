@@ -5,6 +5,7 @@
 typedef struct Tokenized {
     char** argv;
     int argc;
+    bool background_process;
 } Tokenized;
 
 bool is_newline(char c);
