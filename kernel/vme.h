@@ -57,6 +57,5 @@ class VME {
 
     static StrongPtr<VME> duplicate(StrongPtr<VME> vme);
 
-    uint32_t get_phys_addr();
 
 };

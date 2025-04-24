@@ -33,7 +33,9 @@ namespace VMM {
     extern void* naive_mmap(uint32_t size, bool shared, StrongPtr<Node> file, uint32_t file_offset, bool user);
 
     // naive munmap
-    void naive_munmap(void* p, bool user);
+    extern void naive_munmap(void* p, bool user);
+
+    uint32_t get_phys_addr(uint32_t va);
 
 }
 
