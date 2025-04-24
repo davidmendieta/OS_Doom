@@ -221,6 +221,7 @@ use "mouse_button 0-7" to simulate left, middle, right mouse presses
 bool DEMO = true;
 bool new_code = true;
 bool caps = false;
+char letter;
 
 bool is_letter (char c) {
     return (c >= 97) && (c <= 122);
@@ -229,19 +230,21 @@ bool is_letter (char c) {
 void demo_mode() {
     uint8_t scancode = inb(0x60);
     if (scancode == 0xF0) {
-        new_code = true;
-    } else if (new_code) {
-        char c = scancode_to_ascii(scancode);
-        if (scancode == 0x58) {
-            caps = !caps;
-        }
-        if (c != '_') {
+        if (letter != '_') {
+            char c = letter;
             if (caps && is_letter(c)) {
                 Debug::printf("%c", c - 32);
             } else {
                 Debug::printf("%c", c);
             }
         }
+        new_code = true;
+    } else if (new_code) {
+        letter = scancode_to_ascii(scancode);
+        if (scancode == 0x58) {
+            caps = !caps;
+        }
+
         new_code = false;
     }
 }
