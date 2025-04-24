@@ -6,26 +6,32 @@ int main(int argc, char** argv) {
     UDPsocket socket = SDLNet_UDP_Open(5001);
 
     printf("Here opening\n");
-    int fd = open("/images/Abel", 0);
-
-    // char* buffer = malloc(len(fd) + 1);
-    // read(fd, buffer, len(fd) + 1);
-    // write(1, buffer, len(fd) + 1);
-    // printf("Here packet\n");
-    UDPpacket* packet = SDLNet_AllocPacket(len(fd) + 1);
-    packet->address.port = htons((uint16_t) 5000); 
-    packet->address.host = htonl((uint32_t) 19216811); 
-    
-    // packet->len = len(fd);
-    // packet->status = 1; 
-    // printf("Here memcopying\n");
-    // memcpy(packet->data, buffer, len(fd));
-    // printf("Here sending\n");
-    // SDLNet_UDP_Send(socket, 0, packet);
-    
+    UDPpacket* packet = SDLNet_AllocPacket(4096*3);
     SDLNet_UDP_Recv(socket,packet);
     printf("Recieved Packet!\n");
-    write(1, packet->data, len(fd) + 1);
+    write(1, packet->data, packet->len + 1);
+
+
+
+    printf("Here opening\n");
+    int fd2= open("/images/goppert", 0);
+    char* buffer = malloc(len(fd2) + 1);
+    read(fd2, buffer, len(fd2) + 1);
+    //write(1, buffer, len(fd) + 1);
+    UDPpacket* packet2 = SDLNet_AllocPacket(len(fd2) + 1);
+    packet2->address.port = packet->address.port;
+    packet2->address.host = packet->address.host;
+    packet2->len = len(fd2);
+    packet2->status = 1; 
+    memcpy(packet2->data, buffer, len(fd2));
+    SDLNet_UDP_Send(socket, 0, packet2);
+
+
+
+    UDPpacket* packetR = SDLNet_AllocPacket(4096*3);
+    SDLNet_UDP_Recv(socket,packetR);
+    printf("Recieved Packet!\n");
+    write(1, packetR->data, packetR->len + 1);
 
     shutdown(); 
 }
