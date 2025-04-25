@@ -3,6 +3,9 @@
 #include "machine.h"
 #include "keyboard.h"
 #include "ps2.h"
+#include "sdl_keycodes.h"
+#include "sys.h"
+
 //#include "d_event.h"
 //#include "doomkeys.h"
 
@@ -15,8 +18,34 @@
 
 
 
-uint8_t buffer[3]; // buffer for keyboard input
 
+
+uint8_t buffer[3]; // buffer for keyboard input print testing
+
+
+char input_buffer[100];
+
+void write_key_to_dev(SDL_Scancode scancode, bool is_release) {
+    // Only handle key press events
+    if (is_release) return;
+    
+    // Get ASCII value of pressed key
+    char ascii_val = PS2::scancode_to_ascii(scancode & 0x7F);
+    
+    // Only write printable characters and newlines
+    if ((ascii_val >= 32 && ascii_val < 127) || ascii_val == '\n' || ascii_val == '\r') {
+        const char* filepath = "/dev/input/keyboard0";
+        uint32_t fd = open(filepath, 0x0200, 0644);
+        
+        if (fd == 0xFFFFFFFF) {
+            Debug::printf("Failed to open file for writing\n");
+            return;
+        }
+        
+        write(fd, &ascii_val, 1);  // Write the single character
+        close(fd);
+    }
+}
 
 
 
@@ -102,6 +131,8 @@ const char* sdlScancodeToString(SDL_Scancode scancode) {
 
 
 
+
+
 void keyboardHandler(uint8_t scancode) {
    
     for(uint32_t i=0; i< 3; i++){
@@ -123,13 +154,23 @@ void keyboardHandler(uint8_t scancode) {
     }
 
 
+
+
     bool is_release = scancode & 0x80;
     uint8_t keycode = scancode & 0x7F;
 
 
 
 
+
+
+
+
     static bool is_break = false;
+
+
+
+
 
 
 
@@ -195,6 +236,10 @@ void keyboardHandler(uint8_t scancode) {
 
 
 
+
+
+
+
         case 0x41: sdl_scancode = SDL_SCANCODE_COMMA; break; // comma
         case 0x49: sdl_scancode = SDL_SCANCODE_PERIOD; break; // period
         // slash
@@ -213,9 +258,17 @@ void keyboardHandler(uint8_t scancode) {
 
 
 
+
+
+
+
     // determine the ascii value
     char ascii_val = PS2::scancode_to_ascii(scancode);
     int sym = (int) ascii_val;
+
+
+
+
 
 
 
@@ -224,6 +277,10 @@ void keyboardHandler(uint8_t scancode) {
     uint16_t mod = 0;
     if (keycode == 0x2A || keycode == 0x36) mod |= 1; // shift
     if (keycode == 0x1D) mod |= 2; // ctrl
+
+
+
+
 
 
 
@@ -240,10 +297,16 @@ void keyboardHandler(uint8_t scancode) {
     };
 
 
+
+
     event = event;
 
 
+
+
      bool second = false;
+
+    write_key_to_dev(sdl_scancode, is_release);
 
 
     if(buffer[0] == buffer[1] && buffer[2] == 0xF0){
@@ -259,6 +322,8 @@ void keyboardHandler(uint8_t scancode) {
     }
     if(!second){
     if(!is_break){
+
+
 
 
             Debug::printf("Key [%s]: scancode=%x, ascii=%c, sdl_code=%s\n",
@@ -283,7 +348,21 @@ void keyboardHandler(uint8_t scancode) {
 
 
 
+
+
+
+
+
+
+
+
+
+
     // int doom_key = get_doom_key(sym);
+
+
+
+
 
 
 
@@ -297,8 +376,16 @@ void keyboardHandler(uint8_t scancode) {
 
 
 
+
+
+
+
     // D_PostEvent(&doom_event);   // pass the event to Doom
 }
+
+
+
+
 
 
 
@@ -334,8 +421,24 @@ void keyboardHandler(uint8_t scancode) {
 
 
 
+
+
+
+
 //     return 0;  // Unknown key
 // }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
