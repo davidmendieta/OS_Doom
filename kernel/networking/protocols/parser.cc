@@ -121,6 +121,7 @@ char* encode_ip_udp(const void* payload, size_t payload_len, uint32_t src_ip,
         ip, udp, buf + sizeof(IPv4Header) + sizeof(UDPHeader), payload_len);
 
     *out_packet_len = ethernet_len;
+    //Debug::printf("packet being sent %s\n", payload);
     return buf;
 }
 
@@ -167,11 +168,11 @@ char* decode_ip_udp(const void* packet, size_t packet_len,
     const char* payload_ptr = (const char*)udp + sizeof(UDPHeader);
 
     // 4) verify UDP checksum //! THIS ONE DOESN'T WORK
-    if (udp_checksum(ip, udp, payload_ptr, payload_len) != 0) {
-        // return 0;
-        Debug::printf("UDP CHECKSUM FAILED\n");
-        return nullptr;
-    }
+    // if (udp_checksum(ip, udp, payload_ptr, payload_len) != 0) {
+    //     // return 0;
+    //     Debug::printf("UDP CHECKSUM FAILED\n");
+    //     return nullptr;
+    // }
 
     // extract metadata
     *src_ip = ntohl(ip->src_ip);

@@ -51,10 +51,10 @@ void kernelMain(void) {
     const uint32_t stack_size = 134217728;
     void* stack_start = VMM::naive_mmap(stack_size, false, {}, 0, false);
     uint32_t userEsp = ((uint32_t)stack_start + stack_size - 16);
-    
+   
     const char* argv[] = { "init", nullptr };
     userEsp = (uint32_t)load_args((uint32_t*)userEsp, argv);
-    
+ 
     // userEsp-=16; // Account for argc and argv
     
     // ((uint32_t*)userEsp)[0] = 1;
@@ -91,6 +91,7 @@ void kernelMain(void) {
     // User mode will never "return" from switchToUser. It will
     // enter the kernel through interrupts, exceptions, and system
     // calls.
+ 
     switchToUser(e,userEsp,0);
     Debug::panic("*** implement switchToUser in machine.S\n");
 }

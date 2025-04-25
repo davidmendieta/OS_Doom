@@ -40,6 +40,7 @@ class NetworkInterface {
         }
         memcpy(dest_mac, dest, 6);
         Debug::printf("Sending packet to %x\n", dest_ip);
+        
         uint32_t packet_length;
         char* packet = Parser::encode_ip_udp(payload, payload_length, src_ip, src_mac, src_port, dest_ip, (char*)dest_mac, dest_port, &packet_length);
         send(packet, packet_length);

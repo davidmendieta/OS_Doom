@@ -1,0 +1,16 @@
+{
+    "cmake.sourceDirectory": "/u/david118/OS-Doom/doom.dir/chocolate-doom",
+    "files.associations": {
+        "functional": "cpp",
+        "cstring": "c",
+        "array": "cpp",
+        "atomic": "cpp",
+        "cstddef": "cpp",
+        "string": "cpp",
+        "iomanip": "cpp",
+        "sstream": "cpp",
+        "utility": "cpp",
+        "type_traits": "cpp",
+        "heap.h": "c"
+    }
+}

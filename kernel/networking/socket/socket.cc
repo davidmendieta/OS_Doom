@@ -46,7 +46,7 @@ int UDPSocket::bind(const sockaddr_in* addr) {
     if (port_table.contains(port)) {
         return -1;
     }
-    port_table.bind(addr->sin_port, StrongPtr<UDPSocket>{this});
+    port_table.bind(this->sockaddr_info.sin_port, StrongPtr<UDPSocket>{this});
     return 0;
 }
 
@@ -78,6 +78,7 @@ ssize_t UDPSocket::sendto(const void* buf, size_t len, const sockaddr_in* dst) {
     
     network_interface->send_ip_udp(send, len, send_ip, this->sockaddr_info.sin_port,
                                 ntohl(dst->sin_addr.s_addr), ntohs(dst->sin_port), &out_length);
+   
     free(send);
     return out_length;
 }
