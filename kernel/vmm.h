@@ -34,7 +34,8 @@ namespace VMM {
     // naive munmap
     void naive_munmap(void* p, bool user);
     void naive_munmap_location(void* p, bool user, uint32_t location);
-    void munmap(uint32_t va, uint32_t size);
+    // void munmap(uint32_t va, uint32_t size);
+    void munmap(void* p_, bool user, uint32_t size);
 
 }
 

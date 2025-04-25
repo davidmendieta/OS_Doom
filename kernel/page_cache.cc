@@ -59,6 +59,7 @@
     }
 
     void add_page(uint32_t va, uint32_t pa, uint32_t permissions, uint32_t flags, StrongPtr<Node> file, uint32_t offset) {
+        Debug::printf("added va %x\n", va);
         uint32_t index = hash(va);
         for(uint32_t i = 0; i < PG_CACHE_SIZE; ++i) {// idk chat said this is more efficent and doesn't change anything
             uint32_t probe = (index + i) % PG_CACHE_SIZE;

@@ -196,12 +196,13 @@ namespace VMM {
     }
 
     void naive_munmap(void* p_, bool user) {
-        if((uint32_t)p_ < 0xF0000000) { // NOT SHARED
-            auto me = impl::threads::state.current();
-            ASSERT(!(me == nullptr));
-            ASSERT(!(me->vme == nullptr));
-            me->vme->remove_entry((uint32_t)p_, user);
-        }
+        // if((uint32_t)p_ < 0xF0000000) { // NOT SHARED
+        //     auto me = impl::threads::state.current();
+        //     ASSERT(!(me == nullptr));
+        //     ASSERT(!(me->vme == nullptr));
+        //     me->vme->remove_entry((uint32_t)p_, user);
+        // }
+        munmap(p_, user, PhysMem::FRAME_SIZE);
     }
 
  
@@ -296,11 +297,29 @@ namespace VMM {
         return  mmap1(nullptr, sz_, 0, shared, node, offset_ );
         // return naive_mmap1(sz_, shared, node, offset_, user);
     }
+
     void munmap(void* p_, bool user, uint32_t size) {
         auto me = impl::threads::state.current();
         ASSERT(me != nullptr);
 
-        
+        uint32_t va = (uint32_t)p_;
+        uint32_t num_pages = (size + PhysMem::FRAME_SIZE - 1) / PhysMem::FRAME_SIZE;
+
+        if (va >= 0xF0000000) {
+            shared_vme_lock->lock(); 
+            shared_vme->remove_mapped_region(va, size, false); 
+
+            shared_vme_lock->unlock();
+        } else {
+            if (me->vme != nullptr) {
+                me->vme->remove_mapped_region(va, size, user);
+            }
+        }
+
+        for (uint32_t i = 0; i < num_pages; i++) {
+            uint32_t page_addr = va + i * PhysMem::FRAME_SIZE;
+            remove_mapping((uint32_t*)getCR3(), page_addr >> 12);
+        }
     }
 
 
