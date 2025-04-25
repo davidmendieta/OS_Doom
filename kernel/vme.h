@@ -58,6 +58,8 @@ class VME {
     uint32_t add_entry(uint32_t size, StrongPtr<Node> file, uint32_t file_offset, bool user);
     uint32_t add_entry_location(uint32_t size, StrongPtr<Node> file, uint32_t file_offset, bool user, uint32_t location);
     void remove_entry(uint32_t va, bool user);
+    void remove_mapped_region(uint32_t va, uint32_t size, bool user);
+
 
     static StrongPtr<VME> duplicate(StrongPtr<VME> vme);
 };

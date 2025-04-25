@@ -202,6 +202,30 @@ namespace VMM {
             me->vme->remove_entry((uint32_t)p_, user);
         }
     }
+    
+    void munmap(void* p_, bool user, uint32_t size) {
+        auto me = impl::threads::state.current();
+        ASSERT(me != nullptr);
+    
+        uint32_t va = (uint32_t)p_;
+        uint32_t num_pages = (size + PhysMem::FRAME_SIZE - 1) / PhysMem::FRAME_SIZE;
+    
+        if (va >= 0xF0000000) {
+            shared_vme_lock->lock(); 
+            shared_vme->remove_mapped_region(va, size, false); 
+    
+            shared_vme_lock->unlock();
+        } else {  
+            if (me->vme != nullptr) {
+                me->vme->remove_mapped_region(va, size, user);
+            }
+        }
+    
+        for (uint32_t i = 0; i < num_pages; i++) {
+            uint32_t page_addr = va + i * PhysMem::FRAME_SIZE;
+            remove_mapping((uint32_t*)getCR3(), page_addr >> 12);
+        }
+    }
 
     void* naive_mmap(uint32_t sz_, bool shared, StrongPtr<Node> node, uint32_t offset_, bool user) {
         if(!shared) {
@@ -212,16 +236,7 @@ namespace VMM {
         return (void*)shared_vme->add_entry(sz_, node, offset_, user);
     }
 
-    void* naive_mmap_location(uint32_t sz_, bool shared, StrongPtr<Node> node, uint32_t offset_, bool user, uint32_t location) {
-        if(!shared) {
-            auto me = impl::threads::state.current();
-            ASSERT(!(me->vme == nullptr));
-            return (void*)me->vme->add_entry_location(sz_, node, offset_, user, location);
-        } 
-        return (void*)shared_vme->add_entry_location(sz_, node, offset_, user, location);
-    }
-
-    void* mmap(uint32_t* location, uint32_t size, uint32_t permissions, uint32_t flags, uint32_t fd, uint32_t offset) {
+    void* mmap(void* location, uint32_t size, uint32_t permissions, uint32_t flags, uint32_t fd, uint32_t offset) {
         void* mapped_region = nullptr;
         auto me = impl::threads::state.current();
         if(location) {
@@ -245,19 +260,10 @@ namespace VMM {
                     naive_mmap(size, false, me->pcb->fdt[fd]->node, offset, true);
             }
         }
-        // set premissions
+
         return mapped_region;
     }
-
-    void munmap(void* p_, bool user, uint32_t size) {
-        auto me = impl::threads::state.current();
-        ASSERT(me != nullptr);
-
-        
-    }
-
-
-} /* namespace vmm */
+}
 
 extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     StrongPtr<VMEEntry> vme_entry;
