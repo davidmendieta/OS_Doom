@@ -7,6 +7,7 @@
 #include "config.h"
 #include "shared.h"
 #include "networking/networking.h"
+#include "vga.h"
 
 StrongPtr<Ext2> fs{};
 
@@ -40,6 +41,7 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
 
 void kernelMain(void) {
     networkingMain();
+    vga_init();
 
     auto d = StrongPtr<Ide>::make(1,0);
     fs = StrongPtr<Ext2>::make(d);
@@ -92,6 +94,7 @@ void kernelMain(void) {
     // enter the kernel through interrupts, exceptions, and system
     // calls.
     // VGA demo
+
     switchToUser(e,userEsp,0);
     Debug::panic("*** implement switchToUser in machine.S\n");
 }

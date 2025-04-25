@@ -14,6 +14,11 @@
 #include "promise.h"
 #include "networking/socket/socket_sys.h"
 #include "vga.h"
+#include "libk.h"
+
+#define VGA_WIDTH 320
+#define VGA_HEIGHT 200
+#define GRAPHICS_FILE 10000
 
 bool address_valid(uint32_t addr, uint32_t size) {
     return addr >= 0x80000000 && addr + size <= 0xFFFFFFFF;
@@ -35,6 +40,14 @@ uint32_t read(uint32_t fd, void* buf, uint32_t nbyte) {
 }
 
 uint32_t write(uint32_t fd, void* buf, int32_t nbyte) {
+    if(fd == GRAPHICS_FILE) { //! HARD CODED FOR GRAPHICS
+        if (nbyte > VGA_WIDTH * VGA_HEIGHT) nbyte = VGA_WIDTH * VGA_HEIGHT;
+        const unsigned char* src = (const unsigned char*)buf;
+        volatile unsigned char* vga = (unsigned char*)0xA0000;
+        for (size_t i = 0; i < nbyte; i++) vga[i] = src[i];
+        return nbyte;
+    }
+    
     if(nbyte < 0 || !address_valid((uint32_t)buf, nbyte) || fd >= PCB_ARR_SIZE) {
         return -1;
     }
@@ -51,6 +64,10 @@ uint32_t write(uint32_t fd, void* buf, int32_t nbyte) {
 uint32_t open(const char* fd) {
     auto me = impl::threads::state.current();
     if(me->pcb->cwd == nullptr) me->pcb->cwd = fs->root;
+
+    if(K::streq(fd, "/dev/vga")) { //! CUSTOM FOR GRAPHICS BYPASS
+        return GRAPHICS_FILE;
+    }
 
     StrongPtr<Node> new_node = fs->find(me->pcb->cwd, fd);
     StrongPtr<OpenFile> new_open_file = StrongPtr<OpenFile>::make(new_node);
