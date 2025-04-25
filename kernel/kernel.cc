@@ -43,6 +43,8 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
 void kernelMain(void) {
     networkingMain();
     vga_init();
+    PS2::init();
+
 
     auto d = StrongPtr<Ide>::make(1,0);
     fs = StrongPtr<Ext2>::make(d);
