@@ -44,7 +44,7 @@ uint32_t write(uint32_t fd, void* buf, int32_t nbyte) {
         if (nbyte > VGA_WIDTH * VGA_HEIGHT) nbyte = VGA_WIDTH * VGA_HEIGHT;
         const unsigned char* src = (const unsigned char*)buf;
         volatile unsigned char* vga = (unsigned char*)0xA0000;
-        for (size_t i = 0; i < nbyte; i++) vga[i] = src[i];
+        for (int32_t i = 0; i < nbyte; i++) vga[i] = src[i];
         return nbyte;
     }
     
