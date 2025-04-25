@@ -42,6 +42,7 @@
                 if(!(global_cache->entries[i]->vpn & 0x20)) {
                     // hashtable[i] = 0;
                     //write to disk
+                    Debug::printf("evict\n");
                     global_cache->entries[i] = nullptr;
                     return i;
                 }
@@ -61,7 +62,7 @@
         uint32_t index = hash(va);
         for(uint32_t i = 0; i < PG_CACHE_SIZE; ++i) {// idk chat said this is more efficent and doesn't change anything
             uint32_t probe = (index + i) % PG_CACHE_SIZE;
-            auto curr_entry = global_cache->entries[i];
+            auto curr_entry = global_cache->entries[probe];
             if (curr_entry == nullptr) {
                 curr_entry = new CacheEntry;
                 curr_entry->accessed = true;
@@ -74,7 +75,8 @@
                 curr_entry->physical_addr = pa;
                 curr_entry->pg_cache_location = probe;
                 curr_entry->vpn = (curr_entry->virtual_addr >> 12) | 0x20;
-                global_cache->entries[i] = curr_entry;
+                global_cache->entries[probe] = curr_entry;
+                return;
             }
         }
         // didnt find a location need to evict
@@ -95,44 +97,9 @@
         }
     }
 
-
-//    uint32_t evict_page() { // do we need to work with tlb?
-//        for(uint32_t revolutions = 0; revolutions <= 2; revolutions++) {// when page_cache runs out of space
-//            for(uint32_t i = 0; i < 1024; i++) {
-//                if(!(hashtable[i] & 0x20)) {
-//                    hashtable[i] = 0;
-//                    //write to disk
-//                    // VMM::naive_munmap((uint32_t*)hashtable[i], true); // free up space in PD. Do we need to do this?
-//                    return i;
-//                }
-//                hashtable[i] &= ~0x10;
-//            }
-//        }
-//        return -1;
-//    }
-  
-  
-//    void evict_page(uint32_t va) { // for the system call to remove a page
-//        uint32_t hash_val = hash(va);
-
-
-//        if (hashtable[hash_val] != 0) {
-//            if (hashtable[hash_val] & 0x2) {
-//                // write page back to disk we need write
-//            }
-
-
-//            // free physmem
-//            if (hashtable[hash_val] != 0) {
-//                // PhysMem::dealloc_frame?
-//            }
-
-
-//            // clear entry
-//            hashtable[hash_val] = 0;
-//        }
-//    }
-
+    // CacheEntry lookup_page (uint32_t va, StrongPtr<Node> file, uint32_t offset) {
+        
+    // }
 
    void flush_page(uint32_t va) {
        uint32_t hash_val = hash(va);

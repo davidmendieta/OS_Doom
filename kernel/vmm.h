@@ -20,19 +20,21 @@ namespace VMM {
     extern uint32_t new_page_directory();
     extern void copy_page_directory(uint32_t* pd, uint32_t* new_pd);
 
-    // called (on the initial core) to initialize data structures, etc
+    // Called (on the initial core) to initialize data structures, etc
     extern void global_init();
 
-    // called on each core to do per-core initialization
+    // Called on each core to do per-core initialization
     extern void per_core_init();
 
+    // naive mmap
     extern void* naive_mmap(uint32_t size, bool shared, StrongPtr<Node> file, uint32_t file_offset, bool user);
-    // extern void* naive_mmap_location(uint32_t size, bool shared, StrongPtr<Node> file, uint32_t file_offset, bool user, uint32_t location);
+    extern void* naive_mmap_location(uint32_t size, bool shared, StrongPtr<Node> file, uint32_t file_offset, bool user, uint32_t location);
+    extern void* mmap(uint32_t loaction, uint32_t size, uint32_t permissions, uint32_t flags, uint32_t fdt, uint32_t offset);
 
+    // naive munmap
     void naive_munmap(void* p, bool user);
     void naive_munmap_location(void* p, bool user, uint32_t location);
-    
-    void* mmap(void* location, uint32_t size, uint32_t permissions, uint32_t flags, uint32_t fd, uint32_t offset)
-    void munmap(void* p_, bool user, uint32_t size)
+    void munmap(uint32_t va, uint32_t size);
+
 }
 

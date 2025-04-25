@@ -21,7 +21,6 @@ template void VME<BlockingLock>::insert_free_space(uint32_t, uint32_t);
 template StrongPtr<VMEEntry> VME<BlockingLock>::get(uint32_t);
 template uint32_t VME<BlockingLock>::add_entry(uint32_t, StrongPtr<Node>, uint32_t, bool);
 template void VME<BlockingLock>::remove_entry(uint32_t, bool);
-template void VME<BlockingLock>::remove_mapped_region(uint32_t va, uint32_t size, bool user);
 // template StrongPtr<VME<BlockingLock>> VME<BlockingLock>::duplicate(StrongPtr<VME<BlockingLock>>);
 
 VMEEntry::VMEEntry(uint32_t start, uint32_t num_pages, uint32_t size, StrongPtr<Node> file, uint32_t file_offset, bool user, uint32_t permissions, uint32_t flags): 
@@ -165,14 +164,17 @@ uint32_t VME<Lock>::add_entry_location(uint32_t size, StrongPtr<Node> file, uint
     StrongPtr<FreeEntry> curr = free_entries;
 
     uint32_t va = 0;
-    uint32_t required_pages = (size + PhysMem::FRAME_SIZE - 1) / PhysMem::FRAME_SIZE;
+
+    
+    uint32_t required_pages =
+    (size + PhysMem::FRAME_SIZE - 1) / PhysMem::FRAME_SIZE;
     
     while (!(curr == nullptr) && curr->start >= location) {
         if (curr->num_pages >= required_pages) {
             va = curr->start;
             curr->start += required_pages * PhysMem::FRAME_SIZE;
             curr->num_pages -= required_pages;
-        
+
             if (curr->num_pages == 0) {
                 if (prev == nullptr) {
                     free_entries = curr->next;
@@ -185,6 +187,7 @@ uint32_t VME<Lock>::add_entry_location(uint32_t size, StrongPtr<Node> file, uint
         prev = curr;
         curr = curr->next;
     }
+
     
     if (va == 0) {
         if (avail + size > limit) return 0;  //! NO MORE SPACE
@@ -221,87 +224,6 @@ void VME<Lock>::remove_entry(uint32_t va, bool user) {
     }
     return;
 }
-
-template<typename Lock>
-void VME<Lock>::remove_mapped_region(uint32_t va, uint32_t size, bool user) {
-    LockGuard g{lock};
-    uint32_t Ustart = va; // start addr of what to unmap
-    uint32_t Uend   = va + size; // end addr of what to unmap
-    StrongPtr<VMEEntry> prev{nullptr};
-    StrongPtr<VMEEntry> curr = entries;
-
-    while (curr) {
-        uint32_t Estart = curr->start; // start addr of current vme
-        uint32_t Eend   = curr->start + curr->size; // end addr of current vme
-
-        // if no overlap, just advance
-        if (Uend <= Estart || Ustart >= Eend) {
-            prev = curr;
-            curr = curr->next;
-            continue;
-        }
-
-        // case 1: U completely covers E ---> remove this entry
-        if (Ustart <= Estart && Uend >= Eend) {
-            auto to_remove = curr;
-            if (!prev) entries = curr->next;
-            else prev->next = curr->next;
-            curr = curr->next;                 // advance before we delete
-            insert_free_space(Estart, to_remove->num_pages);
-            // keep prev the same, keep unmap window [Ustart,Uend) as-is
-            continue;
-        }
-
-        // case 2: U covers the front chunk of E ---> trim head
-        if (Ustart <= Estart && Uend < Eend) {
-            uint32_t new_start = Uend;
-            uint32_t new_size  = Eend - Uend;
-            curr->start = new_start;
-            curr->size  = new_size;
-            curr->num_pages = (new_size + FRAME_SIZE-1)/FRAME_SIZE;
-            insert_free_space(Estart, (Uend - Estart + FRAME_SIZE-1)/FRAME_SIZE);
-            // done with this entry; unmap window fully consumed here
-            break;
-        }
-
-        // case 3: U covers the back chunk of E ---> trim tail
-        if (Ustart > Estart && Uend >= Eend) {
-            uint32_t keep_size = Ustart - Estart;
-            insert_free_space(Ustart, (Eend - Ustart + FRAME_SIZE-1)/FRAME_SIZE);
-            curr->size = keep_size;
-            curr->num_pages = (keep_size + FRAME_SIZE-1)/FRAME_SIZE;
-            // we've consumed [Estart, Eend) from our unmap window
-            // shrink the unmap window so next iteration only hits what's left
-            Ustart = Eend;
-            curr = curr->next;
-            continue;
-        }
-
-        // case 4: U slices through the middle ---> split
-        // Estart < Ustart < Uend < Eend
-        {
-            uint32_t left_size  = Ustart - Estart;
-            uint32_t right_size = Eend - Uend;
-            // 1) adjust the current entry to become the "left" piece
-            curr->size      = left_size;
-            curr->num_pages = (left_size + FRAME_SIZE-1)/FRAME_SIZE;
-            // 2) allocate a brand-new entry for the right piece
-            auto right = StrongPtr<VMEEntry>::make(
-                Uend,
-                (right_size + FRAME_SIZE-1)/FRAME_SIZE,
-                right_size,
-                curr->file, curr->file_offset + (Uend - Estart),
-                curr->user, curr->permissions, curr->flags);
-            // link it in
-            right->next = curr->next;
-            curr->next  = right;
-            // free the middle chunk
-            insert_free_space(Ustart, (Uend - Ustart + FRAME_SIZE-1)/FRAME_SIZE);
-            break;
-        }
-    }
-}
-
 
 template <typename Lock>
 StrongPtr<VME<Lock>> VME<Lock>::duplicate(StrongPtr<VME<Lock>> vme) {
