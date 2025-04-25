@@ -57,3 +57,6 @@ extern "C" void sysHandler_(void);
 
 //! NETWORKING
 extern "C" void RTL8139Handler_(void);
+extern "C" void keyboard_handler_();
+extern "C" void mouse_handler_();
+

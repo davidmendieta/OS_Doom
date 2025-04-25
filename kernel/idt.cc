@@ -11,6 +11,7 @@ void IDT::init(void) {
 }
 
 void IDT::interrupt(int index, uint32_t handler) {
+    Debug::printf("Interrupt called: index: %d\n", index);
     int i0 = 2 * index;
     int i1 = i0 + 1;
 
@@ -19,6 +20,7 @@ void IDT::interrupt(int index, uint32_t handler) {
 }
 
 void IDT::trap(int index, uint32_t handler, uint32_t dpl) {
+    Debug::printf("Trap called: index: %d\n", index);
     int i0 = 2 * index;
     int i1 = i0 + 1;
 

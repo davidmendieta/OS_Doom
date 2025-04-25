@@ -16,6 +16,7 @@
 #include "sys.h"
 #include "tss.h"
 #include "pci.h"
+#include "ps2.h"
 
 struct Stack {
     static constexpr int BYTES = 4096;
@@ -114,6 +115,11 @@ extern "C" void kernelInit(void) {
         IDT::init();
         Pit::calibrate(1000);
         
+        /* initialize PS2 controller */
+        PS2::init();
+        //PS2::setup_ps2_irqs();
+
+
         /* Enumerate Devices */
         Debug::printf("\n- PCI ENUMERATING DEVICES -\n");
         pciEnumDevices();
