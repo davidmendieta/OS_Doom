@@ -31,31 +31,65 @@ struct WavFmtHeader {
 void generate_test_tone() {
     Debug::printf("*** Generating test sine wave at 440Hz\n");
 
-    num_samples = SAMPLE_RATE; // One second of audio
-    sample_index = 0;
+    #define SAMPLE_RATE 48000
+    #define SINE_TABLE_SIZE 64  // Reduced size for simplicity
 
-    // Precomputed 32-point sine table scaled to 16-bit range
-    const int16_t sine_table[32] = {
-        0, 6392, 12539, 18204, 23169, 27244, 30272, 32137,
-        32767, 32137, 30272, 27244, 23169, 18204, 12539, 6392,
-        0, -6392, -12539, -18204, -23169, -27244, -30272, -32137,
-        -32767, -32137, -30272, -27244, -23169, -18204, -12539, -6392
+    // Precomputed sine table (one full cycle, scaled to 16-bit range)
+    int16_t sine_table[SINE_TABLE_SIZE] = {
+        0,   182,   365,   548,   730,   912,  1093,  1274,
+        1454,  1634,  1813,  1991,  2169,  2346,  2522,  2697,
+        2872,  3046,  3219,  3391,  3562,  3732,  3902,  4071,
+        4239,  4406,  4572,  4737,  4901,  5065,  5227,  5388,
+        5549,  5708,  5867,  6024,  6180,  6336,  6490,  6643,
+        6796,  6947,  7097,  7246,  7394,  7541,  7686,  7830,
+        7974,  8117,  8258,  8398,  8537,  8675,  8811,  8947,
+        9082,  9215,  9347,  9478,  9608,  9737,  9864,  9990
     };
 
-    const uint32_t samples_per_cycle = SAMPLE_RATE / 440; // ~109 samples per cycle
-    const int16_t amplitude = 16384; // Half max amplitude for 16-bit signed
+    // Frequencies for G major scale in Hz
+    const uint16_t g_major_scale[8] = {
+        392, 440, 494, 523, 587, 659, 740, 784
+    };
 
-    for (uint32_t i = 0; i < num_samples; i++) {
-        uint32_t position = (i * 32) / samples_per_cycle % 32;
-        int16_t sample_value = (sine_table[position] * amplitude) / 32767;
+    // Generate G major scale samples (stereo interleaved)
+    const uint32_t duration_ms = 500; // 0.5 sec per note
+    const uint32_t samples_per_note = (SAMPLE_RATE * duration_ms) / 1000;
+    const uint32_t max_samples = SAMPLE_RATE * 2;
+    uint32_t index = 0;
 
-        // Stereo: same sample to both left and right
-        audio_samples[i * 2]     = sample_value;
-        audio_samples[i * 2 + 1] = sample_value;
+    for (int note = 0; note < 8; note++) {
+        uint32_t phase = 0;
+        // Increase phase precision for smoother transitions
+        uint32_t phase_step = (g_major_scale[note] * SINE_TABLE_SIZE * 65536) / SAMPLE_RATE; // 16-bit phase precision
+
+        for (uint32_t i = 0; i < samples_per_note; i++) {
+            // Use linear interpolation between the two nearest points
+            uint32_t table_idx = (phase >> 16) % SINE_TABLE_SIZE;  // Index into sine table (16-bit precision)
+            uint32_t next_idx = (table_idx + 1) % SINE_TABLE_SIZE;
+
+            int16_t sample1 = sine_table[table_idx];
+            int16_t sample2 = sine_table[next_idx];
+
+            // Linear interpolation (fractional part of phase)
+            int t = (phase >> 8) & 0xFF; // Fractional part of phase
+            int16_t interpolated_sample = sample1 + ((sample2 - sample1) * t) / 256;
+
+            // Store the interpolated sample
+            audio_samples[index++] = interpolated_sample; // Left
+            audio_samples[index++] = interpolated_sample; // Right
+
+            phase += phase_step;
+
+            if (index >= max_samples) break;
+        }
     }
+
+    num_samples = index / 2;
 
     Debug::printf("*** Generated %u samples of sine wave\n", num_samples * 2);
 }
+
+
 
 // Set up user space arguments on stack
 uint32_t* load_args(uint32_t* userEsp, const char** argv) {

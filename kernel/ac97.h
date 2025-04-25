@@ -8,7 +8,7 @@
 #define AC97_SUBCLASS      0x01
 
 // AC'97 Mixer and Bus Master Register Offsets
-#define AC97_RESET_REG         0x2C
+#define AC97_RESET_REG         0x00
 #define AC97_GLOBAL_STAT       0x30
 #define AC97_PCM_OUT_BDBAR     0x10
 #define AC97_PCM_OUT_CIV       0x14
@@ -28,6 +28,8 @@
 #define BUFFER_SIZE        0x1000
 #define SAMPLE_RATE        48000  // 48kHz sample rate
 
+#define WAV_HEADER_SIZE 44
+
 // Buffer Descriptor used by AC'97 DMA engine
 struct BufferDescriptor {
     uint32_t buffer_addr;  // Physical address of buffer
@@ -35,21 +37,40 @@ struct BufferDescriptor {
     uint32_t control;      // Control flags (e.g., interrupt)
 } __attribute__((packed));
 
+// WAV File Header Struct
+struct WAVHeader {
+    char riff[4]; // "RIFF"
+    uint32_t chunkSize;
+    char wave[4]; // "WAVE"
+    char fmt[4];  // "fmt "
+    uint32_t fmtSize;
+    uint16_t audioFormat;
+    uint16_t numChannels;
+    uint32_t sampleRate;
+    uint32_t byteRate;
+    uint16_t blockAlign;
+    uint16_t bitsPerSample;
+    char data[4]; // "data"
+    uint32_t dataSize;
+};
+
 // External globals (defined in ac97.cpp)
+extern BufferDescriptor* bdl;
+extern uint32_t nam;   // Native Audio Mixer BAR (BAR0)
+extern uint32_t nabm;
+extern uint32_t sample_index;
+
 extern int16_t audio_samples[SAMPLE_RATE * 2]; // Interleaved stereo audio data
 extern uint32_t num_samples;                   // Total number of samples
-extern BufferDescriptor* bdl;                  // Buffer descriptor list
-extern uint32_t nam;                           // Native Audio Mixer BAR (BAR0)
-extern uint32_t nabm;                          // Native Audio Bus Master BAR (BAR1)
-extern uint32_t sample_index;                  // Current sample index
 
-// AC'97 interface functions
-uint32_t init_ac97();
-void poll_ac97_loop();
-void fill_ac97_buffers();
-void ac97_interrupt_handler();
-void refill_buffers();
-void reset_buffers();
-void shutdown_ac97();
+extern uint32_t init_ac97();
+extern void fill_ac97_buffers();
+extern void poll_ac97_loop();
+extern void ac97_interrupt_handler();
+extern void refill_buffers();
+extern void reset_buffers();
+extern void shutdown_ac97();
+extern void get_wav(uint16_t* audio_samples_array, uint32_t* num_samples_out, const char* filename);
+// extern void generate_g_major_scale_int(int16_t* buffer, uint32_t* num_samples_out);
 
 #endif
