@@ -221,7 +221,8 @@ use "mouse_button 0-7" to simulate left, middle, right mouse presses
 bool DEMO = true;
 bool new_code = true;
 bool caps = false;
-char letter;
+char letter = '\0';
+bool release_initiated;
 
 bool is_letter (char c) {
     return (c >= 97) && (c <= 122);
@@ -229,24 +230,29 @@ bool is_letter (char c) {
 
 void demo_mode() {
     uint8_t scancode = inb(0x60);
+    // Debug::printf("scancode: %x\n", scancode);
     if (scancode == 0xF0) {
-        if (letter != '_') {
-            char c = letter;
-            if (caps && is_letter(c)) {
-                Debug::printf("%c", c - 32);
-            } else {
-                Debug::printf("%c", c);
-            }
-        }
-        new_code = true;
-    } else if (new_code) {
-        letter = scancode_to_ascii(scancode);
+        release_initiated = true;
+
+    } else {
         if (scancode == 0x58) {
             caps = !caps;
         }
 
-        new_code = false;
+        letter = scancode_to_ascii(scancode);
     }
+    if (release_initiated) {
+        if (letter != '_') {
+            char c = letter;
+            if (caps && is_letter(c)) {
+                Debug::printf("Button Pressed: %c\n", c - 32);
+            } else {
+                Debug::printf("Button Pressed: %c\n", c);
+            }
+        }
+        release_initiated = false;
+    }
+
 }
 
 void debug_mode() {
@@ -331,43 +337,36 @@ extern "C" void mouse_handler() {
         //uint16_t y = origin ? 256 : (uint8_t)(256 - rawY);
 
         // Print raw values directly (0-255), so you see 156 for -100
-        // Debug::printf("left: %d, middle: %d, right: %d, x: %u, y (raw): %u, y (disp): %u, abs x: %u, abs y: %u\n", (mouse_bytes[2] & 0x01), 
-        //     (mouse_bytes[2] & 0x04), (mouse_bytes[2] & 0x02), rawX, rawY, y, mouse_x_pos, mouse_y_pos);
-
+        if (DEMO) Debug::printf("left: %d, middle: %d, right: %d, x (raw): %u, y (raw): %u, x (disp): %u, y (disp): %u, abs x: %u, abs y: %u\n",
+            (mouse_bytes[2] & 0x01), (mouse_bytes[2] & 0x04), (mouse_bytes[2] & 0x02), 
+            rawX, rawY, displace_x, displace_y, mouse_x_pos, mouse_y_pos);
                        
-// Extract button states from byte 0 (not byte 2!)
-uint8_t buttons = mouse_bytes[2] & 0x07;  // First 3 bits are button states
+        // Extract button states from byte 0 (not byte 2!)
+        uint8_t buttons = mouse_bytes[2] & 0x07;  // First 3 bits are button states
 
 
-// Extract X and Y movement
-int16_t x_delta = mouse_bytes[1];
-int16_t y_delta = mouse_bytes[0];
+        // Extract X and Y movement
+        int16_t x_delta = mouse_bytes[1];
+        int16_t y_delta = mouse_bytes[0];
 
 
-// Handle sign extension for negative movement
-if (mouse_bytes[2] & 0x10) {
-   x_delta |= 0xFF00;  // X sign bit is set, extend to 16 bits
-}
+        // Handle sign extension for negative movement
+        if (mouse_bytes[2] & 0x10) {
+        x_delta |= 0xFF00;  // X sign bit is set, extend to 16 bits
+        }
 
 
-if (mouse_bytes[2] & 0x20) {
-   y_delta |= 0xFF00;  // Y sign bit is set, extend to 16 bits
-}
+        if (mouse_bytes[2] & 0x20) {
+        y_delta |= 0xFF00;  // Y sign bit is set, extend to 16 bits
+        }
 
 
-// Y is inverted in PS/2, so negate it
-y_delta = -y_delta;
+        // Y is inverted in PS/2, so negate it
+        y_delta = -y_delta;
 
 
-// Call the mouseHandler to translate PS/2 data to SDL events
-mouseHandler(buttons, x_delta, y_delta);
-
-
-
-
-
-
-
+        // Call the mouseHandler to translate PS/2 data to SDL events
+        if (!DEMO) mouseHandler(buttons, x_delta, y_delta);
 
     }
 
