@@ -31,6 +31,8 @@ VendorDevice expectedDevices[] = {
 
 // reads from PCI config space - 32 bits
 uint32_t pciConfigRead32(uint8_t bus, uint8_t slot, uint8_t function, uint8_t registerOffset) {
+// reads from PCI config space - 32 bits
+uint32_t pciConfigRead32(uint8_t bus, uint8_t slot, uint8_t function, uint8_t registerOffset) {
     uint32_t address = ((uint32_t)bus         << 16) |      // bus number 16-23
                        ((uint32_t)slot        << 11) |      // slot number 11-15
                        ((uint32_t)function    << 8)  |      // function 8-10

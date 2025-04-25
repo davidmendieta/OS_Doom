@@ -91,6 +91,7 @@ void kernelMain(void) {
     // User mode will never "return" from switchToUser. It will
     // enter the kernel through interrupts, exceptions, and system
     // calls.
+    // VGA demo
     switchToUser(e,userEsp,0);
     Debug::panic("*** implement switchToUser in machine.S\n");
 }
