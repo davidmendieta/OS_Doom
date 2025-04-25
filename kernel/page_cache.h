@@ -66,7 +66,7 @@ public:
 
 // namespace PageCache {
 void add_page(uint32_t va, uint32_t pa, uint32_t permissions, uint32_t flags, StrongPtr<Node> file, uint32_t offset);
-
+// CacheEntry* lookup_page(uint32_t va, StrongPtr<Node> file, uint32_t offset);
 // global page cache instance
 extern Cache* global_cache;
 

@@ -98,9 +98,27 @@
         }
     }
 
-    // CacheEntry lookup_page (uint32_t va, StrongPtr<Node> file, uint32_t offset) {
-        
+    // CacheEntry* lookup_page (uint32_t va, StrongPtr<Node> file, uint32_t offset) {
+    //     uint32_t index = hash(va);
+    //     for(uint32_t i = 0; i < PG_CACHE_SIZE; i++) {
+    //         uint32_t probe = (index + i) % PG_CACHE_SIZE;
+
+    //     }
     // }
+
+    // CacheEntry* PageCache::lookup(uint32_t va) {
+    //     uint32_t vpn = va >> 12;
+    //     int idx = hash(va);
+    //     for (int i = 0; i < 8; i++) { // probe up to 8 slots
+    //         int probe_idx = (idx + i) % CACHE_SIZE;
+    //         CacheEntry& entry = cache[probe_idx];
+    //         if (entry.valid && (entry.virtual_addr >> 12) == vpn) {
+    //             return &entry; // hit
+    //         }
+    //     }
+    //     return nullptr; // miss
+    // }
+    
 
    void flush_page(uint32_t va) {
        uint32_t hash_val = hash(va);
