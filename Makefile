@@ -4,7 +4,7 @@ UTCS_ID ?= $(shell pwd | sed -e 's/.*_//')
 
 MY_TESTS = ${addprefix ${UTCS_ID},${TEST_EXTS}}
 
-TESTS_DIR ?= ./testcases/graphics
+TESTS_DIR ?= testcases/graphics
 
 POSSIBLE_TESTS = ${notdir ${basename ${wildcard ${TESTS_DIR}/*${firstword ${TEST_EXTS}}}}}
 TESTS = ${sort ${POSSIBLE_TESTS}}
@@ -28,7 +28,7 @@ QEMU_ACCEL ?= tcg,thread=multi
 QEMU_CPU ?= max
 QEMU_SMP ?= 4
 QEMU_MEM ?= 128m
-QEMU_TIMEOUT ?= 40
+QEMU_TIMEOUT ?= 20 #! CHANGED
 QEMU_TIMEOUT_CMD ?= timeout
 QEMU_DEBUG ?=  # e.g -d guest_errors
 
@@ -44,11 +44,41 @@ QEMU_CONFIG_FLAGS = -accel ${QEMU_ACCEL} \
 QEMU_FLAGS = -no-reboot \
 	${QEMU_CONFIG_FLAGS} \
 	-vga std \
-	-display sdl \
+	--display sdl \
 	--serial file:$*.raw \
 	-drive file=kernel/build/kernel.img,index=0,media=disk,format=raw,file.locking=off \
 	-drive file=$*.data,index=1,media=disk,format=raw,file.locking=off \
 	-device isa-debug-exit,iobase=0xf4,iosize=0x04
+
+# ----- NETWORKING START ------
+NETWORK_MODE=CLIENT #  HOST or CLIENT
+
+HOST_IP = 128.83.144.128 # Change to actual Host IP, only needed for client mode
+
+
+RANDOM_MAC := $(shell printf '52:54:%02x:%02x:%02x:%02x\n' \
+    $$((RANDOM%256)) $$((RANDOM%256)) $$((RANDOM%256)) $$((RANDOM%256)))
+
+QEMU_FLAGS_NETWORKING_HOST = -netdev socket,id=net0,listen=:1234 \
+    -device rtl8139,netdev=net0,mac=$(RANDOM_MAC)
+
+QEMU_FLAGS_NETWORKING_CLIENT = -netdev socket,id=net0,connect=$(strip $(HOST_IP)):1234 \
+    -device rtl8139,netdev=net0,mac=$(RANDOM_MAC)
+
+ifeq ($(strip $(NETWORK_MODE)),HOST)
+QEMU_FLAGS += $(QEMU_FLAGS_NETWORKING_HOST)
+endif
+
+ifeq ($(strip $(NETWORK_MODE)),CLIENT)
+QEMU_FLAGS += $(QEMU_FLAGS_NETWORKING_CLIENT)
+endif
+
+print_flags:
+	@echo "QEMU_FLAGS = ${QEMU_FLAGS}"
+
+# ----- NETWORKING END -----
+
+
 
 TIME = $(shell which time)
 
@@ -59,10 +89,6 @@ all : ${TESTS};
 help:
 	@echo ""
 	@echo "Makefile for ${ORIGIN_URL}"
-
-print-TESTS:
-	@echo TESTS = ${TESTS}
-
 	@echo
 	@echo "Useful targets:"
 	@echo "    make -s all             # build kernels for all tests"
