@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "ext2.h"
 #include "sys.h"
+#include "page_cache.h"
 
 namespace VMM {
 
@@ -194,13 +195,41 @@ namespace VMM {
         // Debug::printf("TURNED ON VM\n");
     }
 
-    void naive_munmap(void* p_, bool user) {
-        if((uint32_t)p_ < 0xF0000000) { // NOT SHARED
-            auto me = impl::threads::state.current();
-            ASSERT(!(me == nullptr));
-            ASSERT(!(me->vme == nullptr));
-            me->vme->remove_entry((uint32_t)p_, user);
+    // FINAL PROECT MMAP AND MUNMAP
+    void* mmap(uint32_t* location, uint32_t size, uint32_t permissions, uint32_t flags, StrongPtr<Node> file, uint32_t offset) {
+        void* mapped_region = nullptr;
+        // auto me = impl::threads::state.current()
+        Debug::printf("location: %x\n", location);
+        if(location) {
+            if(flags & SHARED) {
+                // normal shared mapping and shared anon mapping
+                mapped_region = flags & ANON ? naive_mmap_location(size, true, (StrongPtr<Node>)nullptr, offset, true, (uint32_t)location) : 
+                    naive_mmap_location(size, true, file, offset, true, (uint32_t)location);
+                    Debug::printf("size, %d, permissions %x, flags %x, fd %x, offset %x\n", size, permissions, flags, offset);
+                    if(!(flags & ANON)) Debug::printf("file %x\n", file);
+            } else {
+                // private mapping and private anon mapping
+                mapped_region = flags & ANON ? naive_mmap_location(size, false, (StrongPtr<Node>)nullptr, offset, true, (uint32_t)location) : 
+                    naive_mmap_location(size, false, file, offset, true, (uint32_t)location);
+                    Debug::printf("mmaped w/location\n");
+            }
+        } else {
+            if(flags & SHARED) {
+                // normal shared mapping and shared anon mapping
+                Debug::printf("shared w/out location\n");
+                Debug::printf("anon? %x\n", flags&ANON);
+                mapped_region = flags & ANON ? naive_mmap(size, true, (StrongPtr<Node>)nullptr, offset, true) : 
+                    naive_mmap(size, true, file, offset, true);
+            } else {
+                // private mapping and private anon mapping
+                Debug::printf("anon/private w/out location\n");
+                mapped_region = flags & ANON ? naive_mmap(size, false, (StrongPtr<Node>)nullptr, offset, true) : 
+                    naive_mmap(size, false, file, offset, true);
+                    Debug::printf("mmaped w/out location\n");
+            }
         }
+        // set premissions
+        return mapped_region;
     }
     
     void munmap(void* p_, bool user, uint32_t size) {
@@ -227,6 +256,8 @@ namespace VMM {
         }
     }
 
+    // HELPERS AND NAIVE MMAP/MUNMAP
+
     void* naive_mmap(uint32_t sz_, bool shared, StrongPtr<Node> node, uint32_t offset_, bool user) {
         if(!shared) {
             auto me = impl::threads::state.current();
@@ -236,42 +267,47 @@ namespace VMM {
         return (void*)shared_vme->add_entry(sz_, node, offset_, user);
     }
 
-    void* mmap(void* location, uint32_t size, uint32_t permissions, uint32_t flags, uint32_t fd, uint32_t offset) {
-        void* mapped_region = nullptr;
-        auto me = impl::threads::state.current();
-        if(location) {
-            if(flags & SHARED) {
-                // normal shared mapping and shared anon mapping
-                mapped_region = flags & ANON ? naive_mmap_location(size, true, (StrongPtr<Node>)nullptr, offset, true, (uint32_t)location) : 
-                    naive_mmap_location(size, true, me->pcb->fdt[fd]->node, offset, true, (uint32_t)location);
-            } else {
-                // private mapping and private anon mapping
-                mapped_region = flags & ANON ? naive_mmap_location(size, false, (StrongPtr<Node>)nullptr, offset, true, (uint32_t)location) : 
-                    naive_mmap_location(size, false, me->pcb->fdt[fd]->node, offset, true, (uint32_t)location);
-            }
-        } else {
-            if(flags & SHARED) {
-                // normal shared mapping and shared anon mapping
-                mapped_region = flags & ANON ? naive_mmap(size, true, (StrongPtr<Node>)nullptr, offset, true) : 
-                    naive_mmap(size, true, me->pcb->fdt[fd]->node, offset, true);
-            } else {
-                // private mapping and private anon mapping
-                mapped_region = flags & ANON ? naive_mmap(size, false, (StrongPtr<Node>)nullptr, offset, true) : 
-                    naive_mmap(size, false, me->pcb->fdt[fd]->node, offset, true);
-            }
-        }
+    void* naive_mmap_location(uint32_t sz_, bool shared, StrongPtr<Node> node, uint32_t offset_, bool user, uint32_t location) {
+        if(!shared) {
+            auto me = impl::threads::state.current();
+            ASSERT(!(me->vme == nullptr));
+            return (void*)me->vme->add_entry_location(sz_, node, offset_, user, location);
+        } 
+        return (void*)shared_vme->add_entry_location(sz_, node, offset_, user, location);
+    }
+    
+    void* test_mmap(uint32_t sz_, bool shared, StrongPtr<Node> node, uint32_t offset_, bool user) {
+        // if(!shared) {
+        //     auto me = impl::threads::state.current();
+        //     ASSERT(!(me->vme == nullptr));
+        //     return (void*)me->vme->add_entry(sz_, node, offset_, user);
+        // } 
+        // return (void*)shared_vme->add_entry(sz_, node, offset_, user);
+        Debug::printf("size %x, shared %x, node %x, offset %x, user %x\n", sz_, shared, node, offset_, user);
+        return mmap(nullptr, sz_, 0, shared, node, offset_ );
+        // return naive_mmap1(sz_, shared, node, offset_, user);
+    }
 
-        return mapped_region;
+    void naive_munmap(void* p_, bool user) {
+        if((uint32_t)p_ < 0xF0000000) { // NOT SHARED
+            auto me = impl::threads::state.current();
+            ASSERT(!(me == nullptr));
+            ASSERT(!(me->vme == nullptr));
+            me->vme->remove_entry((uint32_t)p_, user);
+        }
     }
 }
 
 extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     StrongPtr<VMEEntry> vme_entry;
     bool unlock = false;
+    Debug::printf("Page fault at VA: %x\n", va_);
+    Debug::printf("Trying to look up VME entry...\n");
+
     if(va_ >= 0xF0000000) { // SHARED
         unlock = true;
         VMM::shared_vme_lock->lock();
-        if(VMM::check_VPN((uint32_t*)(getCR3()), va_ >> 12)) {
+        if(VMM::check_VPN((uint32_t*)(getCR3()), va_ >> 12)) { // idk why this is here, checks if vpn is present and exits
             VMM::shared_vme_lock->unlock();
             return;
         }
@@ -282,16 +318,15 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
         vme_entry = me->vme->get(va_);
     }
     // if(vme_entry == nullptr) Debug::panic("*** can't handle page fault at %x\n",va_);
-    if(vme_entry == nullptr) {
+    if(vme_entry == nullptr) {// what to do here
         Debug::printf("VME ENTRY IS NULL\n");
         // couldve gotten here because a shared mapping was trying to be accessed
         exit(-1);
     }
     
-    uint32_t new_page = PhysMem::alloc_frame();
-    
+    uint32_t new_page = PhysMem::alloc_frame();//pa
+    // Debug::printf("vme_entry: %x\n", vme_entry);
     // if(chunk_size > PhysMem::FRAME_SIZE) chunk_size = PhysMem::FRAME_SIZE;
-    
     VMM::add_mapping((uint32_t*)(getCR3()), (va_ >> 12), new_page >> 12, false, true, true);
     if(unlock) VMM::shared_vme_lock->unlock();
     
@@ -313,7 +348,8 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
         // Debug::printf("IN PAGE FAULT HANDLER | r_BUFFER: %s\n", (char*)(buffer));
     }
     // Debug::printf("VA: %x | NEW PAGE: %x\n", va_, new_page);
-
+    
+    // PageCache::add_page(va_, new_page, vme_entry->permissions, vme_entry->flags, vme_entry->file, vme_entry->file_offset);
     return;
     // memcpy((void*)new_page, (void*)(vme_entry->start + page_offset), PhysMem::FRAME_SIZE);
     // Debug::panic("*** can't handle page fault at %x\n",va_);

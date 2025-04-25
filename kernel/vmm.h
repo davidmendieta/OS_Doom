@@ -27,7 +27,7 @@ namespace VMM {
     extern void per_core_init();
 
     extern void* naive_mmap(uint32_t size, bool shared, StrongPtr<Node> file, uint32_t file_offset, bool user);
-    extern void* naive_mmap_location(uint32_t size, bool shared, StrongPtr<Node> file, uint32_t file_offset, bool user, uint32_t location);
+    // extern void* naive_mmap_location(uint32_t size, bool shared, StrongPtr<Node> file, uint32_t file_offset, bool user, uint32_t location);
 
     void naive_munmap(void* p, bool user);
     void naive_munmap_location(void* p, bool user, uint32_t location);

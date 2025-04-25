@@ -116,6 +116,8 @@ StrongPtr<VMEEntry> VME<Lock>::get(uint32_t va) {
 template <typename Lock>
 uint32_t VME<Lock>::add_entry(uint32_t size, StrongPtr<Node> file, uint32_t file_offset, bool user) {
     LockGuard g{lock};
+    // Debug::printf("in add_entry\n");
+
     StrongPtr<FreeEntry> prev{nullptr};
     StrongPtr<FreeEntry> curr = free_entries;
 
@@ -151,6 +153,7 @@ uint32_t VME<Lock>::add_entry(uint32_t size, StrongPtr<Node> file, uint32_t file
         avail += PhysMem::FRAME_SIZE * required_pages;
     }
     
+    Debug::printf("in add_entry\nvaddr:%x filesz:%x fileoff:%x\n", va, file, file_offset);
     insert_entry_sorted(va, required_pages, size, file, file_offset, user);
     return va;
 }
