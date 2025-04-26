@@ -32,7 +32,9 @@ namespace Poll {
 	};
 
 	//empty struct used to avoid errors in ppoll function
-	struct sigset_t {};
+	struct sigset_t {
+		uint32_t signals;
+	};
 
 	//going based off of node (file perms), may be incorrect
 	//checks the files user, group, and other permissions 
@@ -148,7 +150,7 @@ namespace Poll {
 			return -1;
 		}
 	
-		uint32_t fd_ready = 0;
+		int fd_ready = 0;
 		uint32_t start_time = Pit::jiffies;
 		uint32_t cur_time = Pit::jiffies;
 
@@ -160,8 +162,8 @@ namespace Poll {
 		bool one_time = timeout == 0;
 		bool timed_out = false;
 	
-		while (!timed_out && fd_ready < (uint32_t)nfds) {
-			for (uint32_t fd_index = 0; fd_index < (uint32_t)nfds; fd_index++) {
+		while (!timed_out && fd_ready < nfds) {
+			for (uint32_t fd_index = 0; fd_index < nfds; fd_index++) {
 				Pollfd& cur = fds[fd_index];
 	
 				if (cur.revents != 0) {
@@ -241,8 +243,8 @@ namespace Poll {
 			//given a timespec
 			//convert timespec into milliseconds to reuse poll
 			timeout_in_ms = tmo_p->tv_sec * 1000; //convert seconds to milliseconds
-			//convert nanoseconds into milliseconds by rounding up to the nearest millisecond
-			timeout_in_ms += (tmo_p->tv_nsec + 999999) / 1000000; 
+			//currently don't know how to track nanoseconds, instead convert nanoseconds to nearest millisecond
+			timeout_in_ms += ((tmo_p->tv_nsec + 999999) / 1000000); 
 		}
 	
 		return poll(fds, nfds, timeout_in_ms, pcb);
