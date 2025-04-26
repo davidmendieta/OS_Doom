@@ -19,23 +19,26 @@ void node_init(node_t* node) {
     node->background_job = false;
 }
 
+void node_free(node_t* node) {
+    free(node->fin);
+    free(node->fout);
+    free(node->ferr);
+
+    argument_t* arg = &node->tokens.argv;
+    while (arg) {
+        argument_t* next = arg->next;
+        free(arg->val);
+        arg = next;
+    }
+}
+
 void tokenizer_free(node_t* node) {
     if (node) {
         tokenizer_free(node->left);
         tokenizer_free(node->right);
 
         if (node->type == NODE_COMMAND) {
-            free(node->fin);
-            free(node->fout);
-            free(node->ferr);
-            
-            argument_t* arg = &node->tokens.argv;
-            while (arg) {
-                argument_t* next = arg->next;
-                free(arg->val);
-                arg = next;
-            }
-
+            node_free(node);
             free(node);
         }
     }
@@ -117,6 +120,20 @@ int tokenizer_get_node_type(const char* buffer) {
         if (streq(buffer, symbols[i].symbol)) return symbols[i].type;
     }
     return NODE_COMMAND;
+}
+
+void tokenizer_throw_syntax_error(char fault, queue_t* stream) {
+    if (fault == '\n') {
+        printf("pistash: syntax error near unexpected token `newline\n");
+    } else {
+        printf("pistash: syntax error near unexpected token %c\n", fault);
+    }
+
+    while (peek(stream)) {
+        node_t* node = dequeue(stream);
+        node_free(node);
+        free(node);
+    }
 }
 
 // push to the end of the argument linked list
@@ -218,7 +235,6 @@ queue_t* tokenizer_tokenstream(const char* input) {
      * todo handle $
      * todo handle redirection
      * todo handle flags
-     * todo handle ill-formed (throw error on >, 2>, <<, <)
      */
 
     queue_t stream_;
@@ -227,6 +243,7 @@ queue_t* tokenizer_tokenstream(const char* input) {
     char* buffer = malloc(1024);
     int bi = 0;
     bool in_single = false, in_double = false;
+    bool require_next = false;
 
     while (*p) {
         char c = *p;
@@ -234,6 +251,7 @@ queue_t* tokenizer_tokenstream(const char* input) {
             if (bi > 0) {
                 node_t* node = tokenizer_buffer_flush(buffer, &bi);
                 enqueue(&stream_, node);
+                require_next = false;
             }
             p++;
             continue;
@@ -262,6 +280,11 @@ queue_t* tokenizer_tokenstream(const char* input) {
         }
 
         if (!in_single && !in_double && strncmp(p, "2>", 2) == 0) { // 2> specifically
+            if (require_next) {
+                tokenizer_throw_syntax_error(c, &stream_);
+                return NULL;
+            }
+
             // flush the buffer
             if (bi > 0) {
                 node_t* node = tokenizer_buffer_flush(buffer, &bi);
@@ -273,6 +296,7 @@ queue_t* tokenizer_tokenstream(const char* input) {
             node_t* node = tokenizer_buffer_flush(buffer, &bi);
             enqueue(&stream_, node);
             p += 2;
+            require_next = true;
             continue;
         }
 
@@ -286,6 +310,11 @@ queue_t* tokenizer_tokenstream(const char* input) {
              *      |  - pipe
              *      >  - redirect output
              */
+
+            if (require_next) {
+                tokenizer_throw_syntax_error(c, &stream_);
+                return NULL;
+            }
 
             // flush the buffer
             if (bi > 0) {
@@ -304,6 +333,7 @@ queue_t* tokenizer_tokenstream(const char* input) {
             node_t* node = tokenizer_buffer_flush(buffer, &bi);
             enqueue(&stream_, node);
             p++;
+            require_next = true;
             continue;
         }
 
@@ -314,6 +344,10 @@ queue_t* tokenizer_tokenstream(const char* input) {
     if (bi > 0) {
         node_t* node = tokenizer_buffer_flush(buffer, &bi);
         enqueue(&stream_, node);
+    }
+    if (require_next && stream_.rear->type != NODE_COMMAND) {
+        tokenizer_throw_syntax_error('\n', &stream_);
+        return NULL;
     }
 
     free(buffer);
@@ -366,10 +400,15 @@ node_t* tokenizer_ast(queue_t* stream) {
     return peek(stream);
 }
 
+// return the root of the ast representing user input
+// return NULL on error
 node_t* tokenize(const char* input) {
     if (*input == 0) return NULL;
 
     queue_t* stream = tokenizer_tokenstream(input);
+    if (stream == NULL) {
+        return NULL;
+    }
     node_t* ast = tokenizer_ast(stream);
     free_queue(stream);
     return ast;
