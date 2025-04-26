@@ -15,7 +15,7 @@ void node_init(node_t* node) {
     node->left = NULL;
     node->right = NULL;
     node->next = NULL;
-    node->exit_status = -1;
+    node->exit_status = 1;
     node->background_job = false;
 }
 
@@ -49,10 +49,10 @@ void tokenizer_debug(queue_t* stream) {
     while (node) {
         switch (node->type) {
             case NODE_COMMAND:
-                printf("%s with args:\n\t", node->tokens.argv.val);
+                printf("%s with args:\n", node->tokens.argv.val);
                 argument_t* arg = &node->tokens.argv;
                 while (arg) {
-                    printf("%s ", arg->val);
+                    printf("\t%s\n", arg->val);
                     arg = arg->next;
                 }
                 printf("<end>\n");
@@ -216,9 +216,11 @@ void tokenizer_assign_args(queue_t* stream, queue_t* src) {
             case NODE_COMMAND:
                 if (prev && prev->type == NODE_COMMAND) { // arg
                     push_arg(prev, &node->tokens.argv);
+                    prev->tokens.argc += 1;
                 } else {
                     prev = node;
                     enqueue(stream, node);
+                    node->tokens.argc = 1;
                 }
                 break;
             default:
@@ -231,10 +233,8 @@ void tokenizer_assign_args(queue_t* stream, queue_t* src) {
 // allocates a queue_t
 queue_t* tokenizer_tokenstream(const char* input) {
     /**
-     * todo handle \' as literals and \" as variable expansions 
-     * todo handle $
-     * todo handle redirection
-     * todo handle flags
+     * todo handle \" as variable expansions 
+     * todo handle & at end of expressions
      */
 
     queue_t stream_;
@@ -327,7 +327,7 @@ queue_t* tokenizer_tokenstream(const char* input) {
                 buffer[bi++] = c;
                 buffer[bi++] = c;
                 p++;
-            } else { // todo check for & only at end
+            } else {
                 buffer[bi++] = c;
             }
             node_t* node = tokenizer_buffer_flush(buffer, &bi);
@@ -356,6 +356,7 @@ queue_t* tokenizer_tokenstream(const char* input) {
     init_queue(stream);
 
     tokenizer_assign_args(stream, &stream_);    
+    // tokenizer_debug(stream);
     return stream;
 }
 

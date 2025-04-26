@@ -45,11 +45,12 @@ void error(const char* msg) {
     exit(-1);
 }
 
-int get_command_id(char** argv) {
-    const char* cmd = argv[0];
-    if (cmd[0] == '#') return CMD_IGNORE;
+int get_command_id(char* argv0) {
+    if (argv0[0] == '#') return CMD_IGNORE;
     for (int i = 0; commands[i].name != NULL; i++) {
-        if (streq(cmd, commands[i].name)) return commands[i].code;
+        if (streq(argv0, commands[i].name)) return commands[i].code;
     }
     return CMD_EXTERNAL;
 }
+
+char* tokenize_and_process(char*);

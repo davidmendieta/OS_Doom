@@ -36,7 +36,7 @@ typedef struct Node {
     struct Node* left;
     struct Node* right;
     struct Node* next; // for building
-    int exit_status;
+    uint32_t exit_status;
     enum NodeType type;
     bool background_job;
 } node_t;
