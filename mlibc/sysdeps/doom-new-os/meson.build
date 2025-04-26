@@ -15,6 +15,7 @@ doom_include_dirs = [
   include_directories('include/mlibc/'),
   include_directories('../../options/elf/include'),
   include_directories('../../../kernel/'),
+  include_directories('.'), # make sure the compiler can find syscalls-new.h and syscall_number.h
 ]
 
 rtld_include_dirs += doom_include_dirs
@@ -35,7 +36,10 @@ libc_sources += files(
 # 	)
 # endif
 
-libc_sources += files('internal-sysdeps.cpp')
+libc_sources += files(
+	'internal-sysdeps.cpp'
+	'syscalls-new.cpp' # only add cpp file to libc_source
+)
 #libc_sources += files('generic/syscalls.cpp')
 
 
