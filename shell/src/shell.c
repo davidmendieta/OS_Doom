@@ -37,7 +37,7 @@ void make_bin_path(char* buffer, const char* argv0) {
 char* input_line(char* dst, char* src) {
     int i = 0;
     char c = src[i];
-    while (c && c != '\n') {
+    while (c && c != '\n' && c != '#') {
         dst[i] = c;
         i++;
         c = src[i];
@@ -60,6 +60,9 @@ void input_line(char* buffer) {
     buffer[write] = 0;
 }
 #endif
+
+void nut();
+void nut_fact();
 
 void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
     switch (id) {
@@ -124,6 +127,12 @@ void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
             }
             break;
         }
+        case CMD_PRINT_NUT:
+            nut();
+            break;
+        case CMD_GET_NUT_FACT:
+            nut_fact();
+            break;
         default:
             error("how did you get here??\n");
     }

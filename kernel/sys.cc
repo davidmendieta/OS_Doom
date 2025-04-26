@@ -51,6 +51,7 @@ uint32_t open(const char* fd) {
     if(me->pcb->cwd == nullptr) me->pcb->cwd = fs->root;
 
     StrongPtr<Node> new_node = fs->find(me->pcb->cwd, fd);
+    if (new_node == nullptr) return -1;
     StrongPtr<OpenFile> new_open_file = StrongPtr<OpenFile>::make(new_node);
 
     for(uint32_t i = 0; i < PCB_ARR_SIZE; i++) {
@@ -273,7 +274,6 @@ void naive_unmap(void* p) {
 
 uint32_t print_dir() {
     auto me = impl::threads::state.current();
-    Debug::printf("\n");
     me->pcb->cwd->entries([](uint32_t inode, char *name, uint8_t name_length){
         if (!(K::streq(name, ".") || K::streq(name, "..") || K::streq(name, "lost+found"))) {
             Debug::printf("%s\t", name);
