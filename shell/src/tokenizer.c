@@ -19,6 +19,28 @@ void node_init(node_t* node) {
     node->background_job = false;
 }
 
+void tokenizer_free(node_t* node) {
+    if (node) {
+        tokenizer_free(node->left);
+        tokenizer_free(node->right);
+
+        if (node->type == NODE_COMMAND) {
+            free(node->fin);
+            free(node->fout);
+            free(node->ferr);
+            
+            argument_t* arg = &node->tokens.argv;
+            while (arg) {
+                argument_t* next = arg->next;
+                free(arg->val);
+                arg = next;
+            }
+
+            free(node);
+        }
+    }
+}
+
 void tokenizer_debug(queue_t* stream) {
     node_t* node = stream->front;
     while (node) {
