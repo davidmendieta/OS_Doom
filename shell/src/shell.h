@@ -1,5 +1,4 @@
-#include <stdbool.h>
-#include <stddef.h>
+#pragma once
 #include "sys.h"
 #include "libc.h"
 

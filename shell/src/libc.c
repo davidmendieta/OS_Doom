@@ -114,3 +114,16 @@ int strncmp(const char *s1, const char *s2, size_t n) {
     }
     return 0;
 }    
+
+char* strchr(const char* s, int ch) {
+    while (*s) {
+        if (*s == (char)ch) {
+            return (char*)s;
+        }
+        s++;
+    }
+    if (ch == '\0') {
+        return (char*)s;
+    }
+    return 0;
+}
