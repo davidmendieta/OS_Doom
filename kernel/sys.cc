@@ -13,6 +13,7 @@
 #include "elf.h"
 #include "promise.h"
 #include "uio.h" // new code
+#include "poll.h"
 
     bool address_valid(uint32_t addr, uint32_t size) {
         return addr >= 0x80000000 && addr + size <= 0xFFFFFFFF;

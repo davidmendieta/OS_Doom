@@ -5,7 +5,6 @@
 #include "ps2.h"
 #include "sdl_keycodes.h"
 #include "sys.h"
-#include "ringbuffer.h"
 #include "pit.h"
 
 //#include "d_event.h"

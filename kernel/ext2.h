@@ -3,6 +3,7 @@
 #include "buffer_cache.h"
 #include "ide.h"
 #include "shared.h"
+#include "ringbuffer.h"
 class Ext2;
 struct SuperBlock {
     uint32_t inodes_count;
@@ -194,6 +195,24 @@ class Node : public BlockIO {  // we implement BlockIO because we
     
     // new code
     void truncate(uint32_t new_length = 0);
+
+    //poll for standard file types
+    uint16_t poll(uint16_t events) {
+        uint16_t revents = 0;
+        uint16_t type = get_type();
+        
+        if (type == 0x4) {  
+            revents = events & (0x1 | 0x4);
+        } else if (type == 0x8) {  
+            // Directories can only be read from
+            if (events & 0x1)
+                revents |= 0x1;
+        } else if (type == 0xA) {  // Symlink
+            revents = 0;
+        }
+        
+        return revents;
+    }
 };
 
 class STDIO : public Node {
@@ -242,6 +261,26 @@ class STDERR : public STDIO {
             Debug::printf("%c", buffer[i]);
         }
         return n;
+    }
+};
+
+//custom node type that represents devices
+template<typename T>
+class Device : public Node {
+private:
+    RingBuffer<T>* buff;
+
+public:
+    Device(Ext2* fs, StrongPtr<impl::ext2::BufferCache> buffer_cache, uint32_t number,
+        uint32_t block_size, RingBuffer<T>* buffer)
+       : Node(fs, buffer_cache, number, block_size), buff(buffer) {}
+
+    uint16_t poll(uint16_t events) override {
+        uint16_t revents = 0;
+        if (!buff->isEmpty()) {
+            revents = events & 0x1;  // POLLIN
+        }
+        return revents;
     }
 };
 
