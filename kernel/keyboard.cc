@@ -10,6 +10,7 @@
 
 #include "libc.h"
 
+#include "kernel.h"
 
 //#include "d_event.h"
 //#include "doomkeys.h"
@@ -43,26 +44,25 @@ void write_key_to_dev(uint8_t scancode, bool is_release) {
     char ascii_val = PS2::scancode_to_ascii(scancode);
     
     // Create directories if needed
-    auto kernel_dir = fs1->find(fs1->root, "kernel");
-    if (kernel_dir == nullptr) {
-        char kernel_dir_name[] = "kernel";
-        Debug::printf("*** bp1\n");
+    // auto kernel_dir = fs->find(fs->root, "/kernel");
+    // if (kernel_dir == nullptr) {
+    //     char kernel_dir_name[] = "/kernel";
+    //     Debug::printf("*** bp1\n");
 
-        kernel_dir = fs1->create_inode(fs1->root, kernel_dir_name, 0x4000); // Directory type
-        if (kernel_dir == nullptr) {
-            Debug::printf("*** failed to create kernel directory\n");
-            return;
-        }
-    }
-    Debug::printf("*** bp2\n");
+    //     kernel_dir = fs->create_inode(fs->root, kernel_dir_name, 0x4000); // Directory type
+    //     if (kernel_dir == nullptr) {
+    //         Debug::printf("*** failed to create kernel directory\n");
+    //         return;
+    //     }
+    // }
+    // Debug::printf("*** bp2\n");
 
     // Look for file in kernel directory
-    char kernel_file_name[] = "keyboard.txt";
-    auto node = fs1->find(kernel_dir, kernel_file_name); // FAILING RIGHT HERE
-    Debug::printf("*** bp3\n");
+    char kernel_file_name[] = "keyboard";
+    auto node = fs->find(fs->root, kernel_file_name); // FAILING RIGHT HERE
 
     if (node == nullptr) {
-        node = fs1->create_inode(kernel_dir, kernel_file_name, 0x81A4);
+        node = fs->create_inode(fs->root, kernel_file_name, 0x81A4);
         if (node == nullptr) {
             Debug::printf("*** failed to create keyboard.txt file\n");
             return;
@@ -73,13 +73,17 @@ void write_key_to_dev(uint8_t scancode, bool is_release) {
     file->offset = node->size_in_bytes();
     
     uint32_t written = node->write_all(file->offset, 1, &ascii_val);
-    if (written != 1) {
+
+    if (written == 0) {
         Debug::printf("kernel write failed\n");
     } else {
-        if (file->offset + 1 > node->data.size_low) {
+        Debug::printf("bp4\n");
+        // if (file->offset + 1 > node->data.size_low) {
             node->data.size_low = file->offset + 1;
-            fs1->buffer_cache->write_all(node->get_offset(), sizeof(NodeData), (char*)&node->data);
-        }
+            fs->buffer_cache->write_all(node->get_offset(), sizeof(NodeData), (char*)&node->data);
+            Debug::printf("bp5\n");
+        //}
+        Debug::printf("bp6\n");
     }
 }
 
