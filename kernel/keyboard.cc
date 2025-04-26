@@ -6,17 +6,19 @@
 #include "sdl_keycodes.h"
 #include "sys.h"
 #include "pit.h"
+#include "ext2.h"
+
+#include "libc.h"
+
 
 //#include "d_event.h"
 //#include "doomkeys.h"
-
-
 
 #define SDL_KEYDOWN 0x300
 #define SDL_KEYUP   0x301
 
 
-RingBuffer<SDL_KeyEvent> event_buffer(100); 
+RingBuffer<uint8_t> event_buffer(100); 
 
 
 uint8_t buffer[3]; // buffer for keyboard input print testing
@@ -26,7 +28,7 @@ char input_buffer[100];
 
 // to be called in read() syscall to handler sdl events
 // would read from the SDL event file descriptor
-bool ready_to_read(SDL_KeyEvent* event){
+bool ready_to_read(uint8_t* event){
     if (event_buffer.isEmpty()) {
         return false;
     }
@@ -35,28 +37,51 @@ bool ready_to_read(SDL_KeyEvent* event){
 }
 
 
-// void write_key_to_dev(SDL_Scancode scancode, bool is_release) {
-//     // Only handle key press events
-//     if (is_release) return;
+void write_key_to_dev(uint8_t scancode, bool is_release) {
+    if (is_release) return;
     
-//     // Get ASCII value of pressed key
-//     char ascii_val = PS2::scancode_to_ascii(scancode & 0x7F);
+    char ascii_val = PS2::scancode_to_ascii(scancode);
     
-//     // Only write printable characters and newlines
-//     if ((ascii_val >= 32 && ascii_val < 127) || ascii_val == '\n' || ascii_val == '\r') {
-//         const char* filepath = "/dev/input/keyboard0";
-//         uint32_t fd = open(filepath, 0x0200, 0644);
-        
-//         if (fd == 0xFFFFFFFF) {
-//             Debug::printf("failed to open file for writing\n");
-//             return;
-//         }
-        
-//         write(fd, &ascii_val, 1);  // Write the single character
-//         close(fd);
-//     }
-// }
+    // Create directories if needed
+    auto kernel_dir = fs1->find(fs1->root, "kernel");
+    if (kernel_dir == nullptr) {
+        char kernel_dir_name[] = "kernel";
+        Debug::printf("*** bp1\n");
 
+        kernel_dir = fs1->create_inode(fs1->root, kernel_dir_name, 0x4000); // Directory type
+        if (kernel_dir == nullptr) {
+            Debug::printf("*** failed to create kernel directory\n");
+            return;
+        }
+    }
+    Debug::printf("*** bp2\n");
+
+    // Look for file in kernel directory
+    char kernel_file_name[] = "keyboard.txt";
+    auto node = fs1->find(kernel_dir, kernel_file_name); // FAILING RIGHT HERE
+    Debug::printf("*** bp3\n");
+
+    if (node == nullptr) {
+        node = fs1->create_inode(kernel_dir, kernel_file_name, 0x81A4);
+        if (node == nullptr) {
+            Debug::printf("*** failed to create keyboard.txt file\n");
+            return;
+        }
+    }
+
+    StrongPtr<OpenFile> file = StrongPtr<OpenFile>::make(node);
+    file->offset = node->size_in_bytes();
+    
+    uint32_t written = node->write_all(file->offset, 1, &ascii_val);
+    if (written != 1) {
+        Debug::printf("kernel write failed\n");
+    } else {
+        if (file->offset + 1 > node->data.size_low) {
+            node->data.size_low = file->offset + 1;
+            fs1->buffer_cache->write_all(node->get_offset(), sizeof(NodeData), (char*)&node->data);
+        }
+    }
+}
 
 
 // Converts SDL scancode to string representation for debugging purposes
@@ -266,13 +291,13 @@ void keyboardHandler(uint8_t scancode) {
         }
     };    
     event.timestamp = Pit::jiffies; 
+    (void) event; // silence
+    event_buffer.enqueue(scancode); // add to buffer to be used by poll()
 
-    event_buffer.enqueue(event); // add to buffer to be used by poll()
 
+    bool second = false;
 
-     bool second = false;
-
-  //  write_key_to_dev(sdl_scancode, is_release);
+    write_key_to_dev(scancode, is_release);
 
 
     if(buffer[0] == buffer[1] && buffer[2] == 0xF0){

@@ -99,11 +99,13 @@ struct NodeData {
     void show(const char*);
 };
 
+extern Ext2* fs1;
+
 // A wrapper around an i-node
 class Node : public BlockIO {  // we implement BlockIO because we
                                // represent data
 
-     Ext2* fs;
+    Ext2* fs;
     StrongPtr<impl::ext2::BufferCache> buffer_cache;
 
     void read_indirect(uint32_t actual_index, char* buffer);

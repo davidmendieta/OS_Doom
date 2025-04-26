@@ -5,7 +5,8 @@ iPXE (http://ipxe.org) 00:03.0 CA00 PCI2.10 PnP PMM+06FD0FC0+06F30FC0 CA00
 Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
 
 
-Booting from Hard Disk..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Booting from Hard Disk..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 | What just happened? Why am I here?
 | Discovering my identity and features
 |     CPUID: AuthenticAMD
@@ -23,8 +24,8 @@ Trap called: index: 14
 Interrupt called: index: 255
 | pitInit freq 1000Hz
 | pitInit divider 59659
-| APIT running at 1000068714Hz
-| APIT counter=1000068 for 1000Hz
+| APIT running at 1000052165Hz
+| APIT counter=1000052 for 1000Hz
 Interrupt called: index: 40
 PS2 OK IF 0x55: 0x55
 disable ps2 port interrupts
@@ -56,24 +57,25 @@ Trap called: index: 48
 | reset 1
 |      eip:0x8000
 | initialize 2
-| initializing TSS:ss0 for 1
 | reset 2
-| 1 enabling interrupts, I'm scared
 |      eip:0x8000
 | initialize 3
 | reset 3
 |      eip:0x8000
 | initializing TSS:ss0 for 2
 | 2 enabling interrupts, I'm scared
-| initializing TSS:ss0 for 0
 | initializing TSS:ss0 for 3
-| 0 enabling interrupts, I'm scared
+| initializing TSS:ss0 for 1
 | 3 enabling interrupts, I'm scared
+| initializing TSS:ss0 for 0
+| 1 enabling interrupts, I'm scared
+| 0 enabling interrupts, I'm scared
 vaddr:80000000 memsz:0x401d20 filesz:0x1cec fileoff:80
 HERE init
 *** I'm a teapot
 *** Keyboard interrupt!
-Key [pressed]: scancode=1c, ascii=a, sdl_code=SDL_SCANCODE_A
+*** bp1
+*** bp2
 *** Keyboard interrupt!
 *** Keyboard interrupt!
-Key [released]: scancode=f01c, ascii=?, sdl_code=SDL_SCANCODE_UNKNOWN
+*** bp2

@@ -3,9 +3,11 @@
 #include "utils.h"
 #include "path.h"
 ;
+
+Ext2* fs1 = nullptr;
 Ext2::Ext2(StrongPtr<Ide> ide_): ide_(ide_), root() {
     using namespace impl::ext2;
-
+    fs1 = this;
 
     ide_->read(1024,sb);
     iNodeSize = sb.inode_size;  
