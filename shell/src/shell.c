@@ -69,6 +69,9 @@ void clear_buffer(char* buffer) {
 
 #endif
 
+void logo();
+void nut_fact();
+
 void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
     switch (id) {
         case CMD_IGNORE: // comment
@@ -132,12 +135,12 @@ void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
             }
             break;
         }
-        // case CMD_PRINT_NUT:
-        //     nut();
-        //     break;
-        // case CMD_GET_NUT_FACT:
-        //     nut_fact();
-        //     break;
+        case CMD_PRINT_NUT:
+            logo();
+            break;
+        case CMD_GET_NUT_FACT:
+            nut_fact();
+            break;
         default:
             error("how did you get here??\n");
     }
@@ -293,4 +296,25 @@ int main(int argc, char** argv) {
     }
 
     shutdown(); // should never get here
+}
+
+void logo() {
+    printf("                ______\n");
+    printf("             .-'      `-.\n");
+    printf("           .'            `.\n");
+    printf("         .'                `.\n");
+    printf("        /    .------.        \\\n");
+    printf("       /   .'        `.        \\\n");
+    printf("      |   /   ○    ○   \\        |\n");
+    printf("      |  |      ∩        |       | \n");
+    printf("      |   \\   _______   /        |\n");
+    printf("       \\   `.        .'        /\n");
+    printf("        `.  `------'        .'\n");
+    printf("          `.              .'\n");
+    printf("            `-.        .-'\n");
+    printf("               `------'\n");
+}
+
+void nut_fact() {
+    printf("Pistachio trees can live up to 300 years\n");
 }

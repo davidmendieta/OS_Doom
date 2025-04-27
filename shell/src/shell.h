@@ -40,7 +40,7 @@ Command commands[] = {
     {"unset", CMD_UNSET},
     {"get", CMD_GET},
     {"logo", CMD_PRINT_NUT},
-    {"get_nut_fact", CMD_GET_NUT_FACT},
+    {"nut_fact", CMD_GET_NUT_FACT},
     {NULL, CMD_EXTERNAL}  // default
 };
 
