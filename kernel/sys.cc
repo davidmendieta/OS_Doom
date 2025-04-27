@@ -309,6 +309,10 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
         return read(user_sp[1], (void*)user_sp[2], user_sp[3]);
     case 13:
         return seek(user_sp[1], user_sp[2]);
+    case 90:
+        return mmap(user_sp[1], user_sp[2], user_sp[3], user_sp[4], user_sp[5], user_sp[6]);
+    case 91:
+        return munmap((void*) user_sp[1], user_sp[2], user_sp[3]);
     case 100:
         return chdir((const char*)user_sp[1]);
     case 101:
