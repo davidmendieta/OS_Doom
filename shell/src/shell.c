@@ -51,11 +51,19 @@ void get_input_line(char* buffer) {
     char c; // read from keyboard
     read(0, &c, 1);
     while (c != '\n' && c != '\r') {
-        // todo backspace
-        buffer[write] = c;
-        printf("%c",buffer[write]);
+        if (c == 127) {
+            if (write > 1) {
+                // backspace
+                printf("\b \b");
+                buffer[write - 1] = 0;
+                write--;
+            }
+        } else {
+            buffer[write] = c;
+            printf("%c",buffer[write]);
+            write++;
+        }
         read(0, &c, 1);
-        write++;
     }
     buffer[write] = 0;
     printf("\n");
