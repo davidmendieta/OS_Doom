@@ -1,0 +1,81 @@
+c[?7l[2J[0mSeaBIOS (version rel-1.16.3-0-ga6ed6b701f0a-prebuilt.qemu.org)
+
+
+iPXE (http://ipxe.org) 00:03.0 CA00 PCI2.10 PnP PMM+06FD0FC0+06F30FC0 CA00
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
+
+
+Booting from Hard Disk..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+| What just happened? Why am I here?
+| Discovering my identity and features
+|     CPUID: AuthenticAMD
+|     has SSE3
+|     has MONITOR/MWAIT
+|     running on hypervisor
+| totalProcs 4
+| memSize 0x7fe0000 127MB
+| localAPIC fee00000
+| ioAPIC fec00000
+| heap range 0x100000 0x600000
+| switched to new UART
+| physical range 0x600000 0x7fe0000
+Trap called: index: 14
+Interrupt called: index: 255
+| pitInit freq 1000Hz
+| pitInit divider 59659
+| APIT running at 1000051095Hz
+| APIT counter=1000051 for 1000Hz
+Interrupt called: index: 40
+PS2 OK IF 0x55: 0x55
+disable ps2 port interrupts
+flush buffer
+read config
+modify config
+write modified config
+reenabled ps2 port interrupts
+mouse acknowledgement: 0xfa
+Trap called: index: 33
+Trap called: index: 44
+
+- PCI ENUMERATING DEVICES -
+| Expected Device Found: Vendor 0x8086, Device 0x1237
+| Expected Device Found: Vendor 0x8086, Device 0x7000
+| Expected Device Found: Vendor 0x8086, Device 0x7010
+    | BAR[4]: 0x0000c041
+| Expected Device Found: Vendor 0x8086, Device 0x7113
+| Expected Device Found: Vendor 0x1234, Device 0x1111
+    | BAR[0]: 0xfd000008
+    | BAR[2]: 0xfebf0000
+| Expected Device Found: Vendor 0x8086, Device 0x100e
+    | BAR[0]: 0xfebc0000
+    | BAR[1]: 0x0000c001
+- FOUND ALL EXPECTED DEVICES - 
+
+Trap called: index: 48
+| initialize 1
+| reset 1
+|      eip:0x8000
+| initialize 2
+| reset 2
+|      eip:0x8000
+| initializing TSS:ss0 for 1
+| initializing TSS:ss0 for 2
+| 1 enabling interrupts, I'm scared
+| initialize 3
+| 2 enabling interrupts, I'm scared
+| reset 3
+|      eip:0x8000
+| initializing TSS:ss0 for 3
+| initializing TSS:ss0 for 0
+| 3 enabling interrupts, I'm scared
+| 0 enabling interrupts, I'm scared
+vaddr:80000000 memsz:0x401d20 filesz:0x1cec fileoff:80
+HERE init
+*** I'm a teapot
+*** Keyboard interrupt!
+     Wrote char: a to file
+Key [pressed]: scancode=1c, ascii=a, sdl_code=SDL_SCANCODE_A
+*** Keyboard interrupt!
+*** Keyboard interrupt!
+Key [released]: scancode=f01c, ascii=?, sdl_code=SDL_SCANCODE_UNKNOWN

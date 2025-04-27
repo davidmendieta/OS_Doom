@@ -119,7 +119,6 @@ extern "C" void kernelInit(void) {
         PS2::init();
         //PS2::setup_ps2_irqs();
 
-
         /* Enumerate Devices */
         Debug::printf("\n- PCI ENUMERATING DEVICES -\n");
         pciEnumDevices();

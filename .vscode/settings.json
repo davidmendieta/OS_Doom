@@ -1,11 +1,11 @@
 {
 	"files.associations": {
-		"random": "cpp",
-		"array": "cpp",
-		"string": "cpp",
-		"string_view": "cpp",
-		"ranges": "cpp",
-		"sdl.h": "c"
-	},
-	"cmake.sourceDirectory": "/u/fabiann/OS-Doom/doom.dir/chocolate-doom"
+        "random": "cpp",
+        "array": "cpp",
+        "string": "cpp",
+        "string_view": "cpp",
+        "ranges": "cpp",
+        "sdl.h": "c",
+        "*.tcc": "c"
+    },
 }

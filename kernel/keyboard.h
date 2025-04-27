@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include "sdl_keycodes.h"
+#include "ringbuffer.h"
 
 
 void keyboard_init();
@@ -25,6 +26,7 @@ struct SDL_KeyEvent {
     SDL_Keysym keysym;
 };
 
+extern RingBuffer<uint8_t> event_buffer;
 
 // void keyboard_to_sdl_event(uint8_t scancode, SDL_KeyEvent* event);
  extern void keyboardHandler(uint8_t scancode);

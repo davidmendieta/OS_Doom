@@ -3,7 +3,8 @@
 #include "buffer_cache.h"
 #include "ide.h"
 #include "shared.h"
-
+#include "ringbuffer.h"
+class Ext2;
 struct SuperBlock {
     uint32_t inodes_count;
     uint32_t blocks_count;
@@ -98,22 +99,26 @@ struct NodeData {
     void show(const char*);
 };
 
+extern Ext2* fs1;
+
 // A wrapper around an i-node
 class Node : public BlockIO {  // we implement BlockIO because we
                                // represent data
 
+    Ext2* fs;
     StrongPtr<impl::ext2::BufferCache> buffer_cache;
 
     void read_indirect(uint32_t actual_index, char* buffer);
+   
 
    public:
     // i-number of this node
     const uint32_t number;
     NodeData data;
 
-    Node(StrongPtr<impl::ext2::BufferCache> buffer_cache, uint32_t number,
+    Node(Ext2* fs, StrongPtr<impl::ext2::BufferCache> buffer_cache, uint32_t number,
          uint32_t block_size)
-        : BlockIO(block_size), buffer_cache(buffer_cache), number(number) {}
+        : BlockIO(block_size), fs(fs), buffer_cache(buffer_cache), number(number) {}
 
     virtual ~Node() {}
 
@@ -122,9 +127,16 @@ class Node : public BlockIO {  // we implement BlockIO because we
     //    - for a directory, implementation dependent
     //    - for a symbolic link, the length of the name
     uint32_t size_in_bytes() override { return data.size_low; }
-
+    uint32_t get_offset();
+    uint32_t get_specific_offset(uint32_t num);
+    void update_dir(uint32_t entry_number, char* name, uint16_t type);
+    
     // read the given block (panics if the block number is not valid)
     // remember that block size is defined by the file system not the device
+    void write_indirect1(uint32_t lbn, const char* buffer);
+    void write_indirect2(uint32_t d1, uint32_t d0, const char* buffer);
+    void write_indirect3(uint32_t d2, uint32_t d1, uint32_t d0, const char* buffer); 
+    void write_block(uint32_t lbn, const char* buffer) override;
     void read_block(uint32_t number, char* buffer) override;
 
     inline uint16_t get_type() { return data.get_type(); }
@@ -182,11 +194,32 @@ class Node : public BlockIO {  // we implement BlockIO because we
     //
     // Panics if not a directory
     uint32_t entry_count();
+    
+    // new code
+    void truncate(uint32_t new_length = 0);
+
+    //poll for standard file types
+    uint16_t poll(uint16_t events) {
+        uint16_t revents = 0;
+        uint16_t type = get_type();
+        
+        if (type == 0x4) {  
+            revents = events & (0x1 | 0x4);
+        } else if (type == 0x8) {  
+            // Directories can only be read from
+            if (events & 0x1)
+                revents |= 0x1;
+        } else if (type == 0xA) {  // Symlink
+            revents = 0;
+        }
+        
+        return revents;
+    }
 };
 
 class STDIO : public Node {
    public:
-    STDIO() : Node(StrongPtr<impl::ext2::BufferCache>{}, 0, 0) {};
+    STDIO() : Node(nullptr, StrongPtr<impl::ext2::BufferCache>{}, 0, 0) {};
 
     void read_block(uint32_t number, char* buffer) override {
         return;
@@ -214,8 +247,8 @@ class STDIN : public STDIO {
 class STDOUT : public STDIO {
     public:
     STDOUT(): STDIO(){};
-    int64_t write(uint32_t offset, int32_t n, char* buffer) override {
-        for (int32_t i = 0; i < n; i++) {
+    int64_t write(uint32_t offset, uint32_t n, char* buffer) override {
+        for (uint32_t i = 0; i < n; i++) {
             Debug::printf("%c", buffer[i]);
         }
         return n;
@@ -225,11 +258,31 @@ class STDOUT : public STDIO {
 class STDERR : public STDIO {
     public:
     STDERR(): STDIO(){};
-    int64_t write(uint32_t offset, int32_t n, char* buffer) override {
-        for (int32_t i = 0; i < n; i++) {
+    int64_t write(uint32_t offset, uint32_t n, char* buffer) override {
+        for (uint32_t i = 0; i < n; i++) {
             Debug::printf("%c", buffer[i]);
         }
         return n;
+    }
+};
+
+//custom node type that represents devices
+template<typename T>
+class Device : public Node {
+private:
+    RingBuffer<T>* buff;
+
+public:
+    Device(Ext2* fs, StrongPtr<impl::ext2::BufferCache> buffer_cache, uint32_t number,
+        uint32_t block_size, RingBuffer<T>* buffer)
+       : Node(fs, buffer_cache, number, block_size), buff(buffer) {}
+
+    uint16_t poll(uint16_t events) override {
+        uint16_t revents = 0;
+        if (!buff->isEmpty()) {
+            revents = events & 0x1;  // POLLIN
+        }
+        return revents;
     }
 };
 
@@ -237,22 +290,32 @@ class STDERR : public STDIO {
 class Ext2 {
     // The device on which the file system resides
     StrongPtr<Ide> ide_;
-    StrongPtr<impl::ext2::BufferCache> buffer_cache{};
+    
+    
+   
 
    public:
+    StrongPtr<impl::ext2::BufferCache> buffer_cache{};
+    BlockGroup* groupTable = nullptr;
+    
     // The root directory for this file system
     StrongPtr<Node> root;
+    uint32_t alloc_block();
+    uint32_t alloc_inode();
+    StrongPtr<Node> create_inode(StrongPtr<Node> parent, char* loc, uint16_t mode);
 
    private:
-    uint32_t blockSize;
+
+
+   public:
+   SuperBlock sb;
+       uint32_t blockSize;
     uint32_t numberOfNodes;
     uint32_t numberOfBlocks;
     uint32_t iNodeSize;
     uint32_t nGroups;
     uint32_t* iNodeTables;
     uint32_t iNodesPerGroup;
-
-   public:
     // Mount an existing file system residing on the given device
     // Panics if the file system is invalid
     Ext2(StrongPtr<Ide> ide);
