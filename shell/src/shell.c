@@ -1,7 +1,7 @@
 #include "shell.h"
 #include "tokenizer.h"
 
-#define TESTING
+// #define TESTING 
 
 bool is_numeric(char *str) {
     int index = 0;
@@ -45,17 +45,28 @@ char* input_line(char* dst, char* src) {
 #else
 // read keyboard input into buffer
 // return on newline
-void input_line(char* buffer) {
+void get_input_line(char* buffer) {
+    output_prompt();
     uint32_t write = 0;
     char c; // read from keyboard
     read(0, &c, 1);
-    while (!is_newline(c)) {
+    while (c != '\n' && c != '\r') {
+        // todo backspace
         buffer[write] = c;
+        printf("%c",buffer[write]);
         read(0, &c, 1);
         write++;
     }
     buffer[write] = 0;
+    printf("\n");
 }
+
+void clear_buffer(char* buffer) {
+    for(int i = 0; i < 4096; i++) {
+        buffer[i] = 0;
+    }
+}
+
 #endif
 
 void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
@@ -236,14 +247,18 @@ void inorder_process(node_t* node) {
 }
 
 char* tokenize_and_process(char *buffer) {
-    char* command = malloc(4096);
 
-    // output_prompt();                             // display a prompt
+    #ifdef TESTING
+    char* command = malloc(4096);
     buffer = input_line(command, buffer);           // get a line of input, which will become the command to execute
     node_t* ast = tokenize(command);
     inorder_process(ast);
-
     free(command);
+    #else
+    node_t* ast = tokenize(buffer);
+    inorder_process(ast);
+    #endif
+
     tokenizer_free(ast);
     return buffer;
 }
@@ -261,16 +276,19 @@ void welcome() {
 int main(int argc, char** argv) {
     welcome();
     
-    char* buffer;
+    char* buffer = (void*) malloc(4096);
     hash_init(&environment_variables);
 
     #ifdef TESTING
     int stdin = open("/user/input", 0); // our test case
-    buffer = (void*) malloc(4096);
     read(stdin, (void*) buffer, 4096);
     #endif
 
     while (true) {
+        #ifndef TESTING
+        clear_buffer(buffer);
+        get_input_line(buffer);
+        #endif
         buffer = tokenize_and_process(buffer);
     }
 

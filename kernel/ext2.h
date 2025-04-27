@@ -3,6 +3,9 @@
 #include "buffer_cache.h"
 #include "ide.h"
 #include "shared.h"
+#include "u8250.h"
+
+extern U8250 stdio_;
 
 struct SuperBlock {
     uint32_t inodes_count;
@@ -209,6 +212,11 @@ class STDIO : public Node {
 class STDIN : public STDIO {
     public:
     STDIN(): STDIO(){};
+    int64_t read_all(uint32_t offset, uint32_t n, char* buffer) override {
+        ASSERT(n == 1);
+        buffer[0] = stdio_.get();
+        return 1;
+    };
 };
 
 class STDOUT : public STDIO {

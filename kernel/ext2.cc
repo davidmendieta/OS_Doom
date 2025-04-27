@@ -3,6 +3,7 @@
 #include "utils.h"
 #include "path.h"
 
+U8250 stdio_ = U8250();
 
 Ext2::Ext2(StrongPtr<Ide> ide_): ide_(ide_), root() {
     using namespace impl::ext2;
