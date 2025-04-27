@@ -254,7 +254,7 @@ StrongPtr<Node> Ext2::find(StrongPtr<Node> dir, const char* name) {
         char* str = curr->get();
         //Debug::printf("HERE 1 %s | %s\n", name, str);
         if(str[0] == '/') {
-             Debug::printf("HERE 2.1 %s | %s\n", name, str);
+            //Debug::printf("HERE 2.1 %s | %s\n", name, str);
             node = root;
         } else {
             // Debug::printf("HERE 2.2 %s | %s\n", name, str);

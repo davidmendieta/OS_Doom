@@ -42,29 +42,14 @@ void write_key_to_dev(uint8_t scancode, bool is_release) {
     if (is_release) return;
     
     char ascii_val = PS2::scancode_to_ascii(scancode);
-    
-    // Create directories if needed
-    // auto kernel_dir = fs->find(fs->root, "/kernel");
-    // if (kernel_dir == nullptr) {
-    //     char kernel_dir_name[] = "/kernel";
-    //     Debug::printf("*** bp1\n");
 
-    //     kernel_dir = fs->create_inode(fs->root, kernel_dir_name, 0x4000); // Directory type
-    //     if (kernel_dir == nullptr) {
-    //         Debug::printf("*** failed to create kernel directory\n");
-    //         return;
-    //     }
-    // }
-    // Debug::printf("*** bp2\n");
-
-    // Look for file in kernel directory
-    char kernel_file_name[] = "keyboard";
-    auto node = fs->find(fs->root, kernel_file_name); // FAILING RIGHT HERE
+    char kernel_file_name[] = "/dev/keyboard.txt";
+    auto node = fs->find(fs->root, kernel_file_name);
 
     if (node == nullptr) {
         node = fs->create_inode(fs->root, kernel_file_name, 0x81A4);
         if (node == nullptr) {
-            Debug::printf("*** failed to create keyboard.txt file\n");
+            Debug::printf("failed to create keyboard.txt file\n");
             return;
         }
     }
@@ -75,15 +60,11 @@ void write_key_to_dev(uint8_t scancode, bool is_release) {
     uint32_t written = node->write_all(file->offset, 1, &ascii_val);
 
     if (written == 0) {
-        Debug::printf("kernel write failed\n");
+        Debug::printf("Write failed\n");
     } else {
-        Debug::printf("bp4\n");
-        // if (file->offset + 1 > node->data.size_low) {
             node->data.size_low = file->offset + 1;
             fs->buffer_cache->write_all(node->get_offset(), sizeof(NodeData), (char*)&node->data);
-            Debug::printf("bp5\n");
-        //}
-        Debug::printf("bp6\n");
+            Debug::printf("    Wrote char: %c to file\n", ascii_val);
     }
 }
 
@@ -166,11 +147,6 @@ const char* sdlScancodeToString(SDL_Scancode scancode) {
         default: return "UNKNOWN_SCANCODE";
     }
 }
-
-
-
-
-
 
 void keyboardHandler(uint8_t scancode) {
    
@@ -301,7 +277,6 @@ void keyboardHandler(uint8_t scancode) {
 
     bool second = false;
 
-    write_key_to_dev(scancode, is_release);
 
 
     if(buffer[0] == buffer[1] && buffer[2] == 0xF0){
@@ -317,6 +292,7 @@ void keyboardHandler(uint8_t scancode) {
     }
     if(!second){
     if(!is_break){
+        write_key_to_dev(scancode, is_release);
     Debug::printf("Key [%s]: scancode=%x, ascii=%c, sdl_code=%s\n",
                 "pressed",
                 scancode,
