@@ -64,7 +64,7 @@ void write_key_to_dev(uint8_t scancode, bool is_release) {
     } else {
             node->data.size_low = file->offset + 1;
             fs->buffer_cache->write_all(node->get_offset(), sizeof(NodeData), (char*)&node->data);
-            Debug::printf("    Wrote char: %c to file\n", ascii_val);
+            Debug::printf("--Wrote char: %c to file\n", ascii_val);
     }
 }
 
@@ -293,15 +293,15 @@ void keyboardHandler(uint8_t scancode) {
     if(!second){
     if(!is_break){
         write_key_to_dev(scancode, is_release);
-    Debug::printf("Key [%s]: scancode=%x, ascii=%c, sdl_code=%s\n",
-                "pressed",
-                scancode,
-                (sym > 0 && sym < 128) ? sym : '?', sdlScancodeToString(sdl_scancode));    
+    // Debug::printf("Key [%s]: scancode=%x, ascii=%c, sdl_code=%s\n",
+    //             "pressed",
+    //             scancode,
+    //             (sym > 0 && sym < 128) ? sym : '?', sdlScancodeToString(sdl_scancode));    
     } else {
-        Debug::printf("Key [%s]: scancode=%x%x, ascii=%c, sdl_code=%s\n",
-            "released",
-            scancode,buffer[1],
-            (sym > 0 && sym < 128) ? sym : '?', sdlScancodeToString(sdl_scancode));    
+        // Debug::printf("Key [%s]: scancode=%x%x, ascii=%c, sdl_code=%s\n",
+        //     "released",
+        //     scancode,buffer[1],
+        //     (sym > 0 && sym < 128) ? sym : '?', sdlScancodeToString(sdl_scancode));    
     }
 }
 

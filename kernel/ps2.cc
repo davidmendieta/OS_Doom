@@ -250,8 +250,10 @@ void demo_mode() {
                 Debug::printf("Button Pressed: %c\n", c);
             }
         }
+        
         release_initiated = false;
     }
+    keyboardHandler(scancode);
 
 }
 
@@ -265,6 +267,7 @@ void debug_mode() {
         Debug::printf("KEY PRESS: %c\n", scancode_to_ascii(scancode));
         new_code = false;
     }
+    
     // Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
     Debug::printf("Scancode: 0x%x\n", scancode);
     //mouse_cycle = 0;
@@ -276,14 +279,11 @@ extern "C" void keyboard_handler() {
     SMP::eoi();
     // reset Lapic_eoi
     *((volatile uint32_t*)0xFEE000B0) = 0;
-
     if (DEMO) {
         demo_mode();
     } else {
         debug_mode();
     }
-
-    
 
 }
 

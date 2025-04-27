@@ -5,15 +5,14 @@ iPXE (http://ipxe.org) 00:03.0 CA00 PCI2.10 PnP PMM+06FD0FC0+06F30FC0 CA00
 Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
 
 
-Booting from Hard Disk..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.
-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Booting from Hard Disk..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 | What just happened? Why am I here?
 | Discovering my identity and features
 |     CPUID: AuthenticAMD
 |     has SSE3
 |     has MONITOR/MWAIT
 |     running on hypervisor
-| totalProcs 4
+| totalProcs 16
 | memSize 0x7fe0000 127MB
 | localAPIC fee00000
 | ioAPIC fec00000
@@ -24,8 +23,8 @@ Trap called: index: 14
 Interrupt called: index: 255
 | pitInit freq 1000Hz
 | pitInit divider 59659
-| APIT running at 1000051095Hz
-| APIT counter=1000051 for 1000Hz
+| APIT running at 1000058180Hz
+| APIT counter=1000058 for 1000Hz
 Interrupt called: index: 40
 PS2 OK IF 0x55: 0x55
 disable ps2 port interrupts
@@ -60,22 +59,84 @@ Trap called: index: 48
 | reset 2
 |      eip:0x8000
 | initializing TSS:ss0 for 1
-| initializing TSS:ss0 for 2
-| 1 enabling interrupts, I'm scared
 | initialize 3
-| 2 enabling interrupts, I'm scared
+| 1 enabling interrupts, I'm scared
 | reset 3
 |      eip:0x8000
+| initialize 4
+| reset 4
+|      eip:0x8000
 | initializing TSS:ss0 for 3
-| initializing TSS:ss0 for 0
+| initializing TSS:ss0 for 2
+| initializing TSS:ss0 for 4
+| initialize 5
+| reset 5
+|      eip:0x8000
 | 3 enabling interrupts, I'm scared
+| 4 enabling interrupts, I'm scared
+| 2 enabling interrupts, I'm scared
+| initialize 6
+| initializing TSS:ss0 for 5
+| reset 6
+|      eip:0x8000
+| 5 enabling interrupts, I'm scared
+| initialize 7
+| reset 7
+|      eip:0x8000
+| initializing TSS:ss0 for 6
+| 6 enabling interrupts, I'm scared
+| initialize 8
+| reset 8
+|      eip:0x8000
+| initializing TSS:ss0 for 7
+| 7 enabling interrupts, I'm scared
+| initialize 9
+| initializing TSS:ss0 for 8
+| 8 enabling interrupts, I'm scared
+| reset 9
+|      eip:0x8000
+| initialize 10
+| reset 10
+|      eip:0x8000
+| initializing TSS:ss0 for 9
+| 9 enabling interrupts, I'm scared
+| initialize 11
+| initializing TSS:ss0 for 10
+| reset 11
+|      eip:0x8000
+| 10 enabling interrupts, I'm scared
+| initialize 12
+| initializing TSS:ss0 for 11
+| 11 enabling interrupts, I'm scared
+| reset 12
+|      eip:0x8000
+| initialize 13
+| reset 13
+|      eip:0x8000
+| initializing TSS:ss0 for 12
+| 12 enabling interrupts, I'm scared
+| initializing TSS:ss0 for 13
+| 13 enabling interrupts, I'm scared
+| initialize 14
+| reset 14
+|      eip:0x8000
+| initialize 15
+| reset 15
+| initializing TSS:ss0 for 14
+| 14 enabling interrupts, I'm scared
+|      eip:0x8000
+| initializing TSS:ss0 for 15
+| 15 enabling interrupts, I'm scared
+| initializing TSS:ss0 for 0
 | 0 enabling interrupts, I'm scared
 vaddr:80000000 memsz:0x401d20 filesz:0x1cec fileoff:80
 HERE init
 *** I'm a teapot
-*** Keyboard interrupt!
-     Wrote char: a to file
-Key [pressed]: scancode=1c, ascii=a, sdl_code=SDL_SCANCODE_A
-*** Keyboard interrupt!
-*** Keyboard interrupt!
-Key [released]: scancode=f01c, ascii=?, sdl_code=SDL_SCANCODE_UNKNOWN
+Button Pressed: a
+--Wrote char: a to file
+Button Pressed: b
+--Wrote char: b to file
+Button Pressed: t
+--Wrote char: t to file
+*** Assertion [tcb != nullptr] failed at semaphore.h:34
+| processor 0 halting
