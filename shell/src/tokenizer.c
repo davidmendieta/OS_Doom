@@ -1,5 +1,6 @@
 #include "libc.h"
 #include "tokenizer.h"
+#include "hashmap.h"
 
 void tokens_init(struct Tokenized* tokens) {
     tokens->argc = 0;
@@ -104,6 +105,14 @@ void tokenizer_debug(queue_t* stream) {
     }
 }
 
+bool isnewline(char c) {
+    return c == '\n' || c == '\r' || c == 0;
+}
+
+int isspace(int c) {
+    return c == ' ';
+}
+
 int tokenizer_get_node_type(const char* buffer) {
     struct TokenSymbol symbols[] = {
         {"&&", NODE_AND},
@@ -154,10 +163,6 @@ void push_arg(node_t* node, argument_t* arg) {
 // convert buffer data into a node_t
 // allocates a node_t and char*
 node_t* tokenizer_buffer_to_node(char* buffer) {
-    if (*buffer == 0) {
-        printf("buffer is null %d\n", *(int*)0);
-    }
-
     node_t* node = malloc(sizeof(node_t));
     node_init(node);
     node->type = tokenizer_get_node_type(buffer);
@@ -189,9 +194,6 @@ void tokenizer_assign_args(queue_t* stream, queue_t* src) {
     while (peek(src)) {
         node_t* node = dequeue(src);
         switch (node->type) {
-            case NODE_BACKGROUND_JOB:
-                prev->background_job = true;
-                break;
             case NODE_REDIRINP:
                 // prev->fin = node->tokens.argv.val;
                 prev->fin = dequeue(src)->tokens.argv.val;
@@ -206,6 +208,10 @@ void tokenizer_assign_args(queue_t* stream, queue_t* src) {
                 break;
             case NODE_APPEND:
                 // todo handle
+                break;
+            case NODE_BACKGROUND_JOB: // this is a separator that should not be enqueued
+                prev->background_job = true;
+                prev = node;
                 break;
             case NODE_AND:
             case NODE_OR:
@@ -233,8 +239,8 @@ void tokenizer_assign_args(queue_t* stream, queue_t* src) {
 // allocates a queue_t
 queue_t* tokenizer_tokenstream(const char* input) {
     /**
-     * todo handle \" as variable expansions 
-     * todo handle & at end of expressions
+     * todo handle = as assignment or literal
+     * todo handle int parsing
      */
 
     queue_t stream_;
@@ -243,14 +249,16 @@ queue_t* tokenizer_tokenstream(const char* input) {
     char* buffer = malloc(1024);
     int bi = 0;
     bool in_single = false, in_double = false;
-    bool require_next = false;
+    bool require_next = false;  // controls redirection, throws a syntax error if fails
+    bool can_assign = true;     // controls assignment, throws an error during execution
 
     while (*p) {
         char c = *p;
-        if (!in_single && !in_double && c == ' ') { // command or argument
+        if (!in_single && !in_double && isspace(c)) { // command or argument
             if (bi > 0) {
                 node_t* node = tokenizer_buffer_flush(buffer, &bi);
                 enqueue(&stream_, node);
+                can_assign = node->type != NODE_COMMAND;
                 require_next = false;
             }
             p++;
@@ -273,9 +281,75 @@ queue_t* tokenizer_tokenstream(const char* input) {
             continue;
         }
 
-        if (!in_single && c == '\\') { // escape sequence
+        if (c == '\\' && !in_single) { // escape sequence
             p++;
             if (*p) buffer[bi++] = *p++;
+            continue;
+        }
+
+        if (c == '$' && !in_single) { // variable expansion
+            p++;
+            if (*p < 'A' || *p > 'z') { // just the $ character
+                buffer[bi++] = c;
+                continue;
+            }
+
+            if (bi > 0) {
+                node_t* node = tokenizer_buffer_flush(buffer, &bi);
+                enqueue(&stream_, node);
+            }
+
+            while (*p && !isspace(*p) && !isnewline(*p)) {
+                if ('A' <= *p && *p < 'z') buffer[bi++] = *p;
+                p++;
+            }
+            buffer[bi++] = 0;
+
+            HashValue* hashval = hash_get(&environment_variables, buffer);
+            if (hashval == NULL) { // push a node with an empty string
+                bi = 0;
+                node_t* node = tokenizer_buffer_flush(buffer, &bi);
+                enqueue(&stream_, node);
+            } else {
+                if (hashval->type == TYPE_INT) {
+                    // todo
+                } else {
+                    bi = 0;
+                    node_t* node = tokenizer_buffer_to_node(hashval->data.sdata);
+                    enqueue(&stream_, node);
+                }
+            }
+            continue;
+        }
+
+        if (c == '=' && !in_single && !in_double && can_assign) { // variable assignment
+            if (bi == 0) {
+                buffer[bi++] = c;
+                continue;
+            }
+
+            // set command
+            node_t* node = tokenizer_buffer_to_node("set");
+            enqueue(&stream_, node);
+
+            // everything in buffer is the key
+            node = tokenizer_buffer_flush(buffer, &bi);
+            enqueue(&stream_, node);
+
+            // everything until next delimiter is val
+            p++;
+            while (*p && !isnewline(*p) && (in_double || !isspace(*p))) {
+                if (*p == '\"') {
+                    in_double = !in_double;
+                } else {
+                    buffer[bi++] = *p;
+                }
+                p++;
+            }
+            node = tokenizer_buffer_flush(buffer, &bi);
+            enqueue(&stream_, node);
+
+            can_assign = false;
             continue;
         }
 
@@ -333,7 +407,8 @@ queue_t* tokenizer_tokenstream(const char* input) {
             node_t* node = tokenizer_buffer_flush(buffer, &bi);
             enqueue(&stream_, node);
             p++;
-            require_next = true;
+            require_next = c != '&';
+            can_assign = node->type == NODE_AND || node->type == NODE_OR;
             continue;
         }
 

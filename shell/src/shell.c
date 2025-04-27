@@ -1,8 +1,5 @@
 #include "shell.h"
 #include "tokenizer.h"
-#include "hashmap.h"
-
-Hashmap environment_variables;
 
 #define TESTING
 
@@ -61,9 +58,6 @@ void input_line(char* buffer) {
 }
 #endif
 
-void nut();
-void nut_fact();
-
 void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
     switch (id) {
         case CMD_IGNORE: // comment
@@ -97,8 +91,8 @@ void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
             print_dir();
             break;
         case CMD_SET: {
-            argument_t* argv1 = tokens.argv.next;
-            argument_t* argv2 = argv1->next;
+            argument_t* argv1 = tokens.argv.next;   // key
+            argument_t* argv2 = argv1->next;        // value
             int str_len = strlen(argv1->val) + 1;
             char *var_name = malloc(str_len);
             memcpy(var_name, argv1->val, str_len);
@@ -127,12 +121,12 @@ void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
             }
             break;
         }
-        case CMD_PRINT_NUT:
-            nut();
-            break;
-        case CMD_GET_NUT_FACT:
-            nut_fact();
-            break;
+        // case CMD_PRINT_NUT:
+        //     nut();
+        //     break;
+        // case CMD_GET_NUT_FACT:
+        //     nut_fact();
+        //     break;
         default:
             error("how did you get here??\n");
     }

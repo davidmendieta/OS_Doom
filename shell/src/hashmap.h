@@ -1,4 +1,6 @@
+#pragma once
 #include "value.h"
+#include "stdint.h"
 
 #define ROWS 67
 #define COLS 10
