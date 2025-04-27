@@ -166,6 +166,31 @@ void fill_ac97_buffers() {
     }
 }
 
+void print_amplitude_bar(int16_t amplitude)
+{
+    const int total_width = 80; // total width of the terminal line
+    const int mid = total_width / 2;
+
+    int offset = (amplitude * mid) / 32768; // normalize to terminal width
+    int cursor = mid + offset;
+
+    if (cursor < 0)
+        cursor = 0;
+    if (cursor >= total_width)
+        cursor = total_width - 1;
+
+    for (int i = 0; i < total_width; i++) {
+        if (i == mid) {
+            Debug::printf("|"); // center marker
+        } else if (i == cursor) {
+            Debug::printf("*"); // wave value
+        } else {
+            Debug::printf(" ");
+        }
+    }
+    Debug::printf("\n");
+}
+
 void poll_ac97_loop() {
     if (!ac97_initialized) return;
 
@@ -184,6 +209,8 @@ void poll_ac97_loop() {
                 if (sample_index >= num_samples * 2) sample_index = 0;
                 buf[j] = audio_samples[sample_index++];
                 buf[j + 1] = audio_samples[sample_index++];
+                // print amplitude for the wave -> Wave Visualizer
+                print_amplitude_bar(buf[j]);               
             }
 
             bdl[next_lvi].control = (next_lvi == (BDL_ENTRY_COUNT - 1)) ? (1 << 15) : 0;
