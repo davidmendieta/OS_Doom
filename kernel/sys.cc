@@ -318,7 +318,7 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     case 101:
         return (uint32_t)naive_mmap(user_sp[1], user_sp[2], user_sp[3], user_sp[4]);
     case 102:
-        naive_unmap((void*)user_sp[1]);
+        naive_munmap((void*)user_sp[1], user_sp[2]);
         return 0;
     case 418:
         Debug::printf("*** I'm a teapot\n");
