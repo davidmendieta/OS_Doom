@@ -1,26 +1,21 @@
 #include "socket.h"
 
 #include <stdint.h>
+
 #include "../../bb.h"
 #include "../../heap.h"
 #include "../networking.h"
 #include "../protocols/parser.h"
-
-
-
 #include "porttable.h"
 
 namespace sockets {
 
-UDPSocket::UDPSocket() {
-    recieve_queue = StrongPtr<BB<ReceivedPacket*>>::make(100);
-}
+UDPSocket::UDPSocket() { recieve_queue = StrongPtr<BB<ReceivedPacket*>>::make(100); }
 UDPSocket::~UDPSocket() {
     if (this->isbound) {
         port_table.remove(this->sockaddr_info.sin_port);
     }
 }
-
 
 void UDPSocket::add(void* buffer, size_t payload_len, uint32_t src_ip, uint16_t src_port) {
     ReceivedPacket* packet = new ReceivedPacket(buffer, payload_len, src_ip, src_port);
@@ -50,34 +45,43 @@ int UDPSocket::bind(const sockaddr_in* addr) {
     return 0;
 }
 
-
 int UDPSocket::getsockname(sockaddr_in* addr) {
     if (!(this->isbound)) {
         return -1;
     }
-    Debug::printf("socket name\n");
     addr->sa_family = this->sockaddr_info.sa_family;
     addr->sin_addr.s_addr = htonl(this->sockaddr_info.sin_addr.s_addr);
     addr->sin_port = htons(this->sockaddr_info.sin_port);
     return 0;
 }
 
-//Flags not implmeneted...do I need to?
+// Flags not implmeneted...do I need to?
 ssize_t UDPSocket::sendto(const void* buf, size_t len, const sockaddr_in* dst) {
+    if (!(this->isbound)) {
+        bind(dst);
+    }
     void* send = malloc(len);
     memcpy(send, buf, len);
     uint32_t send_ip = this->sockaddr_info.sin_addr.s_addr;
     if (send_ip == INADDR_ANY) {
         send_ip = network_interface->get_ip();
     }
-    if (dst->sin_addr.s_addr == INADDR_ANY || dst->sin_port == 0) {
+
+    uint16_t dst_port;
+    uint32_t dst_ip;
+
+    if (dst == nullptr && isConnected) {
+        dst_port = this->sockaddr_connected.sin_port;
+        dst_ip = this->sockaddr_info.sin_addr.s_addr;
+    } else if (dst == nullptr || dst->sin_addr.s_addr == INADDR_ANY || dst->sin_port == 0) {
         return -1;
+    } else {
+        dst_port = ntohs(dst->sin_port);
+        dst_ip = ntohl(dst->sin_addr.s_addr);
     }
     size_t out_length = 0;
-
-    
     network_interface->send_ip_udp(send, len, send_ip, this->sockaddr_info.sin_port,
-                                ntohl(dst->sin_addr.s_addr), ntohs(dst->sin_port), &out_length);
+                                   dst_ip, dst_port, &out_length);
     free(send);
     return out_length;
 }
@@ -103,13 +107,34 @@ ssize_t UDPSocket::recvfrom(void* buf, size_t len, sockaddr_in* src, int flags) 
             }
         }
     }
-    uint32_t copy_length = len <= packet->payload_len? len : packet->payload_len;
+    uint32_t copy_length = len <= packet->payload_len ? len : packet->payload_len;
     memcpy(buf, packet->buffer, copy_length);
-    src->sa_family = AF_INET;
-    src->sin_addr.s_addr = htonl(packet->src_ip);
-    src->sin_port = htons(packet->src_port);
+    if (src != nullptr) {
+        src->sa_family = AF_INET;
+        src->sin_addr.s_addr = htonl(packet->src_ip);
+        src->sin_port = htons(packet->src_port);
+    }
+  
     return copy_length;
-
 }
+
+int UDPSocket::connect(const sockaddr_in* address, socklen_t address_len) {
+    this->isConnected = true;
+    this->sockaddr_connected.sa_family = address->sa_family;
+    this->sockaddr_connected.sin_port = ntohs(address->sin_port);
+    this->sockaddr_connected.sin_addr.s_addr = ntohl(address->sin_addr.s_addr);
+    return 0;
+}
+
+int UDPSocket::getpeername(sockaddr_in* addr) {
+    if (!(this->isConnected)) {
+        return -1;
+    }
+    addr->sa_family = this->sockaddr_connected.sa_family;
+    addr->sin_addr.s_addr = htonl(this->sockaddr_connected.sin_addr.s_addr);
+    addr->sin_port = htons(this->sockaddr_connected.sin_port);
+    return 0;
+}
+
 
 }  // namespace sockets

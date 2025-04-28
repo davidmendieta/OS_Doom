@@ -13,7 +13,6 @@ bool address_valid(uint32_t addr, uint32_t size) {
 }
 
 int socket_sys_handler(uint32_t eax, uint32_t* frame) {
-    Debug::printf("Inside handler1 \n");
     uint32_t* user_sp = (uint32_t*)frame[3];
     switch (eax) {
             // int socket(int domain, int type, int protocol);
@@ -62,18 +61,10 @@ int socket_sys_handler(uint32_t eax, uint32_t* frame) {
         // extern int setsockopt(int sockfd, int level, int optname,
         // const void *optval, socklen_t optlen);
         case 204: {
-            int sockfd = user_sp[1];
-            if (sockfd < 0) {
-                return -1;
-            }
-            const struct sockaddr* addr = (const struct sockaddr*)user_sp[2];
-            socklen_t addrlen = user_sp[3];
-            return bind((uint32_t)sockfd, addr, addrlen);
         }
 
         // extern int getsockname(uint32_t sockfd, struct sockaddr *sraddr, socklen_t *addrlen);
         case 205: {
-            Debug::printf("Inside handler");
             int sockfd = user_sp[1];
             if (sockfd < 0) {
                 return -1;
@@ -83,11 +74,47 @@ int socket_sys_handler(uint32_t eax, uint32_t* frame) {
             return getsockname((uint32_t)sockfd, addr, &addrlen);
         }
 
+        // int connect(int socket, const struct sockaddr *address,
+        // socklen_t address_len);
+        case 206: {
+            int sockfd = user_sp[1];
+            if (sockfd < 0) {
+                return -1;
+            }
+            const struct sockaddr* addr = (const struct sockaddr*)user_sp[2];
+            socklen_t addrlen = user_sp[3];
+            return connect((uint32_t)sockfd, addr, addrlen);
+        }
+
+        // extern int getpeername(uint32_t sockfd, struct sockaddr *sraddr, socklen_t *addrlen);
+        case 207: {
+            int sockfd = user_sp[1];
+            if (sockfd < 0) {
+                return -1;
+            }
+            struct sockaddr* addr = (struct sockaddr*)user_sp[2];
+            socklen_t addrlen = user_sp[3];
+            return getpeername((uint32_t)sockfd, addr, &addrlen);
+        }
+
+
         default: {
             Debug::printf("*** unknown system call inside Socket %d\n", eax);
             return -1;
         }
     }
+}
+
+StrongPtr<UDPSocket> getSocket(uint32_t sockfd) {
+    auto me = impl::threads::state.current();
+    if (sockfd < (3 * PCB_ARR_SIZE) || sockfd >= (4 * PCB_ARR_SIZE)) {
+        return StrongPtr<UDPSocket>{nullptr};
+    }
+    sockfd -= (3 * PCB_ARR_SIZE);
+    if (me->pcb->sockdt[sockfd] == nullptr) {
+        return StrongPtr<UDPSocket>{nullptr};
+    }
+    return me->pcb->sockdt[sockfd];
 }
 
 int socket(int domain, int type, int protocol) {
@@ -110,53 +137,38 @@ int bind(uint32_t sockfd, const struct sockaddr* addr, socklen_t addrlen) {
     if (!address_valid((uint32_t)addr, addrlen)) {
         return -1;
     }
-    auto me = impl::threads::state.current();
-    if (sockfd < (3 * PCB_ARR_SIZE) || sockfd >= (4 * PCB_ARR_SIZE)) {
+    StrongPtr<UDPSocket> socket = getSocket(sockfd);
+    if (socket != nullptr) {
+        return socket->bind((const struct sockaddr_in*)addr);
+    } else {
         return -1;
     }
-    sockfd -= (3 * PCB_ARR_SIZE);
-    if (me->pcb->sockdt[sockfd] == nullptr) {  // Found empty file
-        return -1;
-    }
-
-    StrongPtr<UDPSocket> socket = me->pcb->sockdt[sockfd];
-    return socket->bind((const struct sockaddr_in*)addr);
 }
 
 ssize_t sendto(uint32_t sockfd, const void* buf, size_t len, int flags, const struct sockaddr* dest,
                socklen_t destlen) {
-    if (!address_valid((uint32_t)buf, len) || !address_valid((uint32_t)dest, destlen)) {
+    if ( dest != nullptr && !address_valid((uint32_t)buf, len) || !address_valid((uint32_t)dest, destlen)) {
         return -1;
     }
-    auto me = impl::threads::state.current();
-
-    if (sockfd < (3 * PCB_ARR_SIZE) || sockfd >= (4 * PCB_ARR_SIZE)) {
-        return -1;
+    StrongPtr<UDPSocket> socket = getSocket(sockfd);
+    if (socket != nullptr) {
+        return socket->sendto(buf, len, (const struct sockaddr_in*)dest);
     }
-    sockfd -= (3 * PCB_ARR_SIZE);
-    if (me->pcb->sockdt[sockfd] == nullptr) {  // Found empty file
-        return -1;
-    }
-    StrongPtr<UDPSocket> socket = me->pcb->sockdt[sockfd];
-    return socket->sendto(buf, len, (const struct sockaddr_in*)dest);
+    return -1;
 }
 
 ssize_t recvfrom(uint32_t sockfd, void* buf, size_t len, int flags, struct sockaddr* src,
                  socklen_t* srclen) {
-    if (!address_valid((uint32_t)buf, len) || !address_valid((uint32_t)src, sizeof(sockaddr_in)) ||
+
+    if (src != nullptr && srclen != nullptr && !address_valid((uint32_t)buf, len) || !address_valid((uint32_t)src, sizeof(sockaddr_in)) ||
         !address_valid((uint32_t)srclen, sizeof(uint32_t))) {
         return -1;
     }
-    auto me = impl::threads::state.current();
-    if (sockfd < (3 * PCB_ARR_SIZE) || sockfd >= (4 * PCB_ARR_SIZE)) {
-        return -1;
+    StrongPtr<UDPSocket> socket = getSocket(sockfd);
+    if (socket != nullptr) {
+        return socket->recvfrom(buf, len, (struct sockaddr_in*)src, flags);
     }
-    sockfd -= (3 * PCB_ARR_SIZE);
-    if (me->pcb->sockdt[sockfd] == nullptr) {  // Found empty file
-        return -1;
-    }
-    StrongPtr<UDPSocket> socket = me->pcb->sockdt[sockfd];
-    return socket->recvfrom(buf, len, (struct sockaddr_in*)src, flags);
+    return -1;
 }
 
 int getsockname(uint32_t sockfd, struct sockaddr* addr, socklen_t* addrlen) {
@@ -164,16 +176,34 @@ int getsockname(uint32_t sockfd, struct sockaddr* addr, socklen_t* addrlen) {
         !address_valid((uint32_t)addr, *addrlen)) {
         return -1;
     }
-    auto me = impl::threads::state.current();
-    if (sockfd < (3 * PCB_ARR_SIZE) || sockfd >= (4 * PCB_ARR_SIZE)) {
+    StrongPtr<UDPSocket> socket = getSocket(sockfd);
+    if (socket != nullptr) {
+        return socket->getsockname((struct sockaddr_in*)addr);
+    }
+    return -1;
+}
+
+int connect(uint32_t sockfd, const struct sockaddr* address, socklen_t address_len) {
+    if (!address_valid((uint32_t)address, address_len)) {
         return -1;
     }
-    sockfd -= (3 * PCB_ARR_SIZE);
-    if (me->pcb->sockdt[sockfd] == nullptr) {
+    StrongPtr<UDPSocket> socket = getSocket(sockfd);
+    if (socket != nullptr) {
+        return socket->connect((struct sockaddr_in*)address, address_len);
+    }
+    return -1;
+}
+
+int getpeername(uint32_t sockfd, struct sockaddr* addr, socklen_t* addrlen) {
+    if (!address_valid((uint32_t)addrlen, sizeof(uint32_t)) ||
+        !address_valid((uint32_t)addr, *addrlen)) {
         return -1;
     }
-    StrongPtr<UDPSocket> socket = me->pcb->sockdt[sockfd];
-    return socket->getsockname((struct sockaddr_in*)addr);
+    StrongPtr<UDPSocket> socket = getSocket(sockfd);
+    if (socket != nullptr) {
+        return socket->getpeername((struct sockaddr_in*)addr);
+    }
+    return -1;
 }
 
 }  // namespace sockets

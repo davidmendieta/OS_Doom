@@ -44,6 +44,21 @@ struct sockaddr_in {
     char pad[8];
 };
 
+struct iovec {                    /* Scatter/gather array items */
+    void  *iov_base;              /* Starting address */
+    size_t iov_len;               /* Number of bytes to transfer */
+};
+
+struct msghdr {
+    void         *msg_name;       /* optional address */
+    socklen_t     msg_namelen;    /* size of address */
+    struct iovec *msg_iov;        /* scatter/gather array */
+    size_t        msg_iovlen;     /* # elements in msg_iov */
+    void         *msg_control;    /* ancillary data, see below */
+    size_t        msg_controllen; /* ancillary data buffer len */
+    int           msg_flags;      /* flags on received message */
+};
+
 struct ReceivedPacket {
     void* buffer;
 
@@ -62,7 +77,10 @@ struct ReceivedPacket {
 class UDPSocket {
    private:
     bool isbound = false;
+    bool isConnected = false; 
     sockaddr_in sockaddr_info;
+    sockaddr_in sockaddr_connected;
+
     StrongPtr<BB<ReceivedPacket*>> recieve_queue;
 
    public:
@@ -74,6 +92,8 @@ class UDPSocket {
     virtual ssize_t sendto(const void* buf, size_t len, const sockaddr_in* dst);
     virtual ssize_t recvfrom(void* buf, size_t len, sockaddr_in* src, int flags);
     virtual int getsockname(sockaddr_in* addr);
+    virtual int connect(const sockaddr_in* address, socklen_t address_len);
+    virtual  int getpeername(sockaddr_in* addr);
 };
 
 }  // namespace sockets
