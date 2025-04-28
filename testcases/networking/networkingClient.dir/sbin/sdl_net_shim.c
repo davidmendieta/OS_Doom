@@ -21,46 +21,51 @@ UDPpacket *SDLNet_AllocPacket(int size) {
 }
 
 UDPsocket SDLNet_UDP_Open(uint16_t port) {
-    printf("opening socket");
+    printf("Opening\n");
     _UDPsocket *sock = (malloc(sizeof(_UDPsocket)));
     struct sockaddr_in sock_addr;
     //socklen_t sock_len;
-    printf("opening socket2");
+
     /* Allocate a UDP socket structure */
 
     if (!sock) {
         return 0;
     }
-    printf("opening socket3");
+    printf(" ");
 
-    memset(sock, 0, sizeof(*sock));
-    memset(&sock_addr, 0, sizeof(sock_addr));
+    // memset(sock, 0, sizeof(*sock));
+    // memset(&sock_addr, 0, sizeof(sock_addr));
     sock->ready = 1;
     printf("opening socket4");
+    printf(" ");
     /* Open the socket */
+    
     sock->socketfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock->socketfd == INVALID_SOCKET) {
         free(sock);
         return 0;
     }
     printf("opening socket5");
+    printf(" ");
     /* Bind locally, if appropriate */
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_addr.s_addr = INADDR_ANY;
     sock_addr.sin_port = htons(port);
     /* Bind the socket for listening */
     printf("opening socket6");
+    printf(" ");
     if (bind(sock->socketfd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)) == SOCKET_ERROR) {
         close(sock->socketfd);
         free(sock);
         return 0;
     }
     printf("opening socket7\n");
+    printf(" \n");
     printf("opening socket8\n");
 
     /* Get the bound address and port */
     //sock_len = sizeof(sock_addr);
-    printf("opening socket10\n");
+    //printf("opening socket10\n");
     // if (getsockname(sock->socketfd, (struct sockaddr *)&sock_addr, &sock_len) < 0) {
     //     printf("opening socket9\n");
     //     close(sock->socketfd);
