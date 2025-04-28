@@ -41,7 +41,7 @@ int UDPSocket::bind(const sockaddr_in* addr) {
     if (port_table.contains(port)) {
         return -1;
     }
-    port_table.bind(addr->sin_port, StrongPtr<UDPSocket>{this});
+    port_table.bind(this->sockaddr_info.sin_port, StrongPtr<UDPSocket>{this});
     return 0;
 }
 
