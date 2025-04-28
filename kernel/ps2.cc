@@ -272,9 +272,9 @@ void demo_mode() {
                 kbd_head = next;
             }
             if (caps && is_letter(c)) {
-                Debug::printf("Button Pressed: %c\n", c - 32);
+                Debug::printf("%c\n", c - 32);
             } else {
-                Debug::printf("Button Pressed: %c\n", c);
+                Debug::printf("%c\n", c);
             }
         }
         
