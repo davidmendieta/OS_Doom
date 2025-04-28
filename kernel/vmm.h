@@ -38,4 +38,3 @@ namespace VMM {
     void munmap(void* p_, bool user, uint32_t size);
 
 }
-
