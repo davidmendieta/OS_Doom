@@ -189,7 +189,21 @@ char scancode_to_ascii(uint8_t scancode) {
     }
 }
 
+// ADDED
+static char kbd_buf[16];
+static int  kbd_head = 0;
+static int kbd_tail = 0;
 
+bool keyboard_has_char() {
+    return kbd_head != kbd_tail;
+}
+
+char keyboard_get_char() {
+    // caller must ensure has_char()==true
+    char c = kbd_buf[kbd_tail];
+    kbd_tail = (kbd_tail + 1) & (sizeof(kbd_buf)-1);
+    return c;
+}
 
 uint8_t mouse_cycle = 0;
 uint8_t mouse_bytes[3];
@@ -225,6 +239,8 @@ bool is_letter (char c) {
     return (c >= 97) && (c <= 122);
 }
 
+
+
 void demo_mode() {
     uint8_t scancode = inb(0x60);
     if (scancode == 0xF0) {
@@ -235,10 +251,12 @@ void demo_mode() {
             caps = !caps;
         }
         if (c != '_') {
-            if (caps && is_letter(c)) {
-                Debug::printf("%c", c - 32);
-            } else {
-                Debug::printf("%c", c);
+           // enqueue into our keyboard buffer:
+           // ADDED
+            int next = (kbd_head + 1) & (sizeof(kbd_buf)-1);
+            if (next != kbd_tail) {
+                kbd_buf[kbd_head] = (caps && is_letter(c)) ? c-32 : c;
+                kbd_head = next;
             }
         }
         new_code = false;
@@ -272,9 +290,6 @@ extern "C" void keyboard_handler() {
     } else {
         debug_mode();
     }
-
-    
-
 }
 
 
@@ -331,39 +346,32 @@ extern "C" void mouse_handler() {
         //     (mouse_bytes[2] & 0x04), (mouse_bytes[2] & 0x02), rawX, rawY, y, mouse_x_pos, mouse_y_pos);
 
                        
-// Extract button states from byte 0 (not byte 2!)
-uint8_t buttons = mouse_bytes[2] & 0x07;  // First 3 bits are button states
+        // Extract button states from byte 0 (not byte 2!)
+        uint8_t buttons = mouse_bytes[2] & 0x07;  // First 3 bits are button states
 
 
-// Extract X and Y movement
-int16_t x_delta = mouse_bytes[1];
-int16_t y_delta = mouse_bytes[0];
+        // Extract X and Y movement
+        int16_t x_delta = mouse_bytes[1];
+        int16_t y_delta = mouse_bytes[0];
 
 
-// Handle sign extension for negative movement
-if (mouse_bytes[2] & 0x10) {
-   x_delta |= 0xFF00;  // X sign bit is set, extend to 16 bits
-}
+        // Handle sign extension for negative movement
+        if (mouse_bytes[2] & 0x10) {
+        x_delta |= 0xFF00;  // X sign bit is set, extend to 16 bits
+        }
 
 
-if (mouse_bytes[2] & 0x20) {
-   y_delta |= 0xFF00;  // Y sign bit is set, extend to 16 bits
-}
+        if (mouse_bytes[2] & 0x20) {
+        y_delta |= 0xFF00;  // Y sign bit is set, extend to 16 bits
+        }
 
 
-// Y is inverted in PS/2, so negate it
-y_delta = -y_delta;
+        // Y is inverted in PS/2, so negate it
+        y_delta = -y_delta;
 
 
-// Call the mouseHandler to translate PS/2 data to SDL events
-mouseHandler(buttons, x_delta, y_delta);
-
-
-
-
-
-
-
+        // Call the mouseHandler to translate PS/2 data to SDL events
+        mouseHandler(buttons, x_delta, y_delta);
 
     }
 

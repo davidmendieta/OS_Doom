@@ -3,6 +3,9 @@
 #include "buffer_cache.h"
 #include "ide.h"
 #include "shared.h"
+#include "ps2.h"
+#include "loop.h"
+
 
 struct SuperBlock {
     uint32_t inodes_count;
@@ -192,12 +195,13 @@ class STDIO : public Node {
         return;
     };
 
-    int64_t read(uint32_t offset, uint32_t n, char* buffer) override {
-        return 0;
-    };
+    // int64_t read(uint32_t offset, uint32_t n, char* buffer) override {
+    //     return 0;
+    // };
 
+    // ADDED
     int64_t read_all(uint32_t offset, uint32_t n, char* buffer) override {
-        return 0;
+       return read(offset, n, buffer);
     };
 
     uint32_t size_in_bytes() override { 
@@ -206,9 +210,18 @@ class STDIO : public Node {
 
 };
 
+// ADDED
 class STDIN : public STDIO {
     public:
     STDIN(): STDIO(){};
+    int64_t read(uint32_t offset, uint32_t n, char* buffer) override {
+        while (!PS2::keyboard_has_char()) {
+            iAmStuckInALoop(false);
+        }
+        char recieved = PS2::keyboard_get_char(); 
+        memcpy(buffer, &recieved, n);
+        return n; 
+    };
 };
 
 class STDOUT : public STDIO {
