@@ -231,7 +231,12 @@ actaully holds “(100,100)” itself, only those raw delta bytes.
 use "mouse_button 0-7" to simulate left, middle, right mouse presses
 */
 
+
+// change to false for debug mode!!
+// must be true for hangman testcase to work properly
 bool DEMO = true;
+
+
 bool new_code = true;
 bool caps = false;
 char letter = '\0';
@@ -273,7 +278,7 @@ void demo_mode() {
         
         release_initiated = false;
     }
-    keyboardHandler(scancode);
+    
 
 }
 
@@ -287,9 +292,9 @@ void debug_mode() {
         Debug::printf("KEY PRESS: %c\n", scancode_to_ascii(scancode));
         new_code = false;
     }
-    
     // Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
     Debug::printf("Scancode: 0x%x\n", scancode);
+    keyboardHandler(scancode);
     //mouse_cycle = 0;
 }
 
