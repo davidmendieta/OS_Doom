@@ -33,34 +33,35 @@ UDPsocket SDLNet_UDP_Open(uint16_t port) {
     }
     printf(" ");
 
-    memset(sock, 0, sizeof(*sock));
-    memset(&sock_addr, 0, sizeof(sock_addr));
+    // memset(sock, 0, sizeof(*sock));
+    // memset(&sock_addr, 0, sizeof(sock_addr));
     sock->ready = 1;
-    //printf("opening socket4");
+    printf("opening socket4");
     printf(" ");
     /* Open the socket */
+    
     sock->socketfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock->socketfd == INVALID_SOCKET) {
         free(sock);
         return 0;
     }
-    //printf("opening socket5");
+    printf("opening socket5");
     printf(" ");
     /* Bind locally, if appropriate */
     sock_addr.sin_family = AF_INET;
     sock_addr.sin_addr.s_addr = INADDR_ANY;
     sock_addr.sin_port = htons(port);
     /* Bind the socket for listening */
-    //printf("opening socket6");
+    printf("opening socket6");
     printf(" ");
     if (bind(sock->socketfd, (struct sockaddr *)&sock_addr, sizeof(sock_addr)) == SOCKET_ERROR) {
         close(sock->socketfd);
         free(sock);
         return 0;
     }
-    // printf("opening socket7\n");
+    printf("opening socket7\n");
     printf(" \n");
-    // printf("opening socket8\n");
+    printf("opening socket8\n");
 
     /* Get the bound address and port */
     //sock_len = sizeof(sock_addr);
