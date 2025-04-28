@@ -1,0 +1,6 @@
+*** Starting mmap test
+*** File size: 23 bytes
+*** naive_mmap succeeded at address: 0xf0000000
+*** Content from naive_mmap: added va f0000000
+*** you can read files
+*** mmap test completed successfully
