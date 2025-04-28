@@ -147,7 +147,7 @@ int bind(uint32_t sockfd, const struct sockaddr* addr, socklen_t addrlen) {
 
 ssize_t sendto(uint32_t sockfd, const void* buf, size_t len, int flags, const struct sockaddr* dest,
                socklen_t destlen) {
-    if ( dest != nullptr && !address_valid((uint32_t)buf, len) || !address_valid((uint32_t)dest, destlen)) {
+    if ( (dest != nullptr) && (!address_valid((uint32_t)buf, len) || !address_valid((uint32_t)dest, destlen))) {
         return -1;
     }
     StrongPtr<UDPSocket> socket = getSocket(sockfd);
@@ -160,8 +160,8 @@ ssize_t sendto(uint32_t sockfd, const void* buf, size_t len, int flags, const st
 ssize_t recvfrom(uint32_t sockfd, void* buf, size_t len, int flags, struct sockaddr* src,
                  socklen_t* srclen) {
 
-    if (src != nullptr && srclen != nullptr && !address_valid((uint32_t)buf, len) || !address_valid((uint32_t)src, sizeof(sockaddr_in)) ||
-        !address_valid((uint32_t)srclen, sizeof(uint32_t))) {
+    if ((src != nullptr) && (srclen != nullptr) && (!address_valid((uint32_t)buf, len) || !address_valid((uint32_t)src, sizeof(sockaddr_in)) ||
+        !address_valid((uint32_t)srclen, sizeof(uint32_t)))) {
         return -1;
     }
     StrongPtr<UDPSocket> socket = getSocket(sockfd);
