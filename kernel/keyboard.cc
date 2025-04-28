@@ -3,21 +3,70 @@
 #include "machine.h"
 #include "keyboard.h"
 #include "ps2.h"
+#include "sdl_keycodes.h"
+#include "sys.h"
+#include "pit.h"
+#include "ext2.h"
+
+#include "libc.h"
+
+#include "kernel.h"
+
 //#include "d_event.h"
 //#include "doomkeys.h"
-
-
-
 
 #define SDL_KEYDOWN 0x300
 #define SDL_KEYUP   0x301
 
 
+RingBuffer<uint8_t> event_buffer(100); 
 
 
-uint8_t buffer[3]; // buffer for keyboard input
+uint8_t buffer[3]; // buffer for keyboard input print testing
 
 
+char input_buffer[100];
+
+// to be called in read() syscall to handler sdl events
+// would read from the SDL event file descriptor
+bool ready_to_read(uint8_t* event){
+    if (event_buffer.isEmpty()) {
+        return false;
+    }
+    *event = event_buffer.peek();
+    return true;
+}
+
+
+void write_key_to_dev(uint8_t scancode, bool is_release) {
+    if (is_release) return;
+    
+    char ascii_val = PS2::scancode_to_ascii(scancode);
+
+    char kernel_file_name[] = "/dev/keyboard.txt";
+    auto node = fs->find(fs->root, kernel_file_name);
+
+    if (node == nullptr) {
+        node = fs->create_inode(fs->root, kernel_file_name, 0x81A4);
+        if (node == nullptr) {
+            Debug::printf("failed to create keyboard.txt file\n");
+            return;
+        }
+    }
+
+    StrongPtr<OpenFile> file = StrongPtr<OpenFile>::make(node);
+    file->offset = node->size_in_bytes();
+    
+    uint32_t written = node->write_all(file->offset, 1, &ascii_val);
+
+    if (written == 0) {
+        Debug::printf("Write failed\n");
+    } else {
+            node->data.size_low = file->offset + 1;
+            fs->buffer_cache->write_all(node->get_offset(), sizeof(NodeData), (char*)&node->data);
+            Debug::printf("--Wrote char: %c to file\n", ascii_val);
+    }
+}
 
 
 // Converts SDL scancode to string representation for debugging purposes
@@ -99,9 +148,6 @@ const char* sdlScancodeToString(SDL_Scancode scancode) {
     }
 }
 
-
-
-
 void keyboardHandler(uint8_t scancode) {
    
     for(uint32_t i=0; i< 3; i++){
@@ -126,12 +172,7 @@ void keyboardHandler(uint8_t scancode) {
     bool is_release = scancode & 0x80;
     uint8_t keycode = scancode & 0x7F;
 
-
-
-
     static bool is_break = false;
-
-
 
 
     SDL_Scancode sdl_scancode;
@@ -192,9 +233,6 @@ void keyboardHandler(uint8_t scancode) {
         // apostrophe
         // grave
 
-
-
-
         case 0x41: sdl_scancode = SDL_SCANCODE_COMMA; break; // comma
         case 0x49: sdl_scancode = SDL_SCANCODE_PERIOD; break; // period
         // slash
@@ -211,21 +249,15 @@ void keyboardHandler(uint8_t scancode) {
     }
 
 
-
-
     // determine the ascii value
     char ascii_val = PS2::scancode_to_ascii(scancode);
     int sym = (int) ascii_val;
-
-
 
 
     // determine modifier keys
     uint16_t mod = 0;
     if (keycode == 0x2A || keycode == 0x36) mod |= 1; // shift
     if (keycode == 0x1D) mod |= 2; // ctrl
-
-
 
 
     // create the event with all fields
@@ -237,13 +269,14 @@ void keyboardHandler(uint8_t scancode) {
             sym,                                // sym
             mod,                                // mod
         }
-    };
+    };    
+    event.timestamp = Pit::jiffies; 
+    (void) event; // silence
+    event_buffer.enqueue(scancode); // add to buffer to be used by poll()
 
 
-    event = event;
+    bool second = false;
 
-
-     bool second = false;
 
 
     if(buffer[0] == buffer[1] && buffer[2] == 0xF0){
@@ -259,34 +292,24 @@ void keyboardHandler(uint8_t scancode) {
     }
     if(!second){
     if(!is_break){
-
-
-            Debug::printf("Key [%s]: scancode=%x, ascii=%c, sdl_code=%s\n",
-                "pressed",
-                scancode,
-                (sym > 0 && sym < 128) ? sym : '?', sdlScancodeToString(sdl_scancode));    
-   
+        write_key_to_dev(scancode, is_release);
+    // Debug::printf("Key [%s]: scancode=%x, ascii=%c, sdl_code=%s\n",
+    //             "pressed",
+    //             scancode,
+    //             (sym > 0 && sym < 128) ? sym : '?', sdlScancodeToString(sdl_scancode));    
     } else {
-        Debug::printf("Key [%s]: scancode=%x%x, ascii=%c, sdl_code=%s\n",
-            "released",
-            scancode,buffer[1],
-            (sym > 0 && sym < 128) ? sym : '?', sdlScancodeToString(sdl_scancode));    
+        // Debug::printf("Key [%s]: scancode=%x%x, ascii=%c, sdl_code=%s\n",
+        //     "released",
+        //     scancode,buffer[1],
+        //     (sym > 0 && sym < 128) ? sym : '?', sdlScancodeToString(sdl_scancode));    
     }
 }
 
 
-
-
-
-
-
-
-
+    // THIS WAS OLD VERSTION DIRECTLY CALLING POST EVENT IN DOOM
+    // NOW USING THE POLL SYSCALL TO SDLPOLL EVENTS
 
     // int doom_key = get_doom_key(sym);
-
-
-
 
     // // convert sdl to event_t for doom
     // event_t doom_event;
@@ -294,14 +317,8 @@ void keyboardHandler(uint8_t scancode) {
     // doom_event.data1 = doom_key;
     // doom_event.data2 = sym;
 
-
-
-
     // D_PostEvent(&doom_event);   // pass the event to Doom
 }
-
-
-
 
 // int get_doom_key(int sym){
 //     if (sym >= 'a' && sym <= 'z') {
@@ -331,11 +348,13 @@ void keyboardHandler(uint8_t scancode) {
 //         case '/': return '/';
 //     }
 
-
-
-
 //     return 0;  // Unknown key
 // }
+
+
+
+
+
 
 
 

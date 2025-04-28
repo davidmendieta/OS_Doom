@@ -95,8 +95,8 @@ void Ide::read_block(uint32_t sector, char* buffer) {
     }
 }
 
-/*
-void Ide::writeSector(uint32_t sector, const void* buffer) {
+
+void Ide::write_block(uint32_t sector, const char* buffer) {
     LockGuard g{lock};
     const uint32_t* ptr = (const uint32_t*) buffer;
 
@@ -119,42 +119,41 @@ void Ide::writeSector(uint32_t sector, const void* buffer) {
         pause();
     }
 
-    for (uint32_t i=0; i<SectorSize/sizeof(uint32_t); i++) {
+    for (uint32_t i=0; i<512/sizeof(uint32_t); i++) {
         outl(base,ptr[i]);
     }
 
     waitForDrive(drive);
 
-    //outb(base + 7, 0xE7); // flush buffers
+    outb(base + 7, 0xE7); // flush buffers
 
-    //waitForDrive(drive);
+    waitForDrive(drive);
 
 }
-*/
 
-/*
 
-int32_t Ide::write(uint32_t offset, const void* buffer, uint32_t n) {
-    uint32_t sector = offset / SectorSize;
-    uint32_t start = offset % SectorSize;
+
+int32_t Ide::write(uint32_t offset, const char* buffer, uint32_t n) {
+    uint32_t sector = offset / 512;
+    uint32_t start = offset % 512;
 
     uint32_t end = start + n;
-    if (end > SectorSize) end = SectorSize;
+    if (end > 512) end = 512;
 
     uint32_t count = end - start;
     
-    if (count == SectorSize) {
+    if (count == 512) {
         // whole sector
-        writeSector(sector,buffer);
+        write_block(sector,buffer);
     } else if (count != 0) {
-        char data[SectorSize];
-        readSector(sector,data);
+        char data[512];
+        read_block(sector,data);
         memcpy(&data[start],buffer,count);
-        writeSector(sector,data);
+        read_block(sector,data);
     }
     return count;
 }
-*/
+
 
 
 void ideStats(void) {

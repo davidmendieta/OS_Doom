@@ -36,12 +36,14 @@ public:
 
     // Read a block and put its bytes in the given buffer
     virtual void read_block(uint32_t block_number, char* buffer) = 0;
-
+    virtual void write_block(uint32_t block_number, const char* buffer) = 0;
     // Read up to "n" bytes starting at "offset" and put the restuls in "buffer".
     // returns:
     //   > 0  actual number of bytes read
     //   = 0  end (offset == size_in_bytes)
     //   -1   error (offset > size_in_bytes)
+    virtual int64_t write(uint32_t offset, uint32_t n, char* buffer) ;
+    virtual int64_t write_all(uint32_t offset, uint32_t n, char* buffer);
     virtual int64_t read(uint32_t offset, uint32_t n, char* buffer);
 
     // Read min(n,size_in_bytes - offset) bytes starting at "offset" and
@@ -59,11 +61,9 @@ public:
         ASSERT(cnt == sizeof(T));
     }
 
-    virtual int64_t write(uint32_t offset, int32_t n, char* buffer){
-        // exit(-1);
-        return -1;
-    };
+    
 };
+
 
 
 #endif

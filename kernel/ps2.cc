@@ -234,6 +234,8 @@ use "mouse_button 0-7" to simulate left, middle, right mouse presses
 bool DEMO = true;
 bool new_code = true;
 bool caps = false;
+char letter = '\0';
+bool release_initiated;
 
 bool is_letter (char c) {
     return (c >= 97) && (c <= 122);
@@ -243,24 +245,36 @@ bool is_letter (char c) {
 
 void demo_mode() {
     uint8_t scancode = inb(0x60);
+    // Debug::printf("scancode: %x\n", scancode);
     if (scancode == 0xF0) {
-        new_code = true;
-    } else if (new_code) {
-        char c = scancode_to_ascii(scancode);
+        release_initiated = true;
+
+    } else {
         if (scancode == 0x58) {
             caps = !caps;
         }
-        if (c != '_') {
-           // enqueue into our keyboard buffer:
-           // ADDED
+
+        letter = scancode_to_ascii(scancode);
+    }
+    if (release_initiated) {
+        if (letter != '_') {
+            char c = letter;
             int next = (kbd_head + 1) & (sizeof(kbd_buf)-1);
             if (next != kbd_tail) {
                 kbd_buf[kbd_head] = (caps && is_letter(c)) ? c-32 : c;
                 kbd_head = next;
             }
+            if (caps && is_letter(c)) {
+                Debug::printf("Button Pressed: %c\n", c - 32);
+            } else {
+                Debug::printf("Button Pressed: %c\n", c);
+            }
         }
-        new_code = false;
+        
+        release_initiated = false;
     }
+    keyboardHandler(scancode);
+
 }
 
 void debug_mode() {
@@ -273,6 +287,7 @@ void debug_mode() {
         Debug::printf("KEY PRESS: %c\n", scancode_to_ascii(scancode));
         new_code = false;
     }
+    
     // Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
     Debug::printf("Scancode: 0x%x\n", scancode);
     //mouse_cycle = 0;
@@ -284,12 +299,14 @@ extern "C" void keyboard_handler() {
     SMP::eoi();
     // reset Lapic_eoi
     *((volatile uint32_t*)0xFEE000B0) = 0;
-
     if (DEMO) {
         demo_mode();
     } else {
         debug_mode();
     }
+
+    
+
 }
 
 
@@ -342,9 +359,9 @@ extern "C" void mouse_handler() {
         //uint16_t y = origin ? 256 : (uint8_t)(256 - rawY);
 
         // Print raw values directly (0-255), so you see 156 for -100
-        // Debug::printf("left: %d, middle: %d, right: %d, x: %u, y (raw): %u, y (disp): %u, abs x: %u, abs y: %u\n", (mouse_bytes[2] & 0x01), 
-        //     (mouse_bytes[2] & 0x04), (mouse_bytes[2] & 0x02), rawX, rawY, y, mouse_x_pos, mouse_y_pos);
-
+        if (DEMO) Debug::printf("left: %d, middle: %d, right: %d, x (raw): %u, y (raw): %u, x (disp): %u, y (disp): %u, abs x: %u, abs y: %u\n",
+            (mouse_bytes[2] & 0x01), (mouse_bytes[2] & 0x04), (mouse_bytes[2] & 0x02), 
+            rawX, rawY, displace_x, displace_y, mouse_x_pos, mouse_y_pos);
                        
         // Extract button states from byte 0 (not byte 2!)
         uint8_t buttons = mouse_bytes[2] & 0x07;  // First 3 bits are button states
@@ -370,8 +387,15 @@ extern "C" void mouse_handler() {
         y_delta = -y_delta;
 
 
-        // Call the mouseHandler to translate PS/2 data to SDL events
-        mouseHandler(buttons, x_delta, y_delta);
+// Call the mouseHandler to translate PS/2 data to SDL events
+mouseHandler(buttons, x_delta, y_delta);
+
+
+
+
+
+
+
 
     }
 
