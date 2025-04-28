@@ -1,4 +1,9 @@
+//Source: https://github.com/SDL-mirror/SDL_net/blob/master/SDLnetUDP.c 
+
+
 #include "sdl_net_shim.h"
+
+
 
 UDPpacket *SDLNet_AllocPacket(int size) {
     UDPpacket *packet;
@@ -87,8 +92,6 @@ void SDLNet_FreePacket(UDPpacket *packet) {
 }
 
 int SDLNet_UDP_RecvV(UDPsocket sockptr, UDPpacket **packets) {
-    //int numrecv, i, j;
-    //struct UDP_channel *binding;
     socklen_t sock_len;
     struct sockaddr_in sock_addr;
     _UDPsocket* sock = (_UDPsocket*) sockptr;
@@ -124,7 +127,6 @@ int SDLNet_UDP_RecvV(UDPsocket sockptr, UDPpacket **packets) {
 
 int SDLNet_UDP_Recv(UDPsocket sock, UDPpacket *packet) {
     UDPpacket *packets[2];
-    /* Receive a packet array of 1 */
     packets[0] = packet;
     packets[1] = 0;
     return (SDLNet_UDP_RecvV(sock, packets));
