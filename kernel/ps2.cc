@@ -241,6 +241,7 @@ bool new_code = true;
 bool caps = false;
 char letter = '\0';
 bool release_initiated;
+uint8_t last_scancode;
 
 bool is_letter (char c) {
     return (c >= 97) && (c <= 122);
@@ -255,13 +256,14 @@ void demo_mode() {
         release_initiated = true;
 
     } else {
-        if (scancode == 0x58) {
-            caps = !caps;
-        }
-
+        
         letter = scancode_to_ascii(scancode);
+        last_scancode = scancode;
     }
     if (release_initiated) {
+        if (last_scancode == 0x58) {
+            caps = !caps;
+        }
         if (letter != '_') {
             char c = letter;
             int next = (kbd_head + 1) & (sizeof(kbd_buf)-1);
@@ -279,7 +281,6 @@ void demo_mode() {
         release_initiated = false;
     }
     
-
 }
 
 void debug_mode() {
