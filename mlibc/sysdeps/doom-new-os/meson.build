@@ -37,10 +37,10 @@ libc_sources += files(
 # endif
 
 libc_sources += files(
-	'internal-sysdeps.cpp'
+	'internal-sysdeps.cpp',
 	'syscalls-new.cpp' # only add cpp file to libc_source
 )
-#libc_sources += files('generic/syscalls.cpp')
+#libc_sources += files('generic/sysdeps.cpp')
 
 
 # Install ABI headers
