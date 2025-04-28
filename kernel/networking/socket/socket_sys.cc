@@ -138,6 +138,7 @@ int bind(uint32_t sockfd, const struct sockaddr* addr, socklen_t addrlen) {
     }
     StrongPtr<UDPSocket> socket = getSocket(sockfd);
     if (socket != nullptr) {
+        Debug::printf("binding\n");
         return socket->bind((const struct sockaddr_in*)addr);
     } else {
         return -1;

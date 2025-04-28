@@ -30,6 +30,7 @@ class PortTable {
     ~PortTable() {}
 
     bool bind(uint16_t port_num, StrongPtr<UDPSocket> socket) {
+        Debug::printf("binding %d\n", port_num);
         if (port_num == 0) {
             return false;
         }
