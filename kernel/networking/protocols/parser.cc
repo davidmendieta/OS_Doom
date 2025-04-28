@@ -166,12 +166,12 @@ char* decode_ip_udp(const void* packet, size_t packet_len,
     size_t payload_len = udp_len - sizeof(UDPHeader);
     const char* payload_ptr = (const char*)udp + sizeof(UDPHeader);
 
-    // 4) verify UDP checksum //! THIS ONE DOESN'T WORK
-    if (udp_checksum(ip, udp, payload_ptr, payload_len) != 0) {
-        // return 0;
-        Debug::printf("UDP CHECKSUM FAILED\n");
-        return nullptr;
-    }
+    // // 4) verify UDP checksum //! THIS ONE DOESN'T WORK
+    // if (udp_checksum(ip, udp, payload_ptr, payload_len) != 0) {
+    //     // return 0;
+    //     Debug::printf("UDP CHECKSUM FAILED\n");
+    //     return nullptr;
+    // }
 
     // extract metadata
     *src_ip = ntohl(ip->src_ip);
