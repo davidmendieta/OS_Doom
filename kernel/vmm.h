@@ -29,7 +29,7 @@ namespace VMM {
     // naive mmap
     extern void* naive_mmap(uint32_t size, bool shared, StrongPtr<Node> file, uint32_t file_offset, bool user);
     extern void* naive_mmap_location(uint32_t size, bool shared, StrongPtr<Node> file, uint32_t file_offset, bool user, uint32_t location);
-    extern void* mmap(uint32_t loaction, uint32_t size, uint32_t permissions, uint32_t flags, uint32_t fdt, uint32_t offset);
+    void* mmap1(uint32_t* location, uint32_t size, uint32_t permissions, uint32_t flags, StrongPtr<Node> file, uint32_t offset);
 
     // naive munmap
     void naive_munmap(void* p, bool user);
@@ -38,4 +38,3 @@ namespace VMM {
     void munmap(void* p_, bool user, uint32_t size);
 
 }
-
