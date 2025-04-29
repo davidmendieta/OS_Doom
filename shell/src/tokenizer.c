@@ -240,7 +240,6 @@ void tokenizer_assign_args(queue_t* stream, queue_t* src) {
 queue_t* tokenizer_tokenstream(const char* input) {
     /**
      * todo handle = as assignment or literal
-     * todo handle int parsing
      */
 
     queue_t stream_;
@@ -488,4 +487,15 @@ node_t* tokenize(const char* input) {
     node_t* ast = tokenizer_ast(stream);
     free_queue(stream);
     return ast;
+}
+
+void tokenize_debug(const char* input) {
+    if (*input == 0) return;
+
+    queue_t* stream = tokenizer_tokenstream(input);
+    if (stream == NULL) {
+        return;
+    }
+    tokenizer_debug(stream);
+    free_queue(stream);
 }

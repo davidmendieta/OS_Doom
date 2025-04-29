@@ -70,9 +70,7 @@ void get_input_line(char* buffer) {
 }
 
 void clear_buffer(char* buffer) {
-    for(int i = 0; i < 4096; i++) {
-        buffer[i] = 0;
-    }
+    memset(buffer, 0, 4096);
 }
 
 #endif
@@ -149,6 +147,9 @@ void handle_built_in(enum CMD_CODES id, Tokenized tokens) {
         case CMD_GET_NUT_FACT:
             nut_fact();
             break;
+        case CMD_DEBUG:
+            tokenize_debug(tokens.argv.next->val);
+            break;
         default:
             error("how did you get here??\n");
     }
@@ -159,6 +160,21 @@ void handle_fork(const char* path, node_t* node) {
     if (id < 0) {
         error("can't fork\n");
     } else if (id == 0) {
+        if (node->fin) { // no dup2 but praise gheith
+            close(0);
+            open(node->fin, 0);
+        }
+
+        if (node->fout) {
+            close(1);
+            open(node->fout, 0);
+        }
+
+        if (node->ferr) {
+            close(2);
+            open(node->ferr, 0);
+        }
+
         int argc = node->tokens.argc;
         char** argv = malloc(sizeof(void*) * argc);
         argument_t* arg = &node->tokens.argv;
@@ -236,9 +252,11 @@ void process_start(node_t *node) {
         } else {
             printf("couldn't execute file %s\n", node->tokens.argv.val);
         } 
+        close(fd);
+        return;
     }
-    close(fd);
-    // tokens_free(&node->tokens);
+
+    printf("pistash: command not found %s\n", node->tokens.argv.val);
 }
 
 void inorder_process(node_t* node) {
@@ -253,6 +271,9 @@ void inorder_process(node_t* node) {
         bool eval_right = (rc == 0 && node->type == NODE_AND) || (rc != 0 && node->type == NODE_OR);
         if (eval_right) {
             inorder_process(node->right);
+            node->exit_status = node->right->exit_status; // only in here because we care about right
+        } else {
+            node->exit_status = node->type == NODE_AND ? 1 : 0;
         }
     }
 }

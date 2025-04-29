@@ -23,7 +23,8 @@ enum CMD_CODES {
     CMD_GET,        // get command for shell variables
     CMD_EXTERNAL,   // external command
     CMD_PRINT_NUT,  // print nut
-    CMD_GET_NUT_FACT // print nut fact
+    CMD_GET_NUT_FACT, // print nut fact
+    CMD_DEBUG
 };
 
 Command commands[] = {
@@ -41,6 +42,7 @@ Command commands[] = {
     {"get", CMD_GET},
     {"logo", CMD_PRINT_NUT},
     {"nut_fact", CMD_GET_NUT_FACT},
+    {"debug", CMD_DEBUG},
     {NULL, CMD_EXTERNAL}  // default
 };
 

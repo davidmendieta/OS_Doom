@@ -1,15 +1,9 @@
-#define MAX_ARG_LEN 100
+#pragma once
 #include "libc.h"
-#include <stdbool.h>
+#include "queue.h"
+#include "hashmap.h"
 
-typedef struct Tokenized {
-    char** argv;
-    int argc;
-} Tokenized;
-
-bool is_newline(char c);
-bool is_path(char c);
-
-void tokens_init(Tokenized* tokens, const char* input);
-void tokens_free(Tokenized* tokens);
-void tokenize(Tokenized* tokens, const char* input);
+node_t* tokenize(const char*);
+void tokenizer_free(node_t*);
+void tokenize_debug(const char*);
+extern struct Hashmap environment_variables;

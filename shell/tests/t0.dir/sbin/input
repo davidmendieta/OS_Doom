@@ -1,6 +1,0 @@
-ls
-exec 1 2 3 4 5
-cd sbin/temptemp
-cd ..
-HelloWorld
-exit

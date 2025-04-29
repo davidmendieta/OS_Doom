@@ -2,6 +2,8 @@
 #define _LIBC_H_
 
 #include "sys.h"
+#include <stddef.h>
+#include <stdbool.h>
 
 #define MISSING() do { \
     putstr("\n*** missing code at"); \
@@ -28,6 +30,9 @@ extern int streq(const char*, const char*);
 extern int strlen(const char*);
 extern char* strcat(char*, const char*);
 extern char* strcpy(char*, const char*);
+extern int strncmp(const char*, const char*, size_t);
+extern char* strchr(const char*, int);
+extern int my_atoi(const char* str);
 
 
 #endif
