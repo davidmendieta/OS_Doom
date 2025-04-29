@@ -2,6 +2,9 @@
 #include "pci.h"
 #include "machine.h"
 #include "threads.h"
+#include "sys.h"
+#include "ext2.h"
+#include "kernel.h"
 
 #define COLOR_BLACK 0x0
 #define COLOR_GREEN 0x2
@@ -43,13 +46,31 @@ void vga_plot_pixel(int x, int y, unsigned short color) {
 }
 
 void vga_display_image(const unsigned char* image, size_t width, size_t height) {
-    write_regs(g_320x200x256);
     for (size_t y = 0; y < height && y < 200; y++) {
         for (size_t x = 0; x < width && x < 320; x++) {
             vga_plot_pixel(x, y, image[y * width + x]);
         }
     }
 }
+
+
+void vga_display_file(const char* filename) {
+    // // auto me = impl::threads::state.current();
+    // // if(me->pcb->cwd == nullptr) me->pcb->cwd = fs->root;
+
+    // // only read up to the buffer size
+    // const size_t bufsize = 320 * 200;
+    // static unsigned char buffer[320 * 200];
+
+    // // read the file into the buffer
+    // uint32_t bytes_read = open_file->node->read_all(open_file->offset, bufsize, (char*)buffer);
+
+    // open_file->offset += bytes_read;
+
+    // // display the image
+    // vga_display_image(buffer, 320, 200);
+}
+
 
 void draw_rectangle(int x, int y, int width, int height, unsigned short color) {
     for (int i = 0; i < width; i++) {
@@ -183,7 +204,7 @@ void write_regs(const unsigned char* regs) {
         outb(VGA_AC_WRITE, *regs++);
     }
 
-    // lock 16-color palette and unblank display
+    // lock color palette and unblank display
     inb(VGA_INSTAT_READ);
     outb(VGA_AC_INDEX, 0x20);
 }
@@ -195,7 +216,106 @@ static void short_delay() {
     }
 }
 
+// draws "GRAPHICS TEAM" in block letters at (x, y)
+void draw_team_banner(int x, int y) {
+    int w = 18; // letter width
+    int h = 30; // letter height
+    int t = 4;  // thickness
+    int s = 4;  // space between letters
+    int ws = 12; // space between words
+    int color = COLOR_PURPLE;
+    int cx = x;
+
+    // G
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx, y, t, h, color); // left
+    draw_rectangle(cx, y + h - t, w, t, color); // bottom
+    draw_rectangle(cx + w - t, y + h/2, t, h/2, color); // lower right
+    draw_rectangle(cx + w/2, y + h/2 - t/2, w/2, t, color); // middle right
+    cx += w + s;
+
+    // R
+    draw_rectangle(cx, y, t, h, color); // left
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx + w - t, y, t, h/2, color); // upper right
+    draw_rectangle(cx, y + h/2 - t/2, w, t, color); // middle
+    for (int i = 0; i < h/2; ++i) // diagonal leg
+        draw_rectangle(cx + i * (w-t)/(h/2), y + h/2 + i, t, 1, color);
+    cx += w + s;
+
+    // A
+    draw_rectangle(cx, y, t, h, color); // left
+    draw_rectangle(cx + w - t, y, t, h, color); // right
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx, y + h/2 - t/2, w, t, color); // middle
+    cx += w + s;
+
+    // P
+    draw_rectangle(cx, y, t, h, color); // left
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx + w - t, y, t, h/2, color); // right
+    draw_rectangle(cx, y + h/2 - t/2, w, t, color); // middle
+    cx += w + s;
+
+    // H
+    draw_rectangle(cx, y, t, h, color); // left
+    draw_rectangle(cx + w - t, y, t, h, color); // right
+    draw_rectangle(cx, y + h/2 - t/2, w, t, color); // middle
+    cx += w + s;
+
+    // I
+    draw_rectangle(cx + (w-t)/2, y, t, h, color); // vertical
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx, y + h - t, w, t, color); // bottom
+    cx += w + s;
+
+    // C
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx, y, t, h, color); // left
+    draw_rectangle(cx, y + h - t, w, t, color); // bottom
+    draw_rectangle(cx + w - t, y, t, t*2, color); // top right stub
+    draw_rectangle(cx + w - t, y + h - t*2, t, t*2, color); // bottom right stub
+    cx += w + s;
+
+    // S
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx, y, t, h/2, color); // upper left
+    draw_rectangle(cx, y + h/2 - t/2, w, t, color); // middle
+    draw_rectangle(cx + w - t, y + h/2, t, h/2, color); // lower right
+    draw_rectangle(cx, y + h - t, w, t, color); // bottom
+    cx += w + ws; // extra space for word separation
+
+    // T
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx + (w-t)/2, y, t, h, color); // vertical
+    cx += w + s;
+
+    // E
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx, y, t, h, color); // left
+    draw_rectangle(cx, y + h/2 - t/2, w, t, color); // middle
+    draw_rectangle(cx, y + h - t, w, t, color); // bottom
+    cx += w + s;
+
+    // A
+    draw_rectangle(cx, y, t, h, color); // left
+    draw_rectangle(cx + w - t, y, t, h, color); // right
+    draw_rectangle(cx, y, w, t, color); // top
+    draw_rectangle(cx, y + h/2 - t/2, w, t, color); // middle
+    cx += w + s;
+
+    // M
+    draw_rectangle(cx, y, t, h, color); // left
+    draw_rectangle(cx + w - t, y, t, h, color); // right
+    for (int i = 0; i < w/2; ++i) // left diagonal
+        draw_rectangle(cx + i, y + i, t, 1, color);
+    for (int i = 0; i < w/2; ++i) // right diagonal
+        draw_rectangle(cx + w - t - i, y + i, t, 1, color);
+    cx += w + s;
+}
+
 void vga_test() {
+    // vga_display_file("./output.vga");
     while (1)
     {
     // animate Sonic running from right to left
@@ -208,8 +328,25 @@ void vga_test() {
 
         // delay to make animation visible  
         short_delay();
+        short_delay();
     }
     }
+
+    // while (1)
+    // {
+    // int y = 83; // y for middle of screen
+    // for (int x = 320; x >= 0; x -= 8) { // move left by 4 pixels per frame
+    //     vga_clear_screen();
+    //     draw_team_banner(x, y);
+        
+    //     // delay to make animation visible  
+    //     short_delay();
+    //     short_delay();
+    //     short_delay();
+    //     short_delay();
+    //     short_delay();
+    // }
+    // }
 }
 
 
@@ -228,6 +365,6 @@ void vga_init() {
                   mmio_base, io_mmio);
 
     write_regs(g_320x200x256);
-    sleep(2);
+    sleep(1);
     vga_test();
 }

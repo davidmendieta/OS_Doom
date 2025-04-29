@@ -10,6 +10,9 @@ echo x > \dev\tty
 $env:DISPLAY="localhost:0"
 echo x > \dev\tty
 ssh -Y username@hostname
+    
+if on linux use
+set DISPLAY=localhost:0
 
 4: once in you need to set path with
 PATH=~gheith/public/cs439/bin:$PATH
