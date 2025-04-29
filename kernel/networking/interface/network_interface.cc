@@ -58,7 +58,7 @@ void NetworkInterface::handle_ip_udp(IPv4Header* packet, uint32_t packet_length)
             &dst_port
         );
         if(received_packet == nullptr) {
-            Debug::printf("ERROR HANDLING IP UDP\n");
+            //Debug::printf("ERROR HANDLING IP UDP\n");
             return;
         }
     

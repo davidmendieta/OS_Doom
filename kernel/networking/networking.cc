@@ -1,3 +1,4 @@
+/*
 // HOST
 
 #include "networking.h"
@@ -13,6 +14,7 @@ void networkingMain(void) {
 
 }
 
+*/
 
 // CLIENT
 /*
