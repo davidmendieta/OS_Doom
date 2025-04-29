@@ -274,6 +274,7 @@ void naive_unmap(void* p) {
 
 uint32_t print_dir() {
     auto me = impl::threads::state.current();
+    if (me->pcb->cwd == nullptr) me->pcb->cwd = fs->root;
     me->pcb->cwd->entries([](uint32_t inode, char *name, uint8_t name_length){
         if (!(K::streq(name, ".") || K::streq(name, "..") || K::streq(name, "lost+found"))) {
             Debug::printf("%s\t", name);
