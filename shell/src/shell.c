@@ -1,7 +1,7 @@
 #include "shell.h"
 #include "tokenizer.h"
 
-#define FILE_INPUT 
+// #define FILE_INPUT 
 
 bool is_numeric(char *str) {
     int index = 0;
@@ -54,7 +54,7 @@ void get_input_line(char* buffer) {
     read(0, &c, 1);
     while (c != '\n' && c != '\r') {
         if (c == 127) {
-            if (write > 1) {
+            if (write > 0) {
                 // backspace
                 printf("\b \b");
                 buffer[write - 1] = 0;
