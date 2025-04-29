@@ -42,16 +42,16 @@
         auto me = impl::threads::state.current();
         auto open_file = me->pcb->fdt[fd];
 
-    if(open_file == nullptr || open_file->node == nullptr) return -1; // File doesn't exist
-    uint32_t bytes_written = open_file->node->write_all(open_file->offset, nbyte, (char*)buf);
-    open_file->offset += bytes_written;
-    auto data = &open_file->node->data;
-    if (open_file->offset > data->size_low) {
-        data->size_low = open_file->offset;
+        if(open_file == nullptr || open_file->node == nullptr) return -1; // File doesn't exist
+        uint32_t bytes_written = open_file->node->write_all(open_file->offset, nbyte, (char*)buf);
+        open_file->offset += bytes_written;
+        auto data = &open_file->node->data;
+        if (open_file->offset > data->size_low) {
+            data->size_low = open_file->offset;
+        }
+        // Debug::printf("*** bytes_Written from syscall = %d\n", bytes_written);
+        return bytes_written;
     }
-    // Debug::printf("*** bytes_Written from syscall = %d\n", bytes_written);
-    return bytes_written;
-}
 
 // new code
 // write data from multiple buffers to a fd
@@ -72,12 +72,9 @@ uint32_t writev(uint32_t fd, const iovec* iov, uint32_t iovcnt) {
         if (!address_valid((uint32_t)iov[i].iov_base, iov[i].iov_len)) {
             return -1;
         }
-        
         uint32_t bytes_written = open_file->node->write_all(open_file->offset, iov[i].iov_len, (char*)iov[i].iov_base);
-        
         open_file->offset += bytes_written;
         total_written += bytes_written;
-        
         if (bytes_written < iov[i].iov_len) {
             break; // couldn't write all data
         }
@@ -145,7 +142,7 @@ uint32_t mkdir(const char* path) {
 }
 
 
-// Updated implementation of ftruncate system call
+// new code
 uint32_t ftruncate(uint32_t fd, uint32_t length) {
     if (fd >= PCB_ARR_SIZE) {
         return -1;
