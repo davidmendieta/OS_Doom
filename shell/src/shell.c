@@ -41,6 +41,12 @@ char* input_line(char* dst, char* src) {
         c = src[i];
     }
     dst[i] = 0;
+    if (c == '#') {
+        while (c && c != '\n') {
+            i++;
+            c = src[i];
+        }
+    }
     printf("%s\n", dst);
     return src[i] ? &src[i + 1] : &src[i];
 }
@@ -63,7 +69,11 @@ void get_input_line(char* buffer) {
         } else {
             buffer[write] = c;
             printf("%c",buffer[write]);
-            write++;
+            if (c == '\t') {
+                write += 6;
+            } else {
+                write++;
+            }
         }
         read(0, &c, 1);
     }
