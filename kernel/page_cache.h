@@ -38,7 +38,6 @@ class Cache {
 private:
     CacheEntry* entry_table;
     uint32_t cache_size = 4093; 
-    uint32_t clock_hand; // clock algo
     BlockingLock lock; // protect cache access
 
 //internalm ethdos
@@ -51,7 +50,7 @@ private:
 public:
     Cache(uint32_t size);
     ~Cache();
-
+    uint32_t clock_hand; // clock algo
     // page cache methods imple. in page)cache.cc
     
     CacheEntry* entries[4093]; // arr of cache entries

@@ -8,11 +8,12 @@
 #define PG_CACHE_SIZE 4093
     namespace PageCache {
         Cache* global_cache = nullptr;
-        Cache::Cache(uint32_t size) : cache_size(size), clock_hand(0) {
+        Cache::Cache(uint32_t size) : cache_size(size) {
         for (uint32_t i = 0; i < PG_CACHE_SIZE; ++i) {
             entries[i] = nullptr;
         }
         global_cache = new Cache(4093);
+        global_cache->clock_hand = 0;
     }
 
     
@@ -77,10 +78,35 @@
                     continue;
                 }
                 if (!(entry->vpn & 0x20)) { // Not recently accessed
+                    Debug::printf("evict entry at %d\n", probe);
+                    // delete entry; // Free memory
+                    global_cache->entries[probe] = nullptr;
+                    return probe;
+                }
+                // Clear access bit for next revolution
+                entry->vpn &= ~0x20;
+            }
+        }
+        Debug::printf("forced eviction at index 0\n");
+        // delete global_cache->entries[0];
+        global_cache->entries[index] = nullptr;
+        return index;
+    }
+    uint32_t evict_page() {
+        uint32_t index = global_cache->clock_hand;
+        for (uint32_t revolutions = 0; revolutions <= 2; ++revolutions) {
+            for (uint32_t i = 0; i < 8; ++i) {
+                uint32_t probe = (index + i) % PG_CACHE_SIZE;
+                CacheEntry* entry = global_cache->entries[probe];
+                if (entry == nullptr) {
+                    continue;
+                }
+                if (!(entry->vpn & 0x20)) { // Not recently accessed
                     Debug::printf("evict entry at %d\n", i);
                     // delete entry; // Free memory
-                    global_cache->entries[i] = nullptr;
-                    return i;
+                    global_cache->entries[probe] = nullptr;
+                    global_cache->clock_hand = probe;
+                    return probe;
                 }
                 // Clear access bit for next revolution
                 entry->vpn &= ~0x20;
