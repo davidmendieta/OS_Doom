@@ -234,7 +234,7 @@ use "mouse_button 0-7" to simulate left, middle, right mouse presses
 
 // change to false for debug mode!!
 // must be true for hangman testcase to work properly
-bool DEMO = true;
+bool DEMO = false;
 
 
 bool new_code = true;

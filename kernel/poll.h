@@ -100,11 +100,12 @@ namespace Poll {
 		int fd_ready = 0;
 		uint32_t start_time = Pit::jiffies;
 		uint32_t cur_time = Pit::jiffies;
-
+	
+		// clear all revents initially
 		for (int i = 0; i < nfds; i++) {
 			fds[i].revents = 0;
 		}
-
+	
 		//per POSIX
 		//timeout > 0 - wait up to some amt of milliseconds
 		//timeout == 0 - check only once and return 
@@ -113,26 +114,27 @@ namespace Poll {
 		bool one_time = timeout == 0;
 		bool timed_out = false;
 	
-		while (!timed_out && fd_ready == 0) {
+		while (!timed_out) {
+			fd_ready = 0;
+			
 			for (int fd_index = 0; fd_index < nfds; fd_index++) {
-				Pollfd& cur = fds[fd_index];
+				Pollfd* cur_fd = &fds[fd_index];
+				
+				StrongPtr<OpenFile> cur_file = cur_pcb->fdt[cur_fd->fd];
 
-				//standard to reset each iteration
-				cur.revents = 0;
-
-				StrongPtr<OpenFile> cur_file = cur_pcb->fdt[cur.fd];
 				//invalid fd, set error and continue
 				if (cur_file == nullptr || cur_file->node == nullptr) {
-					cur.revents |= PE_INVAL;
+					cur_fd->revents |= PE_INVAL;
 					fd_ready++;
 					continue;
 				}
 	
-				short prev_revents = cur.revents;
-	
-				cur.revents = cur_file->node->poll(cur.events);
-	
-				if (cur.revents != 0 && prev_revents == 0) {
+				// check if any events occurred
+				short events = cur_file->node->poll(cur_fd->events);
+				
+				// if events occured, increment 
+				if (events != 0) {
+					cur_fd->revents = events;
 					fd_ready++;
 				}
 			}
@@ -144,20 +146,19 @@ namespace Poll {
 	
 			//update time
 			cur_time = Pit::jiffies;
-
+	
 			//timed out, break out of loop and return
 			if (!infinite && (cur_time >= start_time + (uint32_t)timeout)) {
 				timed_out = true;
 			}
 
-			if (!timed_out) sleep(1); //reduce busy waiting
+			if (!timed_out) sleep(2); //reduce busy waiting
 		}
 	
 		// if none ready and timed out, return 0
 		if (fd_ready == 0 && timed_out) {
 			return 0;
 		}
-	
 		return fd_ready;
 	}
 	

@@ -202,7 +202,7 @@ class Node : public BlockIO {  // we implement BlockIO because we
     void truncate(uint32_t new_length = 0);
 
     //poll for standard file types
-    uint16_t poll(uint16_t events) {
+    virtual uint16_t poll(uint16_t events) {
         uint16_t revents = 0;
         uint16_t type = get_type();
         
@@ -241,6 +241,8 @@ class STDIO : public Node {
         return 0; //!
     }
 
+    virtual uint16_t poll(uint16_t events) { return 0;}
+
 };
 
 // ADDED
@@ -255,6 +257,10 @@ class STDIN : public STDIO {
         memcpy(buffer, &recieved, n);
         return n; 
     };
+
+    uint16_t poll(uint16_t events) override {
+        return (events & 0x1);
+    }
 };
 
 class STDOUT : public STDIO {
@@ -265,6 +271,10 @@ class STDOUT : public STDIO {
             Debug::printf("%c", buffer[i]);
         }
         return n;
+    }
+
+    uint16_t poll(uint16_t events) override {
+        return (events & 0x4);
     }
 };
 
@@ -277,18 +287,20 @@ class STDERR : public STDIO {
         }
         return n;
     }
+
+    uint16_t poll(uint16_t events) override {
+        return (events & 0x4);
+    }
 };
 
 //custom node type that represents devices
-template<typename T>
 class Device : public Node {
 private:
-    RingBuffer<T>* buff;
+    RingBuffer<int16_t>* buff;
 
 public:
-    Device(Ext2* fs, StrongPtr<impl::ext2::BufferCache> buffer_cache, uint32_t number,
-        uint32_t block_size, RingBuffer<T>* buffer)
-       : Node(fs, buffer_cache, number, block_size), buff(buffer) {}
+    Device(RingBuffer<int16_t>* buffer) 
+    : Node(nullptr, StrongPtr<impl::ext2::BufferCache>{}, 0, 0), buff(buffer) {}
 
     uint16_t poll(uint16_t events) override {
         uint16_t revents = 0;

@@ -14,6 +14,8 @@
 #include "promise.h"
 #include "uio.h" // new code
 #include "poll.h"
+#include "keyboard.h"
+#include "mouse.h"
 
     bool address_valid(uint32_t addr, uint32_t size) {
         return addr >= 0x80000000 && addr + size <= 0xFFFFFFFF;
@@ -177,6 +179,22 @@ uint32_t ftruncate(uint32_t fd, uint32_t length) {
 uint32_t open(const char* fd, int flags, uint16_t mode) {
     auto me = impl::threads::state.current();
     StrongPtr<Node> checkIn;
+    if (K::streq(fd, "/dev/input/keyboard")) {
+        for (uint32_t i = 0; i < PCB_ARR_SIZE; i++) {
+            if (me->pcb->fdt[i] == nullptr) {
+                me->pcb->fdt[i] = StrongPtr<OpenFile> { new OpenFile {StrongPtr<Node> {new Device(&event_buffer)}}};
+                return i;
+            }
+        }
+        return -1;
+    } else if (K::streq(fd, "/dev/input/mouse")) {
+        for (uint32_t i = 0; i < PCB_ARR_SIZE; i++) {
+            if (me->pcb->fdt[i] == nullptr) {
+                me->pcb->fdt[i] = StrongPtr<OpenFile> { new OpenFile {StrongPtr<Node> {new Device(&buff)}}};
+                return i;
+            }
+        }
+    }
     if (fd[0] == '/') {
         checkIn = fs->root;
     }
@@ -507,6 +525,8 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     case 418:
         Debug::printf("*** I'm a teapot\n");
         return -1;
+    case 499:
+        return Poll::poll((Poll::Pollfd*)user_sp[1], (int)user_sp[2], (int)user_sp[3], impl::threads::state.current()->pcb.operator->());
     default:
         Debug::printf("*** unknown system call %d\n",eax);
         return -1;

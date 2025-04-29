@@ -19,7 +19,7 @@
 #define SDL_KEYUP   0x301
 
 
-RingBuffer<uint8_t> event_buffer(100); 
+RingBuffer<int16_t> event_buffer(100); 
 
 
 uint8_t buffer[3]; // buffer for keyboard input print testing

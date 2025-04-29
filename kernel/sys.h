@@ -26,6 +26,7 @@ void* naive_mmap(uint32_t size, bool is_shared, uint32_t file, uint32_t offset);
 void naive_unmap(void* p); // 102
 void iamateapot(); // 418
 
+int poll(uint32_t* fds, int nfds, int timeout); //499
 
 class SYS {
 public:
