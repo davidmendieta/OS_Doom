@@ -1,7 +1,7 @@
 #include "shell.h"
 #include "tokenizer.h"
 
-// #define TESTING 
+#define FILE_INPUT 
 
 bool is_numeric(char *str) {
     int index = 0;
@@ -27,11 +27,12 @@ void make_bin_path(char* buffer, const char* argv0) {
     strcat(buffer, argv0);
 }
 
-#ifdef TESTING
+#ifdef FILE_INPUT
 // for testing purposes only
 // read a line from a file into the destination buffer
 // advance the source buffer
 char* input_line(char* dst, char* src) {
+    output_prompt();
     int i = 0;
     char c = src[i];
     while (c && c != '\n' && c != '#') {
@@ -40,6 +41,7 @@ char* input_line(char* dst, char* src) {
         c = src[i];
     }
     dst[i] = 0;
+    printf("%s\n", dst);
     return src[i] ? &src[i + 1] : &src[i];
 }
 #else
@@ -280,7 +282,7 @@ void inorder_process(node_t* node) {
 
 char* tokenize_and_process(char *buffer) {
 
-    #ifdef TESTING
+    #ifdef FILE_INPUT
     char* command = malloc(4096);
     buffer = input_line(command, buffer);           // get a line of input, which will become the command to execute
     node_t* ast = tokenize(command);
@@ -311,13 +313,13 @@ int main(int argc, char** argv) {
     char* buffer = (void*) malloc(4096);
     hash_init(&environment_variables);
 
-    #ifdef TESTING
+    #ifdef FILE_INPUT
     int stdin = open("/user/input", 0); // our test case
     read(stdin, (void*) buffer, 4096);
     #endif
 
     while (true) {
-        #ifndef TESTING
+        #ifndef FILE_INPUT
         clear_buffer(buffer);
         get_input_line(buffer);
         #endif
