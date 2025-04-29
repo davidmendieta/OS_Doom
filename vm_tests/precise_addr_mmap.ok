@@ -1,11 +1,11 @@
 *** Starting mmap test
 *** Testing size: 23 bytes
 *** Regular mapping succeeded at: 0xf0000000
-*** Content in regular mapping: added va f0000000
+*** Content in regular mapping: haiii!
 *** you can read files
 *** Trying to map at specific address: 0xfee01000
 *** Fixed mapping succeeded at: 0xfee01000
 *** Got the exact address we requested!
-*** Content in fixed mapping: added va fee01000
+*** Content in fixed mapping: haiii!
 *** you can read files
 *** mmap test completed successfully
