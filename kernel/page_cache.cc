@@ -36,36 +36,78 @@
         return  (key >> 12) % PG_CACHE_SIZE;
     }
 
-    uint32_t evict_page() { // do we need to work with tlb?
-        for(uint32_t revolutions = 0; revolutions <= 2; revolutions++) {// when page_cache runs out of space
-            for(uint32_t i = 0; i < 1024; i++) {
-                if(!(global_cache->entries[i]->vpn & 0x20)) {
-                    // hashtable[i] = 0;
-                    //write to disk
-                    Debug::printf("evict\n");
+    // CacheEntry* lookup_page (uint32_t va) {//, StrongPtr<Node> file, uint32_t offset) {
+    //     uint32_t index = hash(va);
+    //     Debug::printf("inside look up\n");
+    //     for(uint32_t i = 0; i < PG_CACHE_SIZE; i++) {
+    //         uint32_t probe = (index + i) % PG_CACHE_SIZE;
+    //         CacheEntry* entry = global_cache->entries[probe];
+    //         // Debug::printf("probe: %x\n", probe);
+    //         // Debug::printf("entry: %x\n", entry);
+    //         if (entry == nullptr) {
+    //             Debug::printf("skip\n");
+    //             continue; // or break if you know empty slots mean "stop"
+
+    //         }
+    
+    //         if(entry) {
+    //             Debug::printf("not null!!\n");
+    //         }
+    //         if(entry && entry->virtual_addr == va) {
+    //             Debug::printf("hit]\n");
+    //             return entry;
+    //         }
+    //     }
+    //     Debug::printf("miss]\n");
+    //     return nullptr;
+    // }
+
+    uint32_t normalize_vpn(uint32_t vpn) {
+        return vpn & ~0x20; // clears access bit
+    }    
+
+    uint32_t evict_page(uint32_t va) {
+        uint32_t vpn = va >> 12; // only work with VPN
+        uint32_t index = hash(normalize_vpn(vpn)); // hash normalized VPN
+        for (uint32_t revolutions = 0; revolutions <= 2; ++revolutions) {
+            for (uint32_t i = 0; i < 8; ++i) {
+                uint32_t probe = (index + i) % PG_CACHE_SIZE;
+                CacheEntry* entry = global_cache->entries[probe];
+                if (entry == nullptr) {
+                    continue;
+                }
+                if (!(entry->vpn & 0x20)) { // Not recently accessed
+                    Debug::printf("evict entry at %d\n", i);
+                    // delete entry; // Free memory
                     global_cache->entries[i] = nullptr;
                     return i;
                 }
-                // hashtable[i] &= ~0x10;
-                global_cache->entries[i]->vpn &= ~0x20;
+                // Clear access bit for next revolution
+                entry->vpn &= ~0x20;
             }
         }
-        global_cache->entries[0] = nullptr;
-        return 0;
+        Debug::printf("forced eviction at index 0\n");
+        // delete global_cache->entries[0];
+        global_cache->entries[index] = nullptr;
+        return index;
     }
     
-    void evict_page(uint32_t va) { // for the system call to remove a page
-        
-    }
 
-    void add_page(uint32_t va, uint32_t pa, uint32_t permissions, uint32_t flags, StrongPtr<Node> file, uint32_t offset) {
-        Debug::printf("added va %x\n", va);
-        uint32_t index = hash(va);
-        for(uint32_t i = 0; i < PG_CACHE_SIZE; ++i) {// idk chat said this is more efficent and doesn't change anything
+    void add_page(uint32_t va, uint32_t pa, uint32_t permissions, uint32_t flags, StrongPtr<Node> file, uint32_t offset, uint32_t size) {
+        uint32_t vpn = va >> 12; // only work with VPN
+        uint32_t index = hash(normalize_vpn(vpn)); // hash normalized VPN
+        Debug::printf("adding vpn %x\n", vpn);
+    
+        for (uint32_t i = 0; i < 8; ++i) {
             uint32_t probe = (index + i) % PG_CACHE_SIZE;
-            auto curr_entry = global_cache->entries[probe];
-            if (curr_entry == nullptr) {
-                curr_entry = new CacheEntry;
+            
+            Debug::printf("probe: %x\n", probe);
+            Debug::printf("entry: %x\n", global_cache->entries[probe]);
+            
+            if (global_cache->entries[probe] == nullptr) {
+                Debug::printf("pass\n");
+                CacheEntry* curr_entry = new CacheEntry;
+                Debug::printf("wa\n");
                 curr_entry->accessed = true;
                 curr_entry->virtual_addr = va;
                 curr_entry->file = file;
@@ -74,52 +116,56 @@
                 curr_entry->flags = flags;
                 curr_entry->permissions = permissions;
                 curr_entry->physical_addr = pa;
+                curr_entry->size = size;
                 curr_entry->pg_cache_location = probe;
-                curr_entry->vpn = (curr_entry->virtual_addr >> 12) | 0x20;
+                curr_entry->vpn = vpn | 0x20; // set access bit initially
                 global_cache->entries[probe] = curr_entry;
+                Debug::printf("normal add at probe %x\n", probe);
                 return;
             }
         }
-        // didnt find a location need to evict
-        uint32_t evicted_page_index = evict_page();
-        if(global_cache->entries[evicted_page_index] == nullptr) {
-            auto curr_entry = global_cache->entries[evicted_page_index];
-            curr_entry = new CacheEntry;
-            curr_entry->accessed = true;
-            curr_entry->virtual_addr = va;
-            curr_entry->file = file;
-            curr_entry->dirty = false;
-            curr_entry->file_offset = offset;
-            curr_entry->flags = flags;
-            curr_entry->permissions = permissions;
-            curr_entry->physical_addr = pa;
-            curr_entry->pg_cache_location = evicted_page_index;
-            global_cache->entries[evicted_page_index] = curr_entry;
-        }
+    
+        uint32_t evicted_index = evict_page(va);
+        CacheEntry* curr_entry = new CacheEntry;
+        curr_entry->accessed = true;
+        curr_entry->virtual_addr = va;
+        curr_entry->file = file;
+        curr_entry->dirty = false;
+        curr_entry->file_offset = offset;
+        curr_entry->flags = flags;
+        curr_entry->permissions = permissions;
+        curr_entry->physical_addr = pa;
+        curr_entry->size = size;
+        curr_entry->pg_cache_location = evicted_index;
+        curr_entry->vpn = vpn | 0x20; // set access bit initially
+        global_cache->entries[evicted_index] = curr_entry;
+        Debug::printf("forced add at probe %x\n", evicted_index);
     }
 
-    // CacheEntry* lookup_page (uint32_t va, StrongPtr<Node> file, uint32_t offset) {
-    //     uint32_t index = hash(va);
-    //     for(uint32_t i = 0; i < PG_CACHE_SIZE; i++) {
-    //         uint32_t probe = (index + i) % PG_CACHE_SIZE;
-
-    //     }
-    // }
-
-    // CacheEntry* PageCache::lookup(uint32_t va) {
-    //     uint32_t vpn = va >> 12;
-    //     int idx = hash(va);
-    //     for (int i = 0; i < 8; i++) { // probe up to 8 slots
-    //         int probe_idx = (idx + i) % CACHE_SIZE;
-    //         CacheEntry& entry = cache[probe_idx];
-    //         if (entry.valid && (entry.virtual_addr >> 12) == vpn) {
-    //             return &entry; // hit
-    //         }
-    //     }
-    //     return nullptr; // miss
-    // }
+    CacheEntry* lookup_page(uint32_t va) {
+        uint32_t vpn = va >> 12;               
+        uint32_t index = hash(normalize_vpn(vpn));
     
-
+        for (uint32_t i = 0; i < PG_CACHE_SIZE; ++i) {
+            uint32_t probe = (index + i) % PG_CACHE_SIZE;
+            CacheEntry* entry = global_cache->entries[probe];
+    
+            if (entry == nullptr) {
+                // No entry, stop search early
+                return nullptr;
+            }
+    
+            if ((entry->vpn & ~0x20) == (vpn & ~0x20)) {
+                // Found matching page
+                entry->vpn |= 0x20; // Mark as accessed
+                return entry;
+            }
+        }
+    
+        // Miss
+        return nullptr;
+    }
+    
    void flush_page(uint32_t va) {
        uint32_t hash_val = hash(va);
 

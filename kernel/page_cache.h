@@ -29,6 +29,7 @@ struct CacheEntry {
     uint32_t ref_count;
     uint32_t pg_cache_location;  
     uint32_t vpn;     
+    uint32_t size;
 
     ~CacheEntry();
 };
@@ -44,7 +45,7 @@ private:
     uint32_t hash(uint32_t va);
     uint32_t hash32(uint32_t key); // Thomas Wang's 32 bit Integer Hash
     int find_entry(uint32_t va);
-    int evict_page();
+    int evict_page(uint32_t va);
     void mark_referenced(int index);
 
 public:
@@ -57,7 +58,7 @@ public:
     uint32_t get_page(uint32_t va, StrongPtr<Node> file, uint32_t file_offset, bool write_access);
     void release_page(uint32_t va);
     void flush_page(uint32_t va);
-    void evict_page(uint32_t va);
+
     
     // uint32_t copy_on_write(uint32_t va);
     // void preload(uint32_t va, uint32_t size, StrongPtr<Node> file, uint32_t file_offset);
@@ -65,8 +66,8 @@ public:
 };
 
 // namespace PageCache {
-void add_page(uint32_t va, uint32_t pa, uint32_t permissions, uint32_t flags, StrongPtr<Node> file, uint32_t offset);
-// CacheEntry* lookup_page(uint32_t va, StrongPtr<Node> file, uint32_t offset);
+void add_page(uint32_t va, uint32_t pa, uint32_t permissions, uint32_t flags, StrongPtr<Node> file, uint32_t offset, uint32_t size);
+CacheEntry* lookup_page(uint32_t va);//, StrongPtr<Node> file, uint32_t offset);
 // global page cache instance
 extern Cache* global_cache;
 

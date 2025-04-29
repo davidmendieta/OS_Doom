@@ -208,24 +208,34 @@ namespace VMM {
 
  
     // DO NOT DELETE FOR MAPPING AT A REGION
+    // void* naive_mmap_location(uint32_t sz_, bool shared, StrongPtr<Node> node, uint32_t offset_, bool user, uint32_t location) {
+    //     if(!shared) {
+    //         auto me = impl::threads::state.current();
+    //         ASSERT(!(me->vme == nullptr));
+    //         return (void*)me->vme->add_entry_location(sz_, node, offset_, user, location);
+    //     } 
+    //     return (void*)shared_vme->add_entry_location(sz_, node, offset_, user, location);
+    // }
     void* naive_mmap_location(uint32_t sz_, bool shared, StrongPtr<Node> node, uint32_t offset_, bool user, uint32_t location) {
+        uint32_t npages = (sz_ + PhysMem::FRAME_SIZE - 1) / PhysMem::FRAME_SIZE;
         if(!shared) {
             auto me = impl::threads::state.current();
             ASSERT(!(me->vme == nullptr));
-            return (void*)me->vme->add_entry_location(sz_, node, offset_, user, location);
+            return (void*)me->vme->add_entry_location(npages * PhysMem::FRAME_SIZE, node, offset_, user, location);
         } 
-        return (void*)shared_vme->add_entry_location(sz_, node, offset_, user, location);
+        return (void*)shared_vme->add_entry_location(npages * PhysMem::FRAME_SIZE, node, offset_, user, location);
     }
-
+    
     // ORIGINAL NAIVE_MMAP DO NOT DELETE
     void* naive_mmap1(uint32_t sz_, bool shared, StrongPtr<Node> node, uint32_t offset_, bool user) {
+        uint32_t npages = (sz_ + PhysMem::FRAME_SIZE - 1) / PhysMem::FRAME_SIZE;
         if(!shared) {
             auto me = impl::threads::state.current();
             ASSERT(!(me->vme == nullptr));
-            return (void*)me->vme->add_entry(sz_, node, offset_, user);
+            return (void*)me->vme->add_entry(npages * PhysMem::FRAME_SIZE, node, offset_, user);
         } 
         // Debug::printf("here\n");
-        return (void*)shared_vme->add_entry(sz_, node, offset_, user);
+        return (void*)shared_vme->add_entry(npages * PhysMem::FRAME_SIZE, node, offset_, user);
     }
 
     // THIS IS THE MMAP FOR LINUX BUT WE ARE NOT USING YOU CAN DELETE IF YOU WANT
@@ -261,33 +271,33 @@ namespace VMM {
     void* mmap1(uint32_t* location, uint32_t size, uint32_t permissions, uint32_t flags, StrongPtr<Node> file, uint32_t offset) {
         void* mapped_region = nullptr;
         // auto me = impl::threads::state.current()
-        Debug::printf("location: %x\n", location);
+        // Debug::printf("location: %x\n", location);
         if(location) {
             if(flags & SHARED) {
                 // normal shared mapping and shared anon mapping
                 mapped_region = flags & ANON ? naive_mmap_location(size, true, (StrongPtr<Node>)nullptr, offset, true, (uint32_t)location) : 
                     naive_mmap_location(size, true, file, offset, true, (uint32_t)location);
-                    Debug::printf("size, %d, permissions %x, flags %x, fd %x, offset %x\n", size, permissions, flags, offset);
-                    if(!(flags & ANON)) Debug::printf("file %x\n", file);
+                    // Debug::printf("size, %d, permissions %x, flags %x, fd %x, offset %x\n", size, permissions, flags, offset);
+                    // if(!(flags & ANON)) Debug::printf("file %x\n", file);
             } else {
                 // private mapping and private anon mapping
                 mapped_region = flags & ANON ? naive_mmap_location(size, false, (StrongPtr<Node>)nullptr, offset, true, (uint32_t)location) : 
                     naive_mmap_location(size, false, file, offset, true, (uint32_t)location);
-                    Debug::printf("mmaped w/location\n");
+                    // Debug::printf("mmaped w/location\n");
             }
         } else {
             if(flags & SHARED) {
                 // normal shared mapping and shared anon mapping
-                Debug::printf("shared w/out location\n");
-                Debug::printf("anon? %x\n", flags&ANON);
+                // Debug::printf("shared w/out location\n");
+                // Debug::printf("anon? %x\n", flags&ANON);
                 mapped_region = flags & ANON ? naive_mmap1(size, true, (StrongPtr<Node>)nullptr, offset, true) : 
                     naive_mmap1(size, true, file, offset, true);
             } else {
                 // private mapping and private anon mapping
-                Debug::printf("anon/private w/out location\n");
+                // Debug::printf("anon/private w/out location\n");
                 mapped_region = flags & ANON ? naive_mmap1(size, false, (StrongPtr<Node>)nullptr, offset, true) : 
                     naive_mmap1(size, false, file, offset, true);
-                    Debug::printf("mmaped w/out location\n");
+                    // Debug::printf("mmaped w/out location\n");
             }
         }
         // set premissions
@@ -298,38 +308,7 @@ namespace VMM {
         return  mmap1(nullptr, sz_, 0, shared, node, offset_ );
         // return naive_mmap1(sz_, shared, node, offset_, user);
     }
-
-    // void munmap(void* p_, bool user, uint32_t size) {
-    //     auto me = impl::threads::state.current();
-    //     ASSERT(me != nullptr);
-
-    //     uint32_t va = (uint32_t)p_;
-    //     uint32_t num_pages = (size + PhysMem::FRAME_SIZE - 1) / PhysMem::FRAME_SIZE;
-
-    //     if (me->vme != nullptr) {
-    //         auto vme_entry = me->vme->get(va);
-    //         if (vme_entry == nullptr) {
-    //             Debug::printf("Skipping munmap: No VME at va=%x\n", va);
-    //             return; // Prevent dangerous unmapping
-    //         }
-    //     }
-        
-    //     if (va >= 0xF0000000) {
-    //         shared_vme_lock->lock(); 
-    //         shared_vme->remove_mapped_region(va, size, false); 
-
-    //         shared_vme_lock->unlock();
-    //     } else {
-    //         if (me->vme != nullptr) {
-    //             me->vme->remove_mapped_region(va, size, user);
-    //         }
-    //     }
-
-    //     for (uint32_t i = 0; i < num_pages; i++) {
-    //         uint32_t page_addr = va + i * PhysMem::FRAME_SIZE;
-    //         remove_mapping((uint32_t*)getCR3(), page_addr >> 12);
-    //     }
-    // }
+    
     void munmap(void* p_, bool user, uint32_t size) {
         Debug::printf("munmap\n");
         auto me = impl::threads::state.current();
@@ -337,13 +316,11 @@ namespace VMM {
     
         uint32_t va = (uint32_t)p_;
         Debug::printf("p: %x\n", p_);
-        // 🚫 Reject anything outside user-space
         if (va <= 0x80000000 || va >= 0xFFFFFFFF) {
             Debug::printf("VMM::munmap: invalid va=%x\n", va);
             return;
         }
     
-        // Clamp size so we never wrap around or cross limit
         uint32_t end_va = va + size;
         if (end_va > 0xFFFFFFFF) {
             end_va = 0xFFFFFFFF;
@@ -388,8 +365,7 @@ namespace VMM {
 extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     StrongPtr<VMEEntry> vme_entry;
     bool unlock = false;
-    // Debug::printf("Page fault at VA: %x\n", va_);
-    // Debug::printf("Trying to look up VME entry...\n");
+
 
     if(va_ >= 0xF0000000) { // SHARED
         unlock = true;
@@ -404,21 +380,29 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
         ASSERT(me != nullptr && !(me->vme == nullptr));
         vme_entry = me->vme->get(va_);
     }
-    // if(vme_entry == nullptr) Debug::panic("*** can't handle page fault at %x\n",va_);
     if(vme_entry == nullptr) {// what to do here
         Debug::printf("VME ENTRY IS NULL\n");
         // couldve gotten here because a shared mapping was trying to be accessed
         exit(-1);
     }
+
+    if(vme_entry->flags) Debug::printf("shared lookup");
+    if (vme_entry->file != nullptr && (vme_entry->flags & SHARED)) {
+        PageCache::CacheEntry* cached = PageCache::lookup_page(va_);
+        if (cached != nullptr) {
+            // Found in PageCache: install cached page
+            VMM::add_mapping((uint32_t*)getCR3(), va_ >> 12, cached->physical_addr >> 12, false, true, true);
+            return;
+        }
+    }
     
     uint32_t new_page = PhysMem::alloc_frame();//pa
-    // Debug::printf("vme_entry: %x\n", vme_entry);
-    // if(chunk_size > PhysMem::FRAME_SIZE) chunk_size = PhysMem::FRAME_SIZE;
+
     VMM::add_mapping((uint32_t*)(getCR3()), (va_ >> 12), new_page >> 12, false, true, true);
     if(unlock) VMM::shared_vme_lock->unlock();
-    
+    // Debug::printf("file %x, null %d\n", vme_entry->file, vme_entry->file == nullptr);
     if(!(vme_entry->file == nullptr)) {
-        
+        Debug::printf("haiii!\n");
         uint32_t page_start = va_ & ~0xFFF;
         uint32_t page_offset = (page_start - vme_entry->start);
         uint32_t size = vme_entry->size - page_offset;
@@ -429,16 +413,8 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
         vme_entry->file->read_all(vme_entry->file_offset + page_offset, size, (char*)new_page);
         // Debug::printf("HERE!\n");
 
-        // Debug::printf("IN PAGE FAULT HANDLER | PA: %x\n", new_page);
-        // Debug::printf("IN PAGE FAULT HANDLER | r_PA: %s\n", (char*)(new_page));
-        // Debug::printf("IN PAGE FAULT HANDLER | r_VA: %s\n", (char*)(page_start));
-        // Debug::printf("IN PAGE FAULT HANDLER | r_BUFFER: %s\n", (char*)(buffer));
-        PageCache::add_page(va_, new_page, vme_entry->permissions, vme_entry->flags, vme_entry->file, vme_entry->file_offset);
-    }
-    // Debug::printf("VA: %x | NEW PAGE: %x\n", va_, new_page);
-    
-    // PageCache::add_page(va_, new_page, vme_entry->permissions, vme_entry->flags, vme_entry->file, vme_entry->file_offset);
+        PageCache::add_page(va_, new_page, vme_entry->permissions, vme_entry->flags, vme_entry->file, vme_entry->file_offset, size);
+    } 
+
     return;
-    // memcpy((void*)new_page, (void*)(vme_entry->start + page_offset), PhysMem::FRAME_SIZE);
-    // Debug::panic("*** can't handle page fault at %x\n",va_);
 }

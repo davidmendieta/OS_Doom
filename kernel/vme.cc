@@ -54,6 +54,7 @@ void VME<Lock>::insert_entry_sorted(uint32_t start, uint32_t num_pages, uint32_t
 
     StrongPtr<VMEEntry> new_node =
         StrongPtr<VMEEntry>::make(start, num_pages, size, file, file_offset, user, 0, 0);
+
     new_node->next = curr;
     if (prev == nullptr) {
         entries = new_node;
@@ -152,7 +153,7 @@ uint32_t VME<Lock>::add_entry(uint32_t size, StrongPtr<Node> file, uint32_t file
         avail += PhysMem::FRAME_SIZE * required_pages;
     }
     
-    Debug::printf("in add_entry\nvaddr:%x filesz:%x fileoff:%x\n", va, file, file_offset);
+    // Debug::printf("in add_entry\nvaddr:%x filesz:%x fileoff:%x\n", va, file, file_offset);
     insert_entry_sorted(va, required_pages, size, file, file_offset, user);
     return va;
 }
@@ -237,6 +238,47 @@ void VME<Lock>::remove_mapped_region(uint32_t va, uint32_t size, bool user) {
     }
 }
 
+// template <typename Lock>
+// uint32_t VME<Lock>::add_entry_location(uint32_t size, StrongPtr<Node> file, uint32_t file_offset, bool user, uint32_t location) {
+//     LockGuard g{lock};
+//     StrongPtr<FreeEntry> prev{nullptr};
+//     StrongPtr<FreeEntry> curr = free_entries;
+
+//     uint32_t va = 0;
+
+    
+//     uint32_t required_pages =
+//     (size + PhysMem::FRAME_SIZE - 1) / PhysMem::FRAME_SIZE;
+    
+//     while (!(curr == nullptr) && curr->start >= location) {
+//         if (curr->num_pages >= required_pages) {
+//             va = curr->start;
+//             curr->start += required_pages * PhysMem::FRAME_SIZE;
+//             curr->num_pages -= required_pages;
+
+//             if (curr->num_pages == 0) {
+//                 if (prev == nullptr) {
+//                     free_entries = curr->next;
+//                 } else {
+//                     prev->next = curr->next;
+//                 }
+//             }
+//             break;
+//         }
+//         prev = curr;
+//         curr = curr->next;
+//     }
+
+    
+//     if (va == 0) {
+//         if (avail + size > limit) return 0;  //! NO MORE SPACE
+//         va = avail;
+//         avail += PhysMem::FRAME_SIZE * required_pages;
+//     }
+    
+//     insert_entry_sorted(va, required_pages, size, file, file_offset, user);
+//     return va;
+// }
 template <typename Lock>
 uint32_t VME<Lock>::add_entry_location(uint32_t size, StrongPtr<Node> file, uint32_t file_offset, bool user, uint32_t location) {
     LockGuard g{lock};
@@ -244,11 +286,11 @@ uint32_t VME<Lock>::add_entry_location(uint32_t size, StrongPtr<Node> file, uint
     StrongPtr<FreeEntry> curr = free_entries;
 
     uint32_t va = 0;
-
+    
     
     uint32_t required_pages =
     (size + PhysMem::FRAME_SIZE - 1) / PhysMem::FRAME_SIZE;
-    
+
     while (!(curr == nullptr) && curr->start >= location) {
         if (curr->num_pages >= required_pages) {
             va = curr->start;
@@ -268,16 +310,16 @@ uint32_t VME<Lock>::add_entry_location(uint32_t size, StrongPtr<Node> file, uint
         curr = curr->next;
     }
 
-    
     if (va == 0) {
         if (avail + size > limit) return 0;  //! NO MORE SPACE
         va = avail;
         avail += PhysMem::FRAME_SIZE * required_pages;
     }
-    
+
     insert_entry_sorted(va, required_pages, size, file, file_offset, user);
     return va;
 }
+
 
 template <typename Lock>
 void VME<Lock>::remove_entry(uint32_t va, bool user) {
