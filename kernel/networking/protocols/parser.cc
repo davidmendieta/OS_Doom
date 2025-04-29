@@ -247,6 +247,24 @@ void decrement_ttl(IPv4Header* ip_hdr) {
 
 
 /*   --- TCP ----   */ 
+uint16_t tcp_checksum(const IPv4Header* ip, const TCPHeader* tcp,
+    const char* payload, size_t payload_len) {
+        
+    PseudoHeader ph = {};
+    ph.src_ip     = ip->src_ip;
+    ph.dst_ip     = ip->dest_ip;
+    ph.zero       = 0;
+    ph.protocol   = 6; // TCP
+    ph.udp_length = htons(sizeof(TCPHeader) + payload_len);
+
+    uint32_t sum = 0;
+    sum += (~checksum(&ph, sizeof(ph))) & 0xFFFF;
+    sum += (~checksum(tcp, sizeof(TCPHeader))) & 0xFFFF;
+    sum += (~checksum(payload, payload_len)) & 0xFFFF;
+
+    return fold_checksum(sum);
+}
+
 char* encode_ip_tcp(const void* payload, size_t payload_len, uint32_t src_ip,
     char* src_mac, uint16_t src_port, uint32_t dest_ip,
     char* dest_mac, uint16_t dest_port,
@@ -300,29 +318,30 @@ char* encode_ip_tcp(const void* payload, size_t payload_len, uint32_t src_ip,
     return buf;
 }
 
-uint16_t tcp_checksum(const IPv4Header* ip, const TCPHeader* tcp,
-    const char* payload, size_t payload_len) {
-        
-    PseudoHeader ph = {};
-    ph.src_ip     = ip->src_ip;
-    ph.dst_ip     = ip->dest_ip;
-    ph.zero       = 0;
-    ph.protocol   = 6; // TCP
-    ph.udp_length = htons(sizeof(TCPHeader) + payload_len);
+TCB_tcp* find_tcb(uint16_t src_port, uint16_t dest_port, uint32_t src_ip) {
+    // Ok this is as far as this implementation will go.
+    // We normally would have a hashmap of active connections
+    // here, in which we would verify if we have to establish
+    // a new connection or just fetch it.
 
-    uint32_t sum = 0;
-    sum += (~checksum(&ph, sizeof(ph))) & 0xFFFF;
-    sum += (~checksum(tcp, sizeof(TCPHeader))) & 0xFFFF;
-    sum += (~checksum(payload, payload_len)) & 0xFFFF;
+    // For now, assume we only allow 1 connection, kinda like a global TCB.
+    static TCB_tcp tcb;
 
-    return fold_checksum(sum);
+    if (tcb.state == TCPState::CLOSED) {
+        tcb.local_port = dest_port;
+        tcb.remote_port = src_port;
+        tcb.remote_ip = src_ip;
+        tcb.state = TCPState::LISTEN; // or SYN_SENT depending on role
+    }
+
+    return &tcb;
 }
 
 void receive_tcp(const IPv4Header* ip, const TCPHeader* tcp, size_t payload_len) {
     uint16_t src_port = ntohs(tcp->src_port);
     uint16_t dest_port = ntohs(tcp->dest_port);
     uint32_t seq_num = ntohl(tcp->seq_num);
-    uint32_t ack_num = ntohl(tcp->ack_num);
+    // uint32_t ack_num = ntohl(tcp->ack_num);
 
     TCB_tcp* conn = find_tcb(src_port, dest_port, ntohl(ip->src_ip));
     if (!conn) {
@@ -372,23 +391,5 @@ void receive_tcp(const IPv4Header* ip, const TCPHeader* tcp, size_t payload_len)
     }
 }
 
-TCB_tcp* find_tcb(uint16_t src_port, uint16_t dest_port, uint32_t src_ip) {
-    // Ok this is as far as this implementation will go.
-    // We normally would have a hashmap of active connections
-    // here, in which we would verify if we have to establish
-    // a new connection or just fetch it.
-
-    // For now, assume we only allow 1 connection, kinda like a global TCB.
-    static TCB_tcp tcb;
-
-    if (tcb.state == TCPState::CLOSED) {
-        tcb.local_port = dest_port;
-        tcb.remote_port = src_port;
-        tcb.remote_ip = src_ip;
-        tcb.state = TCPState::LISTEN; // or SYN_SENT depending on role
-    }
-
-    return &tcb;
-}
 
 }  // namespace Parser

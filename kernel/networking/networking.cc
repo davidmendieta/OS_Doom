@@ -1,5 +1,5 @@
 // HOST
-/*
+
 #include "networking.h"
 
 StrongPtr<NetworkInterface> network_interface;
@@ -12,7 +12,7 @@ void networkingMain(void) {
     };
 
 }
-*/
+
 
 // CLIENT
 /*

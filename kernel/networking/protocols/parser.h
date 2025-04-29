@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "tcp.h"
 
 #pragma pack(push, 1)
 struct IPv4Header {

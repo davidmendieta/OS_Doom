@@ -49,7 +49,7 @@ void send_tcp_ack(TCB_tcp* conn) {
     send_tcp_packet(conn->remote_ip, &hdr, nullptr, 0);
 }
 
-extern NetworkInterface* network_interface
+
 
 void send_tcp_packet(uint32_t dst_ip, const TCPHeader* tcp_hdr, const uint8_t* payload, size_t payload_len) {
     size_t tcp_len = sizeof(TCPHeader) + payload_len;

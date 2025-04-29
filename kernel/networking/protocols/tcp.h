@@ -38,4 +38,4 @@ struct TCB_tcp {
 void send_tcp_syn(TCB_tcp* conn);
 void send_tcp_syn_ack(TCB_tcp* conn);
 void send_tcp_ack(TCB_tcp* conn);
-void send_tcp_packet(uint32_t dst_ip, const TCPHeader* tcp_hdr, const uint8_t* payload, size_t payload_len);
+void send_tcp_packet(uint32_t dst_ip, const TCPHeader* tcp_hdr, const uint8_t* payload, uint32_t payload_len);
