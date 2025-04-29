@@ -78,5 +78,9 @@ namespace Parser {
     uint16_t fold_checksum(uint32_t sum);
     uint16_t udp_checksum(const IPv4Header* ip, const UDPHeader* udp, const char* payload, size_t payload_len);
     
-
+    char* encode_ip_tcp(const void* payload, size_t payload_len, uint32_t src_ip,
+        char* src_mac, uint16_t src_port, uint32_t dest_ip,
+        char* dest_mac, uint16_t dest_port,
+        uint32_t* out_packet_len);
+    void receive_tcp(const IPv4Header* ip, const TCPHeader* tcp, size_t payload_len);
 } // namespace Parser
