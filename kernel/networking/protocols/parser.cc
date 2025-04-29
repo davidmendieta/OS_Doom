@@ -169,7 +169,7 @@ char* decode_ip_udp(const void* packet, size_t packet_len,
     // 4) verify UDP checksum //! THIS ONE DOESN'T WORK
     if (udp_checksum(ip, udp, payload_ptr, payload_len) != 0) {
         // return 0;
-        Debug::printf("UDP CHECKSUM FAILED\n");
+        //Debug::printf("UDP CHECKSUM FAILED\n");
         return nullptr;
     }
 
@@ -205,8 +205,8 @@ bool verify_receiver(const IPv4Header* ip_hdr) {
         return false;
     }
 
-    uint16_t total_len = ntohs(ip_hdr->total_length);
-    uint32_t src_ip = ntohl(ip_hdr->src_ip);
+    //uint16_t total_len = ntohs(ip_hdr->total_length);
+    //uint32_t src_ip = ntohl(ip_hdr->src_ip);
     uint32_t dst_ip = ntohl(ip_hdr->dest_ip);
     uint8_t proto = ip_hdr->protocol;
 
@@ -220,11 +220,13 @@ bool verify_receiver(const IPv4Header* ip_hdr) {
         return false;
     }
 
+	/*
     Debug::printf("IPv4: %d.%d.%d.%d -> %d.%d.%d.%d, len=%d, proto=%d\n",
                   (src_ip >> 24) & 0xFF, (src_ip >> 16) & 0xFF,
                   (src_ip >> 8) & 0xFF, src_ip & 0xFF, (dst_ip >> 24) & 0xFF,
                   (dst_ip >> 16) & 0xFF, (dst_ip >> 8) & 0xFF, dst_ip & 0xFF,
                   total_len, proto);
+				  */
 
     return true;
 }

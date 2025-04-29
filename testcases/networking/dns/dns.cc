@@ -1,25 +1,30 @@
 #include "networking.h"
-#include "../socket/socket.h"
+#include "socket/socket.h"
 
 struct DNSRecord {
     const char* name;
     uint32_t    ip;
 };
+
 static DNSRecord dns_records[] = {
     { "example.com",  (192<<24)|(168<<16)|(1<<8)|11 },
     { "test.local",   (10<<24)|(0<<16)|(0<<8)|2    },
 };
+
 static const int dns_records_count = sizeof(dns_records)/sizeof(dns_records[0]);
 
 static uint16_t read_u16(const uint8_t* p) {
     return (uint16_t(p[0])<<8) | uint16_t(p[1]);
 }
+
 static void write_u16(uint8_t* p, uint16_t v) {
     p[0] = v>>8;  p[1] = v & 0xFF;
 }
+
 static uint32_t read_u32(const uint8_t* p) {
     return (uint32_t(p[0])<<24)|(uint32_t(p[1])<<16)|(uint32_t(p[2])<<8)|(uint32_t(p[3]));
 }
+
 static void write_u32(uint8_t* p, uint32_t v) {
     p[0]=v>>24;  p[1]=(v>>16)&0xFF;  p[2]=(v>>8)&0xFF;  p[3]=v&0xFF;
 }
@@ -28,7 +33,7 @@ static uint32_t build_dns_response(const uint8_t* req, uint32_t req_len,
                                    uint8_t* resp) {
     if (req_len < 12) return 0; // too small
 
-        // Copy ID + flags + QDCOUNT
+    // Copy ID + flags + QDCOUNT
     memcpy(resp, req, 4);
 
     // Set QR=1, Opcode=0, AA=1, RD preserved, others zero, RCODE=0
