@@ -12,6 +12,13 @@
 #include "libk.h"
 #include "elf.h"
 #include "promise.h"
+#include "networking/socket/socket_sys.h"
+#include "vga.h"
+#include "libk.h"
+
+#define VGA_WIDTH 320
+#define VGA_HEIGHT 200
+#define GRAPHICS_FILE 10000
 
 bool address_valid(uint32_t addr, uint32_t size) {
     return addr >= 0x80000000 && addr + size <= 0xFFFFFFFF;
@@ -33,6 +40,14 @@ uint32_t read(uint32_t fd, void* buf, uint32_t nbyte) {
 }
 
 uint32_t write(uint32_t fd, void* buf, int32_t nbyte) {
+    if(fd == GRAPHICS_FILE) { //! HARD CODED FOR GRAPHICS
+        if (nbyte > VGA_WIDTH * VGA_HEIGHT) nbyte = VGA_WIDTH * VGA_HEIGHT;
+        const unsigned char* src = (const unsigned char*)buf;
+        volatile unsigned char* vga = (unsigned char*)0xA0000;
+        for (int32_t i = 0; i < nbyte; i++) vga[i] = src[i];
+        return nbyte;
+    }
+    
     if(nbyte < 0 || !address_valid((uint32_t)buf, nbyte) || fd >= PCB_ARR_SIZE) {
         return -1;
     }
@@ -49,6 +64,10 @@ uint32_t write(uint32_t fd, void* buf, int32_t nbyte) {
 uint32_t open(const char* fd) {
     auto me = impl::threads::state.current();
     if(me->pcb->cwd == nullptr) me->pcb->cwd = fs->root;
+
+    if(K::streq(fd, "/dev/vga")) { //! CUSTOM FOR GRAPHICS BYPASS
+        return GRAPHICS_FILE;
+    }
 
     StrongPtr<Node> new_node = fs->find(me->pcb->cwd, fd);
     if (new_node == nullptr) return -1;
@@ -85,6 +104,9 @@ uint32_t close(uint32_t fd) {
         fd -= PCB_ARR_SIZE * 2;
         me->pcb->children[fd] = nullptr;
         me->pcb->children_promises[fd] = nullptr;
+    } else if (fd < PCB_ARR_SIZE * 4) {
+        fd -= PCB_ARR_SIZE * 3;
+        me->pcb->sockdt[fd] = nullptr;
     } else { // should never happen
         return -1;
     }
@@ -272,12 +294,116 @@ void naive_unmap(void* p) {
     VMM::naive_munmap(p, true);
 }
 
+void vga_syscall(){
+    Debug::printf("in vga system call\n");
+    vga_init();
+}
+
+void vga_syscall(){
+    Debug::printf("in vga system call\n");
+    vga_init();
+}
+
+// add system call stat()
+int stat(const char* path, struct stat *buf) {
+    StrongPtr<Node> inode = fs->find(fs->root, path);
+    if (inode == nullptr) return -1;
+    buf->st_mode = inode->data.mode;
+    buf->st_ino = inode->number;
+    buf->st_nlink = inode->data.n_links;
+    buf->st_uid = inode->data.uid;
+    buf->st_gid = inode->data.gid;
+    buf->st_size = inode->data.size_low;
+    buf->st_blksize = inode->block_size;
+    buf->st_blocks = (inode->data.n_sectors * 512) / buf->st_blksize;
+
+    // not sure if it's ok to cast uint32_t to timespec type
+    buf->st_atim = (timespec) inode->data.atime;
+    buf->st_mtim = (timespec) inode->data.mtime;
+    buf->st_ctim = (timespec) inode->data.ctime;
+    return 0;
+}
+
+// add system call f_stat()
+int fstat(int fd, struct stat *buf) {
+    auto me =impl::threads::state.current();
+    StrongPtr<OpenFile> open_file = me->pcb->fdt[fd];
+    if (open_file == nullptr) return -1;
+    StrongPtr<Node> inode = open_file->node;
+
+    buf->st_mode = inode->data.mode;
+    buf->st_ino = inode->number;
+    buf->st_nlink = inode->data.n_links;
+    buf->st_uid = inode->data.uid;
+    buf->st_gid = inode->data.gid;
+    buf->st_size = inode->data.size_low;
+    buf->st_blksize = inode->block_size;
+    buf->st_blocks = (inode->data.n_sectors * 512) / buf->st_blksize;
+
+    // not sure if it's ok to cast uint32_t to timespec type
+    buf->st_atim = (timespec) inode->data.atime;
+    buf->st_mtim = (timespec) inode->data.mtime;
+    buf->st_ctim = (timespec) inode->data.ctime;
+    return 0;
+}
+
+// add system call stat()
+int stat(const char* path, struct stat *buf) {
+    StrongPtr<Node> inode = fs->find(fs->root, path);
+    if (inode == nullptr) return -1;
+    buf->st_mode = inode->data.mode;
+    buf->st_ino = inode->number;
+    buf->st_nlink = inode->data.n_links;
+    buf->st_uid = inode->data.uid;
+    buf->st_gid = inode->data.gid;
+    buf->st_size = inode->data.size_low;
+    buf->st_blksize = inode->block_size;
+    buf->st_blocks = (inode->data.n_sectors * 512) / buf->st_blksize;
+
+    // not sure if it's ok to cast uint32_t to timespec type
+    buf->st_atim = (timespec) inode->data.atime;
+    buf->st_mtim = (timespec) inode->data.mtime;
+    buf->st_ctim = (timespec) inode->data.ctime;
+    return 0;
+}
+
+// add system call f_stat()
+int fstat(int fd, struct stat *buf) {
+    auto me =impl::threads::state.current();
+    StrongPtr<OpenFile> open_file = me->pcb->fdt[fd];
+    if (open_file == nullptr) return -1;
+    StrongPtr<Node> inode = open_file->node;
+
+    buf->st_mode = inode->data.mode;
+    buf->st_ino = inode->number;
+    buf->st_nlink = inode->data.n_links;
+    buf->st_uid = inode->data.uid;
+    buf->st_gid = inode->data.gid;
+    buf->st_size = inode->data.size_low;
+    buf->st_blksize = inode->block_size;
+    buf->st_blocks = (inode->data.n_sectors * 512) / buf->st_blksize;
+
+    // not sure if it's ok to cast uint32_t to timespec type
+    buf->st_atim = (timespec) inode->data.atime;
+    buf->st_mtim = (timespec) inode->data.mtime;
+    buf->st_ctim = (timespec) inode->data.ctime;
+    return 0;
+}
+
+<<<<<<< HEAD
+
+=======
+>>>>>>> c718acaeb71e2282080750d75eae13750b5a8466
 extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
-    //Debug::printf("*** syscall #%d\n",eax);
+    // Debug::printf("*** syscall #%d\n",eax);
     uint32_t *user_sp = (uint32_t*)frame[3];
     if((uint32_t)user_sp < 0x80000000 || (uint32_t)user_sp >= 0xF0000000) {
         Debug::printf("USER ESP IS INVALID\n");
         exit(-1);
+    }
+    if (eax >= 200 && eax < 250) {
+        
+        return sockets::socket_sys_handler(eax, frame);
     }
     switch (eax) {
     case 0:
@@ -310,6 +436,9 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
         return read(user_sp[1], (void*)user_sp[2], user_sp[3]);
     case 13:
         return seek(user_sp[1], user_sp[2]);
+    case 103:
+        vga_syscall();
+        return 0;
     case 100:
         return chdir((const char*)user_sp[1]);
     case 101:
@@ -320,6 +449,10 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     case 418:
         Debug::printf("*** I'm a teapot\n");
         return -1;
+    case 200:
+        return stat((const char*)user_sp[1], (struct stat*) user_sp[2]);
+    case 201:
+        return fstat(user_sp[1], (struct stat*) user_sp[2]);
     default:
         Debug::printf("*** unknown system call %d\n",eax);
         return -1;

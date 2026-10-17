@@ -10,7 +10,8 @@ CFLAGS = -std=c99 -m32 -nostdlib -nostdinc -g ${UTCS_OPT} -Wall -Werror -mno-sse
 CCFLAGS = -std=c++20 -fno-exceptions -fno-rtti -m32 -ffreestanding -nostdlib -g ${UTCS_OPT} -Wall -Werror -mno-sse
 
 CFILES = $(wildcard *.c)
-CCFILES = $(wildcard *.cc)
+CCFILES := $(sort $(filter-out ./crti.cc ./crtn.cc, $(shell find . -name '*.cc' ! -path './build/*')))
+
 SFILES = $(wildcard *.S) $(wildcard *.s)
 
 ALL_OFILES = $(subst .cc,.o,$(CCFILES)) $(subst .c,.o,$(CFILES)) $(subst .s,.o,$(subst .S,.o,$(SFILES)))
@@ -28,8 +29,8 @@ $B/%.o :  Makefile %.c
 
 $B/%.o :  Makefile %.cc
 	@echo "compiling  $*.cc"
-	@mkdir -p build
-	g++ -I. -c -MD $ -MF $B/$*.d -o $B/$*.o $(CCFLAGS) $*.cc
+	@mkdir -p $(dir $B/$*)
+	g++ -I. -c -MD -MF $B/$*.d -o $B/$*.o $(CCFLAGS) $*.cc
 
 $B/%.o :  Makefile ${TESTS_DIR}/%.cc
 	@echo "compiling  ${TESTS_DIR}/$*.cc"

@@ -6,6 +6,9 @@
 #include "libk.h"
 #include "config.h"
 #include "shared.h"
+#include "networking/networking.h"
+#include "vga.h"
+#include "ps2.h"
 
 StrongPtr<Ext2> fs{};
 
@@ -38,6 +41,11 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
 }
 
 void kernelMain(void) {
+    networkingMain();
+    vga_init();
+    PS2::init();
+
+
     auto d = StrongPtr<Ide>::make(1,0);
     fs = StrongPtr<Ext2>::make(d);
     auto init = fs->find(fs->root, "/sbin/init");
@@ -66,9 +74,12 @@ void kernelMain(void) {
 
     // char** argv = (char**)((uint32_t*)userEsp)[1];
 
-    // Debug::printf("HERE %s\n", argv[0]);
+    Debug::printf("HERE %s\n", argv[0]);
 
-
+    // while (true) {
+    //     PS2::read_ps2_data();
+    //     //Debug::printf("0X%x\n", PS2::read_ps2_data());
+    // }
 
     ASSERT(userEsp % 16 == 0);
 
@@ -88,6 +99,8 @@ void kernelMain(void) {
     // User mode will never "return" from switchToUser. It will
     // enter the kernel through interrupts, exceptions, and system
     // calls.
+    // VGA demo
+
     switchToUser(e,userEsp,0);
     Debug::panic("*** implement switchToUser in machine.S\n");
 }

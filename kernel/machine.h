@@ -7,8 +7,10 @@ extern "C" void resetEIP(void);
 
 extern "C" int inb(int port);
 extern "C" int inl(int port);
+extern "C" int inw(int port); //! NETWORKING CHANGE
 extern "C" void outb(int port, int val);
 extern "C" void outl(int port, int val);
+extern "C" void outw(int port, int val); //! NETWORKING CHANGE
 
 extern "C" uint64_t rdmsr(uint32_t id);
 extern "C" void wrmsr(uint32_t id, uint64_t value);
@@ -21,7 +23,7 @@ extern "C" void spuriousHandler_(void);
 extern "C" void pageFaultHandler_(void);
 
 extern "C" void* memcpy(void *dest, const void* src, size_t n);
-extern "C" void* bzero(void *dest, size_t n);
+//extern "C" void* bzero(void *dest, size_t n);
 
 extern "C" void sti();
 extern "C" void cli();
@@ -53,4 +55,8 @@ extern uint32_t kernelSS;
 extern "C" void switchToUser(uint32_t pc, uint32_t esp, uint32_t eax);
 extern "C" void sysHandler_(void);
 
+//! NETWORKING
+extern "C" void RTL8139Handler_(void);
+extern "C" void keyboard_handler_();
+extern "C" void mouse_handler_();
 

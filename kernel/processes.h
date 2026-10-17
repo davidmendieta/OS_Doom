@@ -1,6 +1,7 @@
 #pragma once
 
 #include "shared.h"
+#include "networking/socket/socket.h"
 
 const uint32_t PCB_ARR_SIZE = 100;
 
@@ -37,9 +38,12 @@ struct PCB {
     StrongPtr<PCB> children[PCB_ARR_SIZE];
     StrongPtr<OpenFile> fdt[PCB_ARR_SIZE];
     StrongPtr<Semaphore> sdt[PCB_ARR_SIZE];
-    
     StrongPtr<Promise<int32_t>> parent_promise;
     StrongPtr<Promise<int32_t>> children_promises[PCB_ARR_SIZE];
+    
+    //NETWORKING!!!!
+    StrongPtr<sockets::UDPSocket> sockdt[PCB_ARR_SIZE];
+
     PCB_State state = RUNNING;
     uint32_t exit_status;
 

@@ -1,0 +1,8 @@
+*.yaml
+*.txt
+.DS_Store
+*.bin
+*.rst
+*.dts
+*.dtsi
+*.dtso
