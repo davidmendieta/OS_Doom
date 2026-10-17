@@ -8,6 +8,7 @@
 #include "../arp/arp.h"
 #include "../socket/socket.h"
 #include "../socket/porttable.h"
+#include "../protocols/tcp.h"
 
 void NetworkInterface::send(const char* payload, uint32_t length) {
     rtl8139.send_packet(payload, length);
@@ -47,30 +48,40 @@ void NetworkInterface::handle_ip_udp(IPv4Header* packet, uint32_t packet_length)
     uint16_t src_port;
     uint16_t dst_port;
 
-    char* received_packet = Parser::decode_ip_udp(
-        packet, 
-        packet_length, 
-        &payload_length, 
-        &src_ip, 
-        &src_port, 
-        &dst_port
-    );
+    if (packet->protocol == 17) {
+        char* received_packet = Parser::decode_ip_udp(
+            packet, 
+            packet_length, 
+            &payload_length, 
+            &src_ip, 
+            &src_port, 
+            &dst_port
+        );
+        if(received_packet == nullptr) {
+            //Debug::printf("ERROR HANDLING IP UDP\n");
+            return;
+        }
+    
+        Debug::printf("RECEIVED PACKET\n");
+        for(uint32_t i = 0; i < payload_length; i++) {
+            Debug::printf("%x", received_packet[i]);
+        }
+        Debug::printf("\n");
 
-    if(received_packet == nullptr) {
-        Debug::printf("ERROR HANDLING IP UDP\n");
-        return;
+        StrongPtr<sockets::UDPSocket> socket =
+            sockets::port_table.get(dst_port);
+        if (socket != nullptr) {
+            socket->add(received_packet, payload_length, src_ip, src_port);
+        }
     }
+#ifdef ENABLE_EXPERIMENTAL_TCP
+    else if (packet->protocol == 6){
+        uint8_t* packet_start = (uint8_t*)packet;
+        uint8_t ihl_bytes = (packet->version_ihl & 0x0F) * 4;
 
-    Debug::printf("RECEIVED PACKET\n");
-    // for(uint32_t i = 0; i < payload_length; i++) {
-    //     Debug::printf("%x", received_packet[i]);
-    // }
-    // Debug::printf("\n");
+        TCPHeader* tcp_hdr = (TCPHeader*)(packet_start + ihl_bytes);
 
-    StrongPtr<sockets::UDPSocket> socket =
-        sockets::port_table.get(dst_port);
-
-    if (socket != nullptr) {
-        socket->add(received_packet, payload_length, src_ip, src_port);
+        Parser::receive_tcp(packet, tcp_hdr, packet_length - ihl_bytes);    
     }
+#endif
 }

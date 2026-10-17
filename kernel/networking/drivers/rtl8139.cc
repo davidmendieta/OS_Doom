@@ -175,7 +175,7 @@ void RTL8139::send_packet(const void* data, uint32_t len) {
     char* transfer_data = (char*)aligned_addr;
 
     memcpy((void*)transfer_data, data, len);
-    Debug::printf("Sending Data\n");
+    //Debug::printf("Sending Data\n");
     // Second, fill in physical address of data, and length
     outl(io_base + TSAD_array[tx_cur], (uint32_t)transfer_data);
     outl(io_base + TSD_array[tx_cur++], len);
@@ -186,17 +186,17 @@ void RTL8139::send_packet(const void* data, uint32_t len) {
 }
 
 extern "C" void RTL8139Handler() {
-    Debug::printf("RTL8139 interrupt was fired !!!! \n");
+    //Debug::printf("RTL8139 interrupt was fired !!!! \n");
     uint16_t status = inw(network_interface->get_io_base() + 0x3e);
 
     
-    Debug::printf("STATUS: %d", status);
+    //Debug::printf("STATUS: %d", status);
     
     if(status & TOK) {
-        Debug::printf("Packet sent\n");
+        //Debug::printf("Packet sent\n");
     }
     if (status & ROK) {
-        Debug::printf("Received packet\n");
+        //Debug::printf("Received packet\n");
         network_interface->receive();
     }
     

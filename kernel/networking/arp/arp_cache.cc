@@ -19,7 +19,7 @@ char *ARPCache::get(uint32_t ip)
     {
         network_interface->send_arp_request(ip);
     }
-    Debug::printf("Getting MAC address for %x\n", ip);
+    //Debug::printf("Getting MAC address for %x\n", ip);
 
     // Send ARP request
     char *val = p[ip & 0xFF]->get();

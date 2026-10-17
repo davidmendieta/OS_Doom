@@ -7,6 +7,7 @@
 // }
 
 #include "parser.h"
+#include "tcp.h"
 #include "../../debug.h"
 #include "../../heap.h"
 #include "../../machine.h"
@@ -147,6 +148,13 @@ char* decode_ip_udp(const void* packet, size_t packet_len,
         return nullptr;
     }
 
+    // Verify ttl
+    if (ip->ttl <= 0){
+        Debug::printf("IP TTL FAILED\n");
+        return nullptr;
+    }
+    decrement_ttl((IPv4Header*) ip);
+
     // 2) protocol & IP‑dest checks
     if (!verify_receiver(ip)) {
         // return 0;
@@ -208,8 +216,8 @@ bool verify_receiver(const IPv4Header* ip_hdr) {
         return false;
     }
 
-    uint16_t total_len = ntohs(ip_hdr->total_length);
-    uint32_t src_ip = ntohl(ip_hdr->src_ip);
+    //uint16_t total_len = ntohs(ip_hdr->total_length);
+    //uint32_t src_ip = ntohl(ip_hdr->src_ip);
     uint32_t dst_ip = ntohl(ip_hdr->dest_ip);
     uint8_t proto = ip_hdr->protocol;
 
@@ -223,11 +231,13 @@ bool verify_receiver(const IPv4Header* ip_hdr) {
         return false;
     }
 
+	/*
     Debug::printf("IPv4: %d.%d.%d.%d -> %d.%d.%d.%d, len=%d, proto=%d\n",
                   (src_ip >> 24) & 0xFF, (src_ip >> 16) & 0xFF,
                   (src_ip >> 8) & 0xFF, src_ip & 0xFF, (dst_ip >> 24) & 0xFF,
                   (dst_ip >> 16) & 0xFF, (dst_ip >> 8) & 0xFF, dst_ip & 0xFF,
                   total_len, proto);
+				  */
 
     return true;
 }
@@ -237,4 +247,152 @@ void decrement_ttl(IPv4Header* ip_hdr) {
         ip_hdr->ttl--;
     }
 }
+
+
+/*   --- TCP ----   */ 
+uint16_t tcp_checksum(const IPv4Header* ip, const TCPHeader* tcp,
+    const char* payload, size_t payload_len) {
+        
+    PseudoHeader ph = {};
+    ph.src_ip     = ip->src_ip;
+    ph.dst_ip     = ip->dest_ip;
+    ph.zero       = 0;
+    ph.protocol   = 6; // TCP
+    ph.udp_length = htons(sizeof(TCPHeader) + payload_len);
+
+    uint32_t sum = 0;
+    sum += (~checksum(&ph, sizeof(ph))) & 0xFFFF;
+    sum += (~checksum(tcp, sizeof(TCPHeader))) & 0xFFFF;
+    sum += (~checksum(payload, payload_len)) & 0xFFFF;
+
+    return fold_checksum(sum);
+}
+
+char* encode_ip_tcp(const void* payload, size_t payload_len, uint32_t src_ip,
+    char* src_mac, uint16_t src_port, uint32_t dest_ip,
+    char* dest_mac, uint16_t dest_port,
+    uint32_t* out_packet_len) {
+
+    size_t tcp_len = sizeof(TCPHeader) + payload_len;
+    size_t ip_len = sizeof(IPv4Header) + tcp_len;
+    size_t ethernet_len = sizeof(EthernetHeader) + ip_len;
+
+    auto* buf = (char*)malloc(ethernet_len);
+
+    // fill Ethernet Header
+    auto* ethernet = (EthernetHeader*)buf;
+    memcpy(ethernet->src_mac, src_mac, 6);
+    memcpy(ethernet->dest_mac, dest_mac, 6);
+    ethernet->ethertype = htons(IPV4_VALUE);
+
+    auto* ip = (IPv4Header*)(buf + sizeof(EthernetHeader));
+
+    // fill IPv4 header
+    ip->version_ihl = (4 << 4) | (sizeof(IPv4Header) / 4);
+    ip->type_of_service = 0;
+    ip->total_length = htons((uint16_t)ip_len);
+    ip->identification = htons(0);
+    ip->flags_fragment = htons(0x4000);
+    ip->ttl = 64;
+    ip->protocol = 6; // 6 for TCP
+    ip->header_checksum = 0;
+    ip->src_ip = htonl(src_ip);
+    ip->dest_ip = htonl(dest_ip);
+
+    ip->header_checksum = checksum(ip, sizeof(IPv4Header));
+
+    // fill TCP header
+    auto* tcp = (TCPHeader*)(buf + sizeof(EthernetHeader) + sizeof(IPv4Header));
+    memcpy(tcp, payload, sizeof(TCPHeader));
+
+    // copy TCP payload if any
+    if (payload_len > 0) {
+        memcpy(buf + sizeof(EthernetHeader) + sizeof(IPv4Header) + sizeof(TCPHeader),
+            (const char*)payload + sizeof(TCPHeader),
+            payload_len);
+    }
+
+    // TCP checksum
+    tcp->checksum = 0;
+    tcp->checksum = tcp_checksum(ip, tcp, buf + sizeof(EthernetHeader) + sizeof(IPv4Header)
+                                + sizeof(TCPHeader), payload_len);
+
+    *out_packet_len = ethernet_len;
+    return buf;
+}
+
+TCB_tcp* find_tcb(uint16_t src_port, uint16_t dest_port, uint32_t src_ip) {
+    // Ok this is as far as this implementation will go.
+    // We normally would have a hashmap of active connections
+    // here, in which we would verify if we have to establish
+    // a new connection or just fetch it.
+
+    // For now, assume we only allow 1 connection, kinda like a global TCB.
+    static TCB_tcp tcb;
+
+    if (tcb.state == TCPState::CLOSED) {
+        tcb.local_port = dest_port;
+        tcb.remote_port = src_port;
+        tcb.remote_ip = src_ip;
+        tcb.state = TCPState::LISTEN; // or SYN_SENT depending on role
+    }
+
+    return &tcb;
+}
+
+void receive_tcp(const IPv4Header* ip, const TCPHeader* tcp, size_t payload_len) {
+    uint16_t src_port = ntohs(tcp->src_port);
+    uint16_t dest_port = ntohs(tcp->dest_port);
+    uint32_t seq_num = ntohl(tcp->seq_num);
+    // uint32_t ack_num = ntohl(tcp->ack_num);
+
+    TCB_tcp* conn = find_tcb(src_port, dest_port, ntohl(ip->src_ip));
+    if (!conn) {
+        Debug::printf("TCP: No TCB found or created\n");
+        return;
+    }
+
+    uint8_t flags = tcp->flags;
+
+    switch (conn->state) {
+    case TCPState::LISTEN:
+        if (flags & 0x02) { // SYN received
+            Debug::printf("TCP: Received SYN in LISTEN, sending SYN+ACK\n");
+
+            conn->state = TCPState::SYN_RECEIVED;
+            conn->ack_num = seq_num + 1;
+            conn->seq_num = 100; // bc why not
+
+            send_tcp_syn_ack(conn);
+        }
+        break;
+
+    case TCPState::SYN_SENT:
+        if ((flags & 0x12) == 0x12) { // SYN+ACK received
+            Debug::printf("TCP: Received SYN+ACK in SYN_SENT, sending ACK\n");
+
+            conn->state = TCPState::ESTABLISHED;
+            conn->ack_num = seq_num + 1;
+            conn->seq_num += 1; // We sent SYN already
+
+            send_tcp_ack(conn);
+        }
+        break;
+
+    case TCPState::SYN_RECEIVED:
+    // ACK received
+    if (flags & 0x10) { 
+            Debug::printf("TCP: Received ACK in SYN_RECEIVED, connection ESTABLISHED\n");
+
+            conn->state = TCPState::ESTABLISHED;
+        }
+        break;
+
+    default:
+        Debug::printf("TCP: Packet received in unexpected state\n");
+        break;
+    }
+}
+
+
 }  // namespace Parser
