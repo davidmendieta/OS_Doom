@@ -27,7 +27,7 @@ char* DHCP::encode_dhcp(uint32_t sender_ip, char* sender_mac, uint16_t opcode, u
     memcpy(ethernet_header->src_mac, sender_mac, 6);
     memcpy(ethernet_header->dest_mac, (char* )"\xFF\xFF\xFF\xFF\xFF\xFF", 6);
     
-    // TODO: Fix this shit
+    // TODO: Fix this
     ethernet_header->ethertype = IPV4_VALUE; // make it DHCP_VALUE ?? 
 
     // DHCP header

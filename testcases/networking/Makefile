@@ -28,7 +28,7 @@ QEMU_ACCEL ?= tcg,thread=multi
 QEMU_CPU ?= max
 QEMU_SMP ?= 4
 QEMU_MEM ?= 128m
-QEMU_TIMEOUT ?= 20 #! CHANGED
+QEMU_TIMEOUT ?= 5 #! CHANGED
 QEMU_TIMEOUT_CMD ?= timeout
 QEMU_DEBUG ?=  # e.g -d guest_errors
 
@@ -53,7 +53,7 @@ QEMU_FLAGS = -no-reboot \
 # ----- NETWORKING START ------
 NETWORK_MODE=CLIENT #  HOST or CLIENT
 
-HOST_IP = 128.83.144.128 # Change to actual Host IP, only needed for client mode
+HOST_IP = 128.83.139.55 # Change to actual Host IP, only needed for client mode
 
 
 RANDOM_MAC := $(shell printf '52:54:%02x:%02x:%02x:%02x\n' \

@@ -1,0 +1,113 @@
+c[?7l[2J[0mSeaBIOS (version rel-1.16.3-0-ga6ed6b701f0a-prebuilt.qemu.org)
+
+
+iPXE (http://ipxe.org) 00:03.0 CA00 PCI2.10 PnP PMM+06FD0FC0+06F30FC0 CA00
+Press Ctrl-B to configure iPXE (PCI 00:03.0)...                                                                               
+
+
+Booting from Hard Disk..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+| What just happened? Why am I here?
+| Discovering my identity and features
+|     CPUID: AuthenticAMD
+|     has SSE3
+|     has MONITOR/MWAIT
+|     running on hypervisor
+| totalProcs 1
+| memSize 0x7fe0000 127MB
+| localAPIC fee00000
+| ioAPIC fec00000
+| heap range 0x100000 0x600000
+| switched to new UART
+| physical range 0x600000 0x7fe0000
+| pitInit freq 1000Hz
+| pitInit divider 59659
+| APIT running at 1000071822Hz
+| APIT counter=1000071 for 1000Hz
+
+- PCI ENUMERATING DEVICES -
+| Expected Device Found: Vendor 0x8086, Device 0x1237
+| Expected Device Found: Vendor 0x8086, Device 0x7000
+| Expected Device Found: Vendor 0x8086, Device 0x7010
+    | BAR[4]: 0x0000c101
+| Expected Device Found: Vendor 0x8086, Device 0x7113
+| Expected Device Found: Vendor 0x1234, Device 0x1111
+    | BAR[0]: 0xfd000008
+    | BAR[2]: 0xfebd0000
+| Expected Device Found: Vendor 0x10ec, Device 0x8139
+    | BAR[0]: 0x0000c001
+    | BAR[1]: 0xfebd1000
+- FOUND ALL EXPECTED DEVICES - 
+
+| initializing TSS:ss0 for 0
+| 0 enabling interrupts, I'm scared
+rtl8139 use port based access (base: c000)
+val: 1
+RCR: 8a
+Interrupt Mask Register: 5
+Registered irq interrupt for rtl8139, irq num = 11
+MAC Address: 52:54:4d:cd:6d:ed
+PCI interrupt pin = 1, line = 11
+vaddr:80000000 memsz:0x4025c0 filesz:0x259c fileoff:80
+Entering main
+Opening
+ opening socket4 opening socket5 opening socket6 opening socket7
+ 
+opening socket8
+Here opening
+Sending ARP request to 12539ab
+ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff 52 54 4d ffffffcd 6d ffffffed 6 8 1 0 0 8 6 4 1 0 52 54 4d ffffffcd 6d ffffffed 0 0 ffffffaa 39 25 1 ffffffff ffffffff ffffffff ffffffff ffffffff ffffffff 0 0 ffffffab 39 25 1 
+Sending Data
+RTL8139 interrupt was fired !!!! 
+STATUS: 4Packet sent
+Getting MAC address for 12539ab
+RTL8139 interrupt was fired !!!! 
+STATUS: 1Received packet
+Received ARP packet
+Received ARP reply
+Sender IP That we got APR NAMESPACE: 12539ab
+Sender MAC: 52:54:d5:82:f3:5a
+Sending packet to 12539ab
+Sending Data
+RTL8139 interrupt was fired !!!! 
+STATUS: 4Packet sent
+RTL8139 interrupt was fired !!!! 
+STATUS: 1Received packet
+Received ARP packet
+Target IP is 000387c8
+ARP request for us
+Sending Data
+RTL8139 interrupt was fired !!!! 
+STATUS: 4Packet sent
+RTL8139 interrupt was fired !!!! 
+STATUS: 1Received packet
+IPv4: 1.37.57.171 -> 1.37.57.170, len=867, proto=17
+RETURNING PAYLOAD
+RECEIVED PACKET
+2a2a2a202525252525252523232525252525252525252523232a2a2b3d3d3d2a2a2b2b2b2a2a2a252aa2a2a2a2025252525252525232a2a2a23232525252525252323232a2a2b2b2b23232a2a2a2a2a2a252aa2a2a2a20252525252525252323232323232325232323232323232a2a2a2a2a232a2a2a2a2a2a2a252aa2a2a2a202325252525232323232a2a232a232b2d3a3a3a3a3a2d2b2a2a2a2a232a2323232a2a2a252aa2a2a2a202323252325232323232a3a2e2e3a3a3a3d2a2a2a2a2d2e3a2d3d2b232a2a2a2a2a2a232323a2a2a2a202323232323232323233a3a3a3a3a2e2d2a2a2a2a2a2d2e3a2e2e2e2b2a2b2b2b2b2b2b2b2ba2a2a2a202a2a2a2a2a2a2a2a2b3a3a3a3a2e2e2e2e3a3a2e2e2e2e2e3a3a3a2d3d3d3d3d3d3d3d3d3da2a2a2a202a2a2a2a2a2a2a2a2a3d3d2d2d2b3d2d3a2d2d3a2d3d3d3a3a2d2d3d3d3d3d3d3d3d3d3d3da2a2a2a202a2a2a2a2a2a2a2b2b2b2b2a2b3d3d2b3d2d2d2d3d3d3d2b2b3d3d3d3d2b2b2b2b2b2b2b2ba2a2a2a202b2b2b2b2b3d3d3d3d3d3d2b3d2d2d3d3d3d2d3d3d3d2d3d2b2b2b2b2b2b2b2b2b2b2b2b2ba2a2a2a202b2b2b3d3d3d3d3d3d3d3d2b2d2d3a2d2d2d3a2d2d3a3a2d2b2b2b2b2b2b2b2b2b2b2b2b2ba2a2a2a203d3d3d3d3d3d2b2b2b2b2b2b3d2d2d2d2d3d3d2d2d2d2d2a2a2b2b2b2b2b2b2b2b2b2b2b2ba2a2a2a203d3d3d3d3d2b2b2b2b232b2d3d2d2d3d3d3d3d3d3d2d3d2325232a2b2b2b2b2b2b2b2b2b2ba2a2a2a202d2d3d2b2b3d2a232325252b3d3d3d2d2d2d2d2d3d2b2325252323232a2a2b2b2b2b2b2b2ba2a2a2a203d3d3d2a2323232325252525252525232b2b2b2a2a2b23252525252523232a2a3d3d2b3d3da2a2a2a203d3d2d2a232325252525252525252525232a232a23252525252525252323232a2d3d2b3d3da2a2a2a202b2d2d3d23252525252525252525252525252525252525252525252523252a2d2d3d3d2b2ba2a2a2a202b2d2d2d2b2525252525252525252525252525252525252a2b2d2b2525233d2d2d2d2b2b2ba2a2a2a203d2d2d3d3d3d25252525252525252525252525252525252525232525233d3d3d2d3a2b2b2ba2a2a2a202d2d2d3d3d3d2b2525252525252525252525252525252525252525233d3d3d2d2d3a3d2b2b
+Recieved Packet!
+*** %%%%%%%##%%%%%%%%%%##**+===**+++***%*
+*** %%%%%%%#***##%%%%%%###**+++##******%*
+*** %%%%%%%#######%#######*****#*******%*
+*** #%%%%####**#*#+-:::::-+****#*###***%*
+*** ##%#%####*:..:::=****-.:-=+#******###
+*** #########:::::.-*****-.:...+*++++++++
+*** ********+::::....::.....:::-=========
+*** *********==--+=-:--:-==::--==========
+*** *******++++*+==+=---===++====++++++++
+*** +++++======+=--===-===-=+++++++++++++
+*** +++========+--:---:--::-+++++++++++++
+*** ======++++++=----==----**++++++++++++
+*** =====++++#+-=--======-=#%#*++++++++++
+*** --=++=*##%%+===-----=+#%%###**+++++++
+*** ===*####%%%%%%%#+++**+#%%%%%##**==+==
+*** ==-*##%%%%%%%%%%#*#*#%%%%%%%###*-=+==
+*** +--=#%%%%%%%%%%%%%%%%%%%%%%%#%*--==++
+*** +---+%%%%%%%%%%%%%%%%%%*+-+%%#=---+++
+*** =--===%%%%%%%%%%%%%%%%%%%#%%#===-:+++
+*** ---===+%%%%%%%%%%%%%%%%%%%%#===--:=++
+Getting MAC address for 12539ab
+Sending packet to 12539ab
+Sending Data
+RTL8139 interrupt was fired !!!! 
+STATUS: 4Packet sent
+shutdown
