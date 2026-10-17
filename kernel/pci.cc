@@ -155,12 +155,12 @@ PciDevice* findDeviceVD(uint16_t vendor_id, uint16_t device_id) {
 
 // verify we find all of our expected devices
 void verifyDevices() {
-    for (size_t i = 0; i < pciDeviceCount; i++) {
-        
-        PciDevice* device = findDeviceVD(pciDevices[i].vendor, pciDevices[i].device);
+    for (size_t i = 0; i <  sizeof(expectedDevices)/sizeof(expectedDevices[0]); i++) {
+        VendorDevice* expected = &expectedDevices[i];
+        PciDevice* device = findDeviceVD(expected->vendor, expected->device);
 
         if (device != nullptr) {
-            Debug::printf("| Expected Device Found: Vendor 0x%x, Device 0x%x\n", device->vendor, device->device);
+            Debug::printf("| Expected Device Found: Vendor 0x%x, Device 0x%x\n", expected->vendor, expected->device);
 
             int max_bars = (device->header & 0x7F) == 1 ? 2 : 6;
             for (int b = 0; b < max_bars; b++) {
@@ -169,7 +169,7 @@ void verifyDevices() {
                 }
             }
         } else {
-            Debug::panic("| Expected Device Not Found: Vendor 0x%x, Device 0x%x\n", pciDevices[i].vendor, pciDevices[i].device);
+            Debug::panic("| Expected Device Not Found: Vendor 0x%x, Device 0x%x\n", expected->vendor, expected->device);
         }
     }
 
