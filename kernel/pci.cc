@@ -27,6 +27,7 @@ VendorDevice expectedDevices[] = {
     { 0x8086, 0x7113 }, // Intel 82371 PIIX4 ACPI Controller - manages power configuration and ACPI functions
     { 0x1234, 0x1111 }, // Bochs/QEMU Virtual VGA Adapter - emulates a VGA compatible graphics device for basic virtual machine display
     { 0x8086, 0x100e }, // Intel 82540EM Gigabit Ethernet Controller (e1000) - provides gigabit network connectivity
+    { 0x8086, 0x2415 }, // Intel 82801AA/ICH AC’97 Audio Controller
 };
 
 // reads from PCI config space - 32 bits
@@ -144,12 +145,14 @@ void pciEnumDevices() {
 
 // find device(struct) based on vendor and device id
 PciDevice* findDeviceVD(uint16_t vendor_id, uint16_t device_id) {
+    Debug::printf("Finding device id\n");
     for (size_t i = 0; i < pciDeviceCount; i++) {
         if ((pciDevices[i].vendor == vendor_id) && 
             (pciDevices[i].device == device_id)) {
             return &pciDevices[i];
         }
     }
+	Debug::printf("didn't find device id\n");
     return nullptr;
 }
 

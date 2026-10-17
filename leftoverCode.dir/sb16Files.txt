@@ -1,0 +1,139 @@
+sb16.cc 
+
+#include "sb16.h"
+#include "io.h"
+#include "vmm.h"
+#include "physmem.h"
+#include "debug.h"
+
+// DSP base and mixer ports
+#define SB16_BASE  0x220
+#define DSP_RESET  (SB16_BASE + 0x6)
+#define DSP_READ   (SB16_BASE + 0xA)
+#define DSP_WRITE  (SB16_BASE + 0xC)
+#define DSP_READ_STATUS (SB16_BASE + 0xE)
+#define MIXER_ADDR (0x224)
+#define MIXER_DATA (0x225)
+
+// DSP commands
+#define DSP_CMD_SPKON   0xD1
+#define DSP_CMD_SPKOFF  0xD3
+#define DSP_CMD_8BIT_DMA_PLAYBACK 0xC6
+#define DSP_CMD_SET_SAMPLE_RATE   0x41
+
+// DMA
+#define DMA_CHANNEL 1
+#define DMA_PAGE_REGISTER 0x83
+
+// Buffer
+#define DMA_BUFFER_SIZE 4096
+uint8_t* sb16_buffer = nullptr;
+uint32_t sb16_phys = 0;
+extern uint8_t audio_samples[];
+extern uint32_t num_samples;
+uint32_t sample_index = 0;
+
+bool sb16_reset() {
+    // Reset the DSP (Digital Signal Processor)
+    outb(DSP_RESET, 1);
+    for (int i = 0; i < 1000; i++);  // Delay to ensure reset completion
+    outb(DSP_RESET, 0);
+
+    // Check DSP response to confirm reset
+    for (int i = 0; i < 10000; i++) {
+        if (inb(DSP_READ_STATUS) & 0x80) {
+            if (inb(DSP_READ) == 0xAA) {
+                Debug::printf("SB16 reset success!\n");
+                return true;
+            }
+        }
+    }
+    Debug::printf("SB16 reset failed.\n");
+    return false;
+}
+
+void sb16_set_sample_rate(uint16_t hz) {
+    // Set the sample rate for SB16
+    outb(DSP_WRITE, DSP_CMD_SET_SAMPLE_RATE);
+    outb(DSP_WRITE, (hz >> 8) & 0xFF);
+    outb(DSP_WRITE, hz & 0xFF);
+}
+
+void setup_dma(uint32_t phys_addr, uint16_t length) {
+    // Configure DMA for SB16 to transfer audio buffer
+    outb(0x0A, 0x05);                 // Mask channel 1
+    outb(0x0C, 0xFF);                 // Reset flip-flop
+    outb(0x0B, 0x49);                 // Mode: single, write, auto-init
+
+    // Set DMA address
+    outb(0x02, phys_addr & 0xFF);
+    outb(0x02, (phys_addr >> 8) & 0xFF);
+    outb(DMA_PAGE_REGISTER, (phys_addr >> 16) & 0xFF);
+
+    length -= 1;
+    outb(0x03, length & 0xFF);
+    outb(0x03, (length >> 8) & 0xFF);
+
+    outb(0x0A, 0x01); // Unmask channel 1
+}
+
+void sb16_play_dma(uint32_t buf_phys, uint16_t length) {
+    // Start playing audio using DMA
+    outb(DSP_WRITE, DSP_CMD_SPKON);  // Turn on the speaker
+    outb(DSP_WRITE, DSP_CMD_8BIT_DMA_PLAYBACK);  // 8-bit DMA playback mode
+    outb(DSP_WRITE, (length - 1) & 0xFF);  // Length of the sample
+    outb(DSP_WRITE, (length - 1) >> 8);
+}
+
+void fill_buffer_with_samples() {
+    // Fill the DMA buffer with audio samples
+    sample_index = 0;
+    for (int i = 0; i < DMA_BUFFER_SIZE; i++) {
+        if (sample_index < num_samples) {
+            sb16_buffer[i] = audio_samples[sample_index++];
+        } else {
+            sb16_buffer[i] = 128; // silence (middle for 8-bit unsigned)
+        }
+    }
+}
+
+void init_sb16_audio() {
+    // Allocate memory for the SB16 buffer (must be below 1MB for DMA)
+    sb16_phys = (uint32_t)PhysMem::alloc_frame();  // Directly get the physical address
+    sb16_buffer = (uint8_t*)sb16_phys;  // Cast the physical address to a pointer to uint8_t
+    
+    // Initialize the SB16 hardware
+    if (!sb16_reset()) return;
+
+    // Set sample rate (22050 Hz is safe for playback)
+    sb16_set_sample_rate(22050);
+
+    // Fill the buffer with samples
+    fill_buffer_with_samples();
+    
+    // Set up DMA for audio buffer
+    setup_dma(sb16_phys, DMA_BUFFER_SIZE);
+
+    // Start audio playback using DMA
+    sb16_play_dma(sb16_phys, DMA_BUFFER_SIZE);
+
+    Debug::printf("SB16: Playback started (22050 Hz, 8-bit mono)\n");
+}
+
+
+
+sb16.h 
+
+
+// In sb16.h
+#ifndef SB16_H
+#define SB16_H
+
+#include <stdint.h>
+
+int init_sb16(); // Initializes SB16 audio
+void play_sb16_samples(uint16_t* samples, uint32_t num_samples); // Plays samples on SB16
+void poll_sb16_loop(); // Polls the SB16 for playback status
+void shutdown_sb16(); // Shuts down SB16 audio
+
+#endif // SB16_H

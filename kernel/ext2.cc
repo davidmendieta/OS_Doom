@@ -224,7 +224,7 @@ StrongPtr<Node> Ext2::find_one(StrongPtr<Node> dir, char* name) {
             if(i != name_length) {
                 dir->read<char>(full_offset + 8 + i, c);
             }
-            // Debug::printf("%c", c);
+            // Debug::printf("%c\n", c);
             if (c != name[i]) {
                 // Debug::printf(" - NOT THE SAME: %d != %d\n", c, name[i]);
                 break; // Not the same name
@@ -266,6 +266,7 @@ StrongPtr<Node> Ext2::find(StrongPtr<Node> dir, const char* name) {
             if(next_node->is_symlink()) {
                 count++;
             }
+            
 
             // Symlink
             if(!path.isEmpty() && next_node->is_symlink()) {
@@ -282,6 +283,8 @@ StrongPtr<Node> Ext2::find(StrongPtr<Node> dir, const char* name) {
             }
 
         }
+
+            // Debug::printf("HERE QM %s | %s\n", name, str);
 
         delete[] str;
         curr = path.remove();

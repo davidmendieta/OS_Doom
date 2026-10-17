@@ -320,3 +320,42 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState)
     // memcpy((void*)new_page, (void*)(vme_entry->start + page_offset), PhysMem::FRAME_SIZE);
     // Debug::panic("*** can't handle page fault at %x\n",va_);
 }
+
+namespace VMM {
+uint32_t get_pd () {
+    return global_page_directory;
+}
+}
+
+namespace VMM {
+uint32_t get_phys_addr(uint32_t va) {
+    // Retrieve the current thread's VME (Virtual Memory Entry)
+    auto me = impl::threads::state.current();
+
+    uint32_t* pd = (uint32_t*)me->pd;
+
+    uint32_t pdi = va >> 22;
+    uint32_t pti = (va >> 12) & 0x3FF;
+
+    uint32_t pde = pd[pdi];
+    Debug::printf("VA: 0x%x | PDI: 0x%x | PDE: 0x%x\n", va, pdi, pde);
+
+    if (!(pde&1)) {
+        Debug::printf("PDE Doesnt exist\n");
+        return 0;
+    }
+
+    uint32_t* pt = (uint32_t*)(pde & 0xFFFFF000);
+    Debug::printf("  PT pointer: 0x%x\n", pt);
+    uint32_t pte = pt[pti];
+    Debug::printf("  PTI: 0x%x | PTE: 0x%x\n", pti, pte);
+    if (!(pte&1)) {
+        Debug::printf("PTE Doesnt exist\n");
+        return 0;
+    }
+
+    uint32_t page_frame = pte & 0xFFFFF000;
+    uint32_t offset = va & 0xFFF;
+    return page_frame | offset;
+}
+}

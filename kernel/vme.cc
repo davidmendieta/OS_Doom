@@ -205,3 +205,5 @@ StrongPtr<VMEEntry> VMEEntry::duplicate(StrongPtr<VMEEntry> vme_entry) {
     new_vme_entry->next = VMEEntry::duplicate(vme_entry->next);
     return new_vme_entry;
 }
+
+

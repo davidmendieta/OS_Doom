@@ -17,6 +17,7 @@ namespace VMM {
     extern void remove_PT_mapping(uint32_t* PD, uint32_t PDI);
     extern void remove_mapping(uint32_t* PD, uint32_t VPN);
 
+    extern uint32_t get_pd();
     extern uint32_t new_page_directory();
     extern void copy_page_directory(uint32_t* pd, uint32_t* new_pd);
 
@@ -26,13 +27,17 @@ namespace VMM {
     // Called on each core to do per-core initialization
     extern void per_core_init();
 
+
+
     // naive mmap
     extern void* naive_mmap(uint32_t size, bool shared, StrongPtr<Node> file, uint32_t file_offset, bool user);
 
     extern void* map_vga();
 
     // naive munmap
-    void naive_munmap(void* p, bool user);
+    extern void naive_munmap(void* p, bool user);
+
+    uint32_t get_phys_addr(uint32_t va);
 
 }
 

@@ -41,6 +41,7 @@ QEMU_CONFIG_FLAGS = -accel ${QEMU_ACCEL} \
                     -m ${QEMU_MEM} \
                     ${QEMU_DEBUG}
 
+export SDL_AUDIODRIVER=pulseaudio
 QEMU_FLAGS = -no-reboot \
 	${QEMU_CONFIG_FLAGS} \
 	-vga std \
@@ -48,7 +49,10 @@ QEMU_FLAGS = -no-reboot \
 	--serial file:$*.raw \
 	-drive file=kernel/build/kernel.img,index=0,media=disk,format=raw,file.locking=off \
 	-drive file=$*.data,index=1,media=disk,format=raw,file.locking=off \
-	-device isa-debug-exit,iobase=0xf4,iosize=0x04
+	-device isa-debug-exit,iobase=0xf4,iosize=0x04 \
+	-audiodev sdl,id=sdl1,out.buffer-count=512,out.frequency=48000 \
+	-device AC97,audiodev=sdl1,bus=pci.0,addr=0x1f
+
 
 # ----- NETWORKING START ------
 NETWORK_MODE=CLIENT #  HOST or CLIENT

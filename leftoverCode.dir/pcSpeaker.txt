@@ -1,0 +1,46 @@
+// small I/O wait (tune or replace with your own timer if you have one)
+static inline void io_wait() {
+    // delay loop that just writes 0 to a port which allows controller to catch up
+    asm volatile ("outb %%al, $0x80" : : "a"(0));
+}
+
+/// pitchannel2
+static void pit2_set_divisor(uint16_t divisor) {
+    outb(0x43, 0b10110110);
+    outb(0x42, divisor & 0xFF);
+    outb(0x42, divisor >> 8);
+}
+
+// enable the speaker gate
+static void speaker_on() {
+    // mask out speaker data (1) and gate (1)
+    uint8_t val = inb(0x61);
+    outb(0x61, val | 0b11);
+}
+
+// disable the speaker fate
+static void speaker_off() {
+    // mask out speaker data (1) and gate (0)
+    uint8_t val = inb(0x61);
+    outb(0x61, val & ~0b10);
+}
+
+void beep(uint32_t freq, uint32_t ms) {
+    if (freq == 0 || ms == 0) return;
+    // divisor = inputclock / freq
+    uint16_t divisor = (uint16_t)(1193180 / freq);
+    //Debug::printf("*** Divisor: %x\n, divisor");
+
+    pit2_set_divisor(divisor);
+    speaker_on();
+    //Debug::printf("*** speaker on\n");
+
+    // crude busy-wait; replace with your timer/sleep if available
+    for (uint32_t i = 0; i < ms * 1000; i++) {
+        io_wait();
+        // Debug::printf("***waiting\n");
+    }
+
+    speaker_off();
+    //Debug::printf("*** speaker off\n");
+}

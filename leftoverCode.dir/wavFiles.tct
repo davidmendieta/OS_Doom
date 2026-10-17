@@ -1,0 +1,63 @@
+wav.cc 
+
+#include "libk.h"
+#include "debug.h"
+#include "wav.h"
+
+uint16_t* audio_samples = nullptr;
+uint32_t num_samples = 0;
+
+struct WavHeader {
+    char riff_id[4];
+    uint32_t riff_size;
+    char wave_id[4];
+    char fmt_id[4];
+    uint32_t fmt_size;
+    uint16_t audio_fmt;
+    uint16_t channels;
+    uint32_t sample_rate;
+    uint32_t byte_rate;
+    uint16_t block_align;
+    uint16_t bits_per_sample;
+    char data_id[4];
+    uint32_t data_size;
+} __attribute__((packed));
+
+bool load_wav(uint8_t* raw_data, uint32_t size) {
+    WavHeader* hdr = (WavHeader*)raw_data;
+
+    if (K::memcmp(hdr->riff_id, "RIFF", 4) != 0 ||
+        K::memcmp(hdr->wave_id, "WAVE", 4) != 0 ||
+        K::memcmp(hdr->fmt_id, "fmt ", 4) != 0 ||
+        K::memcmp(hdr->data_id, "data", 4) != 0) {
+        Debug::printf("*** WAV: invalid format header\n");
+        return false;
+    }
+
+    if (hdr->audio_fmt != 1 || hdr->channels != 1 || hdr->bits_per_sample != 16) {
+        Debug::printf("*** WAV: only supports PCM mono 16-bit\n");
+        return false;
+    }
+
+    uint16_t* samples = (uint16_t*)(raw_data + sizeof(WavHeader));
+    num_samples = hdr->data_size / 2;
+    audio_samples = samples;
+
+    Debug::printf("*** WAV loaded: %u samples at %u Hz\n", num_samples, hdr->sample_rate);
+    return true;
+}
+
+
+
+
+
+wav.h
+
+#pragma once
+
+#include <stdint.h>
+
+extern uint16_t* audio_samples;
+extern uint32_t num_samples;
+
+bool load_wav(uint8_t* raw_data, uint32_t size);
