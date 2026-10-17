@@ -1,0 +1,6 @@
+# this is a syntax parsing test
+echo hi && echo how are you doing&& echo that was weird &&echo this is even weirder
+echo now&&echo this&& echo is&& echo evil
+echo "pistash has simple quotes handling"
+echo 'single quotes work too because everything is literal in here like "this" and $this'
+exit

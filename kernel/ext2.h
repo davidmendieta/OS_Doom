@@ -5,6 +5,9 @@
 #include "shared.h"
 #include "ps2.h"
 #include "loop.h"
+#include "u8250.h"
+
+extern U8250 stdio_;
 
 #include "ringbuffer.h"
 class Ext2;
@@ -250,16 +253,17 @@ class STDIN : public STDIO {
     public:
     STDIN(): STDIO(){};
     int64_t read(uint32_t offset, uint32_t n, char* buffer) override {
-        while (!PS2::keyboard_has_char()) {
-            iAmStuckInALoop(false);
-        }
-        char recieved = PS2::keyboard_get_char(); 
-        memcpy(buffer, &recieved, n);
-        return n; 
-    };
-
+        if (n == 0) return 0;
+#ifdef CONSOLE_SERIAL_INPUT
+        buffer[0] = stdio_.get();
+#else
+        while (!PS2::keyboard_has_char()) iAmStuckInALoop(false);
+        buffer[0] = PS2::keyboard_get_char();
+#endif
+        return 1;
+    }
     uint16_t poll(uint16_t events) override {
-        return (events & 0x1);
+        return PS2::keyboard_has_char() ? (events & 0x1) : 0;
     }
 };
 

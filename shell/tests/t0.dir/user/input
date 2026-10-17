@@ -1,0 +1,6 @@
+# hi this is a comment ignore me
+echo welcome to pistash # dont print this
+echo pistash is a shell
+echo written in C
+echo for cs 439
+exit

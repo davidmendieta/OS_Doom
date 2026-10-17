@@ -1,0 +1,13 @@
+#!/bin/bash
+
+ORIGINAL_DIR="$(pwd)"
+THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# cd into /shell/tests
+cd $THIS_DIR
+cd ../tests
+
+echo "deleting $1.dir $1.dir/sbin $1.ok"
+rm -rf $1.dir && rm $1.ok
+
+cd $ORIGINAL_DIR

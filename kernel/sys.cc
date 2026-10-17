@@ -468,6 +468,19 @@ uint32_t open(const char* fd, int flags, uint16_t mode) {
         VMM::naive_munmap(p, true);
     }
 
+uint32_t print_dir() {
+    auto me = impl::threads::state.current();
+    if (me->pcb->cwd == nullptr) me->pcb->cwd = fs->root;
+    me->pcb->cwd->entries([](uint32_t inode, char *name, uint8_t name_length){
+        if (!(K::streq(name, ".") || K::streq(name, "..") || K::streq(name, "lost+found"))) {
+            Debug::printf("%s\t", name);
+        }
+        return 0;
+    });
+    Debug::printf("\n");
+    return 0;
+}
+
 extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     //Debug::printf("*** syscall #%d\n",eax);
     uint32_t *user_sp = (uint32_t*)frame[3];
@@ -537,6 +550,8 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     case 418:
         Debug::printf("*** I'm a teapot\n");
         return -1;
+    case 1970:
+        return print_dir();
     case 499:
         return Poll::poll((Poll::Pollfd*)user_sp[1], (int)user_sp[2], (int)user_sp[3], impl::threads::state.current()->pcb.operator->());
     default:

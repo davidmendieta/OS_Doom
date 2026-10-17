@@ -1,0 +1,3 @@
+# this is a short circuiting test
+echo welcome to this test || echo this doesnt print
+exit

@@ -1,0 +1,8 @@
+# check out some cool features (2) that pistash can do
+echo "printing lies.txt"
+cat /user/lies.txt
+
+echo "grep???"
+grep *** < /user/lies.txt
+
+exit

@@ -1,0 +1,26 @@
+#!/bin/bash
+
+export TESTS_DIR=shell/tests
+ORIGINAL_DIR="$(pwd)"
+THIS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# cd into /shell/tests
+cd $THIS_DIR
+cd ../tests
+
+# build shell
+echo "compiling $1"
+cd "$1.dir/sbin/"
+make clean
+make -s
+
+# build /bin
+cd "../bin"
+make clean
+make -s
+
+# run the test
+cd "../../../../"
+make -s clean $1.test
+
+cd $ORIGINAL_DIR
