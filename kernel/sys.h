@@ -12,11 +12,11 @@ extern uint32_t close(uint32_t id); //  6
 // shutdown // 7
 extern uint32_t wait(uint32_t id, uint32_t *status); // 8
 extern uint32_t execl(const char* path, const char* argv[]); // 9;
-extern uint32_t open(const char* fn, uint32_t flags, uint16_t mode); // 10
+extern uint32_t open(const char* fn, int flags = 0, uint16_t mode = 0); // 10
 extern uint32_t len(uint32_t fd); // 11
 extern uint32_t read(uint32_t fd, void* buf, uint32_t nbyte); // 12
 extern uint32_t seek(uint32_t fd, uint32_t offset); // 13;
-extern uint32_t writev(uint32_t fd, void* iov, uint32_t iovcnt); // 14
+extern uint32_t writev(uint32_t fd, const iovec* iov, uint32_t iovcnt); // 14
 extern uint32_t mkdir(const char* path); // 15
 extern uint32_t ftruncate(uint32_t fd, uint32_t length); // 16
 
@@ -27,6 +27,10 @@ void naive_unmap(void* p); // 102
 void iamateapot(); // 418
 
 int poll(uint32_t* fds, int nfds, int timeout); //499
+
+struct stat;
+int stat(const char* path, struct stat* buf); // 250
+int fstat(int fd, struct stat* buf); // 251
 
 class SYS {
 public:

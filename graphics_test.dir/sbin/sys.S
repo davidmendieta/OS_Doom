@@ -116,7 +116,7 @@ seek:
 	# off_t map_vga()
 	.global map_vga	
 map_vga:
-	mov $103, %eax
+	mov $104, %eax
 	int $48
 	ret
 

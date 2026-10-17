@@ -7,7 +7,7 @@ all : ${IMAGES}
 UTCS_OPT ?= -O3
 
 CFLAGS = -std=c99 -m32 -nostdlib -nostdinc -g ${UTCS_OPT} -Wall -Werror -mno-sse
-CCFLAGS = -std=c++20 -fno-exceptions -fno-rtti -m32 -ffreestanding -nostdlib -g ${UTCS_OPT} -Wall -Werror -mno-sse
+CCFLAGS = -idirafter ../doom-sysroot/include -std=c++20 -fno-exceptions -fno-rtti -m32 -ffreestanding -nostdlib -g ${UTCS_OPT} -Wall -Werror -mno-sse
 
 CFILES = $(wildcard *.c)
 CCFILES := $(sort $(filter-out ./crti.cc ./crtn.cc, $(shell find . -name '*.cc' ! -path './build/*')))

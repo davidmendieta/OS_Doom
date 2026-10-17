@@ -25,7 +25,7 @@ static inline void outw(uint16_t port, uint16_t val) {
     __asm__ volatile("outw %0, %1" : : "a"(val), "Nd"(port));
 }
 
-static inline uint16_t inw(uint16_t port) {
+static inline uint16_t ac97_inw(uint16_t port) {
     uint16_t ret;
     __asm__ volatile("inw %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
@@ -89,10 +89,10 @@ uint32_t init_ac97() {
     outw(nam + 0x02, 0x0000); // Master volume
     outw(nam + 0x18, 0x0000); // PCM output volume
 
-    uint16_t master_vol = inw(nam + 0x02);
+    uint16_t master_vol = ac97_inw(nam + 0x02);
     outw(nam + 0x02, master_vol & ~(1 << 15));  // Unmute master
 
-    uint16_t pcm_vol = inw(nam + 0x18);
+    uint16_t pcm_vol = ac97_inw(nam + 0x18);
     outw(nam + 0x18, pcm_vol & ~(1 << 15));     // Unmute PCM
 
     bdl = (BufferDescriptor*)VMM::naive_mmap(sizeof(BufferDescriptor) * BDL_ENTRY_COUNT, true, {}, 0, false);

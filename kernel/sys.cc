@@ -13,13 +13,18 @@
 #include "libk.h"
 #include "elf.h"
 #include "promise.h"
+#include "networking/socket/socket_sys.h"
+#include "vga.h"
+#include "../doom-sysroot/include/abi-bits/stat.h"
+
+static constexpr uint32_t GRAPHICS_FILE = 10000;
 #include "uio.h" // new code
 #include "poll.h"
 #include "keyboard.h"
 #include "mouse.h"
 
     bool address_valid(uint32_t addr, uint32_t size) {
-        return addr >= 0x80000000 && addr + size <= 0xFFFFFFFF;
+        return addr >= 0x80000000 && size <= 0xFFFFFFFFu - addr;
     }
 
     uint32_t read(uint32_t fd, void* buf, uint32_t nbyte) {
@@ -38,6 +43,12 @@
     }
 
     uint32_t write(uint32_t fd, void* buf, int32_t nbyte) {
+        if (fd == GRAPHICS_FILE) {
+            if (nbyte < 0 || !address_valid((uint32_t)buf, nbyte)) return -1;
+            if (nbyte > 320 * 200) nbyte = 320 * 200;
+            memcpy((void*)VGA_ADDRESS, buf, nbyte);
+            return nbyte;
+        }
         if(nbyte < 0 || !address_valid((uint32_t)buf, nbyte) || fd >= PCB_ARR_SIZE) {
             // Debug::printf("*** bytes_Written from syscall = -1\n");
             return -1;
@@ -175,6 +186,7 @@ uint32_t ftruncate(uint32_t fd, uint32_t length) {
 }
 
 uint32_t open(const char* fd, int flags, uint16_t mode) {
+    if (K::streq(fd, "/dev/vga")) return GRAPHICS_FILE;
     auto me = impl::threads::state.current();
     StrongPtr<Node> checkIn;
     if (K::streq(fd, "/dev/input/keyboard")) {
@@ -271,6 +283,7 @@ uint32_t open(const char* fd, int flags, uint16_t mode) {
     }
 
     uint32_t close(uint32_t fd) {
+        if (fd == GRAPHICS_FILE) return 0;
         auto me = impl::threads::state.current();
         if (fd < PCB_ARR_SIZE) { // file
             me->pcb->fdt[fd] = nullptr;
@@ -281,6 +294,8 @@ uint32_t open(const char* fd, int flags, uint16_t mode) {
             fd -= PCB_ARR_SIZE * 2;
             me->pcb->children[fd] = nullptr;
             me->pcb->children_promises[fd] = nullptr;
+        } else if (fd < PCB_ARR_SIZE * 4) {
+            me->pcb->sockdt[fd - PCB_ARR_SIZE * 3] = nullptr;
         } else { // should never happen
             return -1;
         }
@@ -488,6 +503,7 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
         Debug::printf("USER ESP IS INVALID\n");
         exit(-1);
     }
+    if (eax >= 200 && eax < 250) return sockets::socket_sys_handler(eax, frame);
     switch (eax) {
     case 0:
         exit(user_sp[1]);    
@@ -535,6 +551,13 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     case 91:
         VMM::munmap((void*) user_sp[1], user_sp[2], user_sp[3]);
         return 0;
+    case 103:
+        vga_init();
+        return 0;
+    case 250:
+        return stat((const char*)user_sp[1], (struct stat*)user_sp[2]);
+    case 251:
+        return fstat(user_sp[1], (struct stat*)user_sp[2]);
     case 100:
         return chdir((const char*)user_sp[1]);
     case 101:
@@ -543,7 +566,7 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
         naive_unmap((void*)user_sp[1]);
         return 0;
     
-    case 103:
+    case 104:
         return (uint32_t) VMM::map_vga();
 
     
@@ -564,3 +587,33 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     void SYS::init(void) {
         IDT::trap(48,(uint32_t)sysHandler_,3);
     }
+
+// Keep libc metadata calls outside the 200-249 socket range.
+static int fill_stat(StrongPtr<Node> node, struct stat* buf) {
+    if (node == nullptr || !address_valid((uint32_t)buf, sizeof(*buf))) return -1;
+    bzero(buf, sizeof(*buf));
+    buf->st_mode = node->data.mode;
+    buf->st_ino = node->number;
+    buf->__st_ino_truncated = node->number;
+    buf->st_nlink = node->data.n_links;
+    buf->st_uid = node->data.uid;
+    buf->st_gid = node->data.gid;
+    buf->st_size = node->data.size_low;
+    buf->st_blksize = node->block_size;
+    buf->st_blocks = node->data.n_sectors;
+    buf->st_atim.tv_sec = buf->__st_atim32.tv_sec = node->data.atime;
+    buf->st_mtim.tv_sec = buf->__st_mtim32.tv_sec = node->data.mtime;
+    buf->st_ctim.tv_sec = buf->__st_ctim32.tv_sec = node->data.ctime;
+    return 0;
+}
+int stat(const char* path, struct stat* buf) {
+    auto me = impl::threads::state.current();
+    auto base = me->pcb->cwd == nullptr ? fs->root : me->pcb->cwd;
+    return fill_stat(fs->find(base, path), buf);
+}
+int fstat(int fd, struct stat* buf) {
+    if (fd < 0 || fd >= PCB_ARR_SIZE) return -1;
+    auto file = impl::threads::state.current()->pcb->fdt[fd];
+    if (file == nullptr) return -1;
+    return fill_stat(file->node, buf);
+}

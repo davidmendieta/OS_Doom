@@ -209,11 +209,11 @@ public:
     }
 
     // Equality -- null
-    bool operator ==(nullptr_t rhs) const {
+    bool operator ==(decltype(nullptr) rhs) const {
         return ptr == rhs;
     }
 
-    bool operator !=(nullptr_t rhs) const {
+    bool operator !=(decltype(nullptr) rhs) const {
         return ptr != rhs;
     }
 
