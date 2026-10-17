@@ -10,7 +10,7 @@ public:
 };
 
 struct ElfHeader {
-    unsigned char maigc0; // should be 0x7f
+    unsigned char magic0; // should be 0x7f
     unsigned char magic1; // should be E
     unsigned char magic2; // should be L
     unsigned char magic3; // should be F

@@ -9,6 +9,7 @@
 #include "kernel.h"
 #include "threads.h"
 #include "vme.h"
+#include "vmm.h"
 #include "libk.h"
 #include "elf.h"
 #include "promise.h"
@@ -512,6 +513,15 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
         return mkdir((const char*)user_sp[1]);
     case 16: // new code
         return ftruncate(user_sp[1], user_sp[2]);
+    case 90:{
+        auto me = impl::threads::state.current();
+        StrongPtr<OpenFile> open_file = me->pcb->fdt[user_sp[5]];
+        StrongPtr<Node> node = (open_file == nullptr) ? StrongPtr<Node>() : open_file->node;
+        return (uint32_t)VMM::mmap1((uint32_t* )user_sp[1], user_sp[2], user_sp[3],user_sp[4], node ,user_sp[6]);
+    }
+    case 91:
+        VMM::munmap((void*) user_sp[1], user_sp[2], user_sp[3]);
+        return 0;
     case 100:
         return chdir((const char*)user_sp[1]);
     case 101:

@@ -15,8 +15,11 @@ struct VMEEntry {
     uint32_t file_offset;
     StrongPtr<VMEEntry> next{nullptr};
     bool user;
+    uint32_t permissions;
+    uint32_t flags;
     
-    VMEEntry(uint32_t start, uint32_t num_pages, uint32_t size, StrongPtr<Node> file, uint32_t file_offset, bool user);
+    VMEEntry(uint32_t start, uint32_t num_pages, uint32_t size, StrongPtr<Node> file, uint32_t file_offset, bool user,
+        uint32_t permissions, uint32_t flags);
     ~VMEEntry();
 
     static StrongPtr<VMEEntry> duplicate(StrongPtr<VMEEntry> vme_entry);
@@ -53,7 +56,9 @@ class VME {
 
     StrongPtr<VMEEntry> get(uint32_t va);
     uint32_t add_entry(uint32_t size, StrongPtr<Node> file, uint32_t file_offset, bool user);
+    uint32_t add_entry_location(uint32_t size, StrongPtr<Node> file, uint32_t file_offset, bool user, uint32_t location);
     void remove_entry(uint32_t va, bool user);
+    void remove_mapped_region(uint32_t va, uint32_t size, bool user);
 
     static StrongPtr<VME> duplicate(StrongPtr<VME> vme);
 

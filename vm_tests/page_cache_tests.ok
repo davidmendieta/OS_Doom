@@ -1,0 +1,34 @@
+*** Starting Page Cache Test ***
+*** Test file size: 23 bytes
+*** Test 1: Basic File Mapping ***
+*** Mapping at: 0xf0000000
+*** Content from mapping: added va f0000000
+*** you can read fil
+*** After modification: XY* you can read fil
+*** Test 2: Repeated access to memory-mapped file ***
+*** Mapping created at: 0xf0001000
+*** Iteration 1: Reading from mapped file
+***   Read 23 bytes starting at offset 0: *** you can read fil...
+*** Iteration 2: Reading from mapped file
+***   Read 20 bytes starting at offset 3:  you can read files
+*** Iteration 3: Reading from mapped file
+***   Read 17 bytes starting at offset 6: u can read files
+*** Iteration 4: Reading from mapped file
+***   Read 14 bytes starting at offset 9: an read files
+*** Iteration 5: Reading from mapped file
+***   Read 11 bytes starting at offset 12: read files
+*** Test 3: Unmapping and remapping to test page cache retention ***
+*** Unmapped the file
+*** Remapping the file
+*** Remapped at: 0xf0002000
+*** Reading from remapped file: added va f0002000
+*** you can read fil...
+*** Test 4: Multiple Private Mappings ***
+*** First mapping at: 0xf0002000
+*** Second mapping at: 0xf0003000
+*** Content from first mapping: *** you can read fil
+*** Content from second mapping: added va f0003000
+*** you can read fil
+*** After modifying first mapping: PR* you can read fil
+*** Second mapping content: *** you can read fil
+*** Page Cache Test Completed Successfully ***

@@ -9,7 +9,7 @@ uint32_t ELF::load(StrongPtr<Node> file) {
     file->read(0,hdr);
 
     
-    if(hdr.maigc0 != 0x7f || hdr.magic1 != 'E' || hdr.magic2 != 'L' || hdr.magic3 != 'F') {
+    if(hdr.magic0 != 0x7f || hdr.magic1 != 'E' || hdr.magic2 != 'L' || hdr.magic3 != 'F') {
         Debug::panic("ELF NOT VALID\n");
         return 0;
     }

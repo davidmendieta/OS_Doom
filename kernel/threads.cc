@@ -8,6 +8,7 @@
 #include "blocking_queue.h"
 #include "vmm.h"
 #include "tss.h"
+#include "page_cache.h"
 
 namespace impl::threads {
 
@@ -103,13 +104,13 @@ namespace impl::threads {
                 state.ready_queue.add(p);
                 p = state.sleep_queues[id].remove();
             }
+            
         };
 
         while (true) {
             ASSERT(state.in_helper_thread());      // nullptr -> helper thread
             ASSERT(!Interrupts::isDisabled());         // interrupts should be enabled
             ASSERT(SMP::me() == id);                   // has affinity to a core
-
 
             wakeup();
 
@@ -127,9 +128,9 @@ namespace impl::threads {
             }
 
             // setting active_thread enables preemption, need to disable interrupts briefly
-            cli();     
+            cli();
             state.active_thread[id] = next;                         // O(1)
-	    tss[id].esp0 = next->interruptEsp();                    // O(1)
+	        tss[id].esp0 = next->interruptEsp();                    // O(1)
             context_switch(&state.helpers[id], &next->save_area);   // O(1)
             sti();   
         }
