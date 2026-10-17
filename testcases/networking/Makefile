@@ -51,7 +51,7 @@ QEMU_FLAGS = -no-reboot \
 	-device isa-debug-exit,iobase=0xf4,iosize=0x04
 
 # ----- NETWORKING START ------
-NETWORK_MODE=CLIENT #  HOST or CLIENT
+NETWORK_MODE=HOST #  HOST or CLIENT
 
 HOST_IP = 128.83.139.55 # Change to actual Host IP, only needed for client mode
 

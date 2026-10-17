@@ -97,7 +97,6 @@ int socket_sys_handler(uint32_t eax, uint32_t* frame) {
             return getpeername((uint32_t)sockfd, addr, &addrlen);
         }
 
-
         default: {
             Debug::printf("*** unknown system call inside Socket %d\n", eax);
             return -1;
@@ -139,6 +138,7 @@ int bind(uint32_t sockfd, const struct sockaddr* addr, socklen_t addrlen) {
     }
     StrongPtr<UDPSocket> socket = getSocket(sockfd);
     if (socket != nullptr) {
+        Debug::printf("binding\n");
         return socket->bind((const struct sockaddr_in*)addr);
     } else {
         return -1;

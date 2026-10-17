@@ -28,6 +28,7 @@ int UDPSocket::bind(const sockaddr_in* addr) {
     }
     this->isbound = true;
     int port = ntohs(addr->sin_port);
+    
     if (port == 0) {
         int port = pick_port();
         if (port == 0) {

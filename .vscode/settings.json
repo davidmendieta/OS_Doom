@@ -1,5 +1,5 @@
 {
-	"files.associations": {
+    "files.associations": {
         "random": "cpp",
         "array": "cpp",
         "string": "cpp",
@@ -7,6 +7,7 @@
         "ranges": "cpp",
         "sdl.h": "c",
         "*.tcc": "c",
-        "libc.h": "c"
-    },
+        "libc.h": "c",
+        "buffer": "cpp"
+    }
 }
