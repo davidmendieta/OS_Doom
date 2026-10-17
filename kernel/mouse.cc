@@ -9,6 +9,9 @@ static uint8_t last_buttons = 0;
 static int mouse_sensitivity = 10;
 static int mouse_dpi = 800;
 
+RingBuffer<int16_t> buff (256);
+
+
 void mouse_init(){
     // Initialization code if needed
     mouse_x = 0;
@@ -123,4 +126,7 @@ void mouseHandler(uint8_t buttons, int16_t x_delta, int16_t y_delta){
     }
     Debug::printf("left: %d, middle: %d, right: %d, x: %d, y:%d\n", buttons & 0x1, (buttons & 0x4) >> 2, (buttons & 0x2) >> 1, mouse_x, mouse_y);
     last_buttons = buttons;
+    buff.enqueue(buttons);
+    buff.enqueue(mouse_x);
+    buff.enqueue(mouse_y);
 }

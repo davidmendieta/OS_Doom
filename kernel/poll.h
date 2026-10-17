@@ -6,6 +6,16 @@
 #include "processes.h"
 #include "threads.h"
 
+//values from https://wiki.osdev.org/Ext2#Inode_Type_and_Permissions
+//what nodes represent based on the mode field
+const uint16_t 	FIFO = 0x1000;
+const uint16_t 	DEVICE = 0x2000;
+const uint16_t 	DIR = 0x4000;
+const uint16_t 	BLOCK_DEV = 0X6000;
+const uint16_t 	FILE = 0X8000;
+const uint16_t 	SYM_LINK = 0XA000;
+const uint16_t 	SOCKET = 0xC000;
+
 namespace Poll {
 
 	//got these numbers from chatgpt
@@ -31,20 +41,10 @@ namespace Poll {
 		long int tv_nsec;   //Nanoseconds [0, 999,999,999] 
 	};
 
-	//empty struct used to avoid errors in ppoll function
-	struct sigset_t {};
-
-	//going based off of node (file perms), may be incorrect
-	//checks the files user, group, and other permissions 
-	bool can_read (StrongPtr<OpenFile> fd) {
-		auto mode = fd->node->data.mode;
-		return mode & (0x100 | 0x040 | 0x004); 
-	}
-	
-	bool can_write (StrongPtr<OpenFile> fd) {
-		auto mode = fd->node->data.mode;
-		return mode & (0x080 | 0x020 | 0x002);
-	}
+	//empty struct used to avoid errors in ppoll function 
+	struct sigset_t {
+		uint32_t sigs;
+	};
 	
 	bool read (uint16_t events) {
 		return events & PE_READ;
@@ -54,12 +54,13 @@ namespace Poll {
 		return events & PE_WRITE;
 	}
 
-	struct fd_set {
-		int set[100];
-	};
+	// struct fd_set {
+	// 	int set[100];
+	// };
 
 	const int FD_SETSIZE = 1024; // FD_SETSIZE is the maximum number of FDs, standard is 1024
 	// fd_set is a bitmask for file descriptors
+
 	typedef struct {
 		// each bit represents a FD
 		uint8_t fds[FD_SETSIZE / 8]; 
@@ -86,7 +87,114 @@ namespace Poll {
 		int mask = 1 << ((fd) % 8); 
 		return set->fds[index] & mask; // 0 == not set, 1 == set
 	}
+
+	//user stub is just: 
+	//int poll (Pollfd* fds, int nfds, int timeout);
+	//this poll only checks for files, dirs, symlinks, and devices
+	int poll(Pollfd* fds, int nfds, int timeout, PCB* cur_pcb) {
+		//invalid array size, return an error
+		if (nfds < 0) {
+			return -1;
+		}
 	
+		int fd_ready = 0;
+		uint32_t start_time = Pit::jiffies;
+		uint32_t cur_time = Pit::jiffies;
+	
+		// clear all revents initially
+		for (int i = 0; i < nfds; i++) {
+			fds[i].revents = 0;
+		}
+	
+		//per POSIX
+		//timeout > 0 - wait up to some amt of milliseconds
+		//timeout == 0 - check only once and return 
+		//timeout < 0 - check indefinitely (no timeout) until all fds are ready
+		bool infinite = timeout < 0;
+		bool one_time = timeout == 0;
+		bool timed_out = false;
+	
+		while (!timed_out) {
+			fd_ready = 0;
+			
+			for (int fd_index = 0; fd_index < nfds; fd_index++) {
+				Pollfd* cur_fd = &fds[fd_index];
+				
+				StrongPtr<OpenFile> cur_file = cur_pcb->fdt[cur_fd->fd];
+
+				//invalid fd, set error and continue
+				if (cur_file == nullptr || cur_file->node == nullptr) {
+					cur_fd->revents |= PE_INVAL;
+					fd_ready++;
+					continue;
+				}
+	
+				// check if any events occurred
+				short events = cur_file->node->poll(cur_fd->events);
+				
+				// if events occured, increment 
+				if (events != 0) {
+					cur_fd->revents = events;
+					fd_ready++;
+				}
+			}
+	
+			// exit if one-time or an fd became ready
+			if (one_time || fd_ready > 0) {
+				break;
+			}
+	
+			//update time
+			cur_time = Pit::jiffies;
+	
+			//timed out, break out of loop and return
+			if (!infinite && (cur_time >= start_time + (uint32_t)timeout)) {
+				timed_out = true;
+			}
+
+			if (!timed_out) sleep(2); //reduce busy waiting
+		}
+	
+		// if none ready and timed out, return 0
+		if (fd_ready == 0 && timed_out) {
+			return 0;
+		}
+		return fd_ready;
+	}
+	
+
+	//user stub is
+	//int ppoll(struct pollfd *fds, nfds_t nfds, const struct timespec *_Nullable tmo_p,
+	//const sigset_t *_Nullable sigmask);
+
+	//sigmask represents signals from the OS (i think), i dont think this is implemented
+	//so it will be ignored for now (may cause issues, not sure)
+	int ppoll(Pollfd* fds, int nfds, const timespec* tmo_p, const sigset_t* sigmask, PCB* pcb) {
+		//poll but with increased time precision, and sigmask
+		//no tmo_p means wait indefinitely, stay looping until all files are ready
+		
+		//early return if invalid nfds
+		if (nfds < 0) {
+			return -1;
+		}
+	
+		int timeout_in_ms;
+	
+		//determine what to set the timeout time to
+		if (tmo_p == nullptr) {
+			//no time spec given, means wait indefinitely
+			timeout_in_ms = -1;
+		} else {
+			//given a timespec
+			//convert timespec into milliseconds to reuse poll
+			timeout_in_ms = tmo_p->tv_sec * 1000; //convert seconds to milliseconds
+			//convert nanoseconds into milliseconds by rounding up to the nearest millisecond
+			timeout_in_ms += (tmo_p->tv_nsec + 999999) / 1000000; 
+		}
+	
+		return poll(fds, nfds, timeout_in_ms, pcb);
+	}
+
 	int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timespec *timeout, PCB* cur_pcb) {
 		if (nfds < 0) return -1;
 	
@@ -138,114 +246,6 @@ namespace Poll {
 			}
 		}
 		return ready_fds;
-	}
-
-	//user stub is just: 
-	//int poll (Pollfd* fds, int nfds, int timeout);
-
-	int poll(Pollfd* fds, int nfds, int timeout, PCB* cur_pcb) {
-		if (nfds < 0) {
-			return -1;
-		}
-	
-		uint32_t fd_ready = 0;
-		uint32_t start_time = Pit::jiffies;
-		uint32_t cur_time = Pit::jiffies;
-
-		//per POSIX
-		//timeout > 0 - wait up to some amt of milliseconds
-		//timeout == 0 - check only once and return 
-		//timeout < 0 - check indefinitely (no timeout) until all fds are ready
-		bool infinite = timeout < 0;
-		bool one_time = timeout == 0;
-		bool timed_out = false;
-	
-		while (!timed_out && fd_ready < (uint32_t)nfds) {
-			for (uint32_t fd_index = 0; fd_index < (uint32_t)nfds; fd_index++) {
-				Pollfd& cur = fds[fd_index];
-	
-				if (cur.revents != 0) {
-					continue;
-				}
-	
-				StrongPtr<OpenFile> cur_file = cur_pcb->fdt[cur.fd];
-				if (cur_file == nullptr || cur_file->node == nullptr) {
-					cur.revents |= PE_INVAL;
-					fd_ready++;
-					continue;
-				}
-	
-				bool file_read = can_read(cur_file);
-				bool file_write = can_write(cur_file);
-	
-				bool event_read = read(cur.events);
-				bool event_write = write(cur.events);
-	
-				short prev_revents = cur.revents;
-	
-				if (file_read && event_read) {
-					cur.revents |= PE_READ;
-				}
-				if (file_write && event_write) {
-					cur.revents |= PE_WRITE;
-				}
-	
-				if (cur.revents != 0 && prev_revents == 0) {
-					fd_ready++;
-				}
-			}
-	
-			// exit if one-time or fds became ready
-			if (one_time || fd_ready > 0) {
-				break;
-			}
-	
-			cur_time = Pit::jiffies;
-	
-			if (!infinite && (cur_time >= start_time + (uint32_t)timeout)) {
-				timed_out = true;
-			}
-		}
-	
-		// if none ready and timed out, return 0
-		if (fd_ready == 0 && timed_out) {
-			return 0;
-		}
-	
-		return fd_ready;
-	}
-	
-
-	//user stub is
-	//int ppoll(struct pollfd *fds, nfds_t nfds, const struct timespec *_Nullable tmo_p,
-	//const sigset_t *_Nullable sigmask);
-
-	//sigmask represents signals from the OS (i think), i dont think this is implemented
-	//so it will be ignored for now (may cause issues, not sure)
-	int ppoll(Pollfd* fds, int nfds, const timespec* tmo_p, const sigset_t* sigmask, PCB* pcb) {
-		//poll but with increased time precision, and sigmask
-		//no tmo_p means wait indefinitely, stay looping until all files are ready
-	
-		//early return if invalid nfds
-		if (nfds < 0) {
-			return -1;
-		}
-	
-		int timeout_in_ms;
-	
-		//determine what to set the timeout time to
-		if (tmo_p == nullptr) {
-			//no time spec given, means wait indefinitely
-			timeout_in_ms = -1;
-		} else {
-			//given a timespec
-			//convert timespec into milliseconds to reuse poll
-			timeout_in_ms = tmo_p->tv_sec * 1000; //convert seconds to milliseconds
-			//convert nanoseconds into milliseconds by rounding up to the nearest millisecond
-			timeout_in_ms += (tmo_p->tv_nsec + 999999) / 1000000; 
-		}
-	
-		return poll(fds, nfds, timeout_in_ms, pcb);
 	}
 	
 }

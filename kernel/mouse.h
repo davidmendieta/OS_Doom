@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "ringbuffer.h"
 
 
 // SDL Mouse event types
@@ -16,6 +17,7 @@
 #define SDL_BUTTON_MIDDLE    2
 #define SDL_BUTTON_RIGHT     3
 
+extern RingBuffer<int16_t> buff;
 
 void mouse_init();
 extern void mouseHandler(uint8_t buttons, int16_t x_delta, int16_t y_delta);

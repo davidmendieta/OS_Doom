@@ -4,7 +4,7 @@ UTCS_ID ?= $(shell pwd | sed -e 's/.*_//')
 
 MY_TESTS = ${addprefix ${UTCS_ID},${TEST_EXTS}}
 
-TESTS_DIR ?= testcases/graphics
+TESTS_DIR ?= ./testcases/input-interface
 
 POSSIBLE_TESTS = ${notdir ${basename ${wildcard ${TESTS_DIR}/*${firstword ${TEST_EXTS}}}}}
 TESTS = ${sort ${POSSIBLE_TESTS}}
@@ -247,4 +247,3 @@ failed:
 	done
 
 -include *.d
-

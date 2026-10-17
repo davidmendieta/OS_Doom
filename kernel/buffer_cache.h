@@ -22,6 +22,7 @@ namespace impl::ext2 {
     struct Block {
         uint32_t block_id;
         char* buffer;
+        bool dirty = false;
         StrongPtr<Block> next{nullptr};
         WeakPtr<Block> prev{StrongPtr<Block>()};
     
@@ -40,6 +41,9 @@ namespace impl::ext2 {
         BlockingLock lock{};
     
     public:
+        StrongPtr<Block> getFirst() {
+            return first;
+        }
         StrongPtr<GlobalIndex> global_index;
     
         BlockList(uint32_t index) {
@@ -54,7 +58,6 @@ namespace impl::ext2 {
             }
             // Debug::printf("\n");
         }
-    
         bool remove() {
             LockGuard<BlockingLock> g{lock};
             if(last == nullptr) return false;
@@ -66,6 +69,22 @@ namespace impl::ext2 {
                 last->next = nullptr;
             }
             return true;
+        }
+    
+        StrongPtr<Block> removeBlock() {
+            LockGuard<BlockingLock> g{lock};
+            if(last == nullptr){
+                return {};
+            }
+            StrongPtr<Block> removedBlock = last;
+            StrongPtr<Block> last_prev = last->prev.promote();
+            last = last_prev;
+            if(last == nullptr) {
+                first = nullptr;
+            } else {
+                last->next = nullptr;
+            }
+            return removedBlock;
         }
     
         StrongPtr<Block> extract(uint32_t block_id) {
@@ -94,7 +113,7 @@ namespace impl::ext2 {
                     return curr;
                 }
                 prev = curr;
-                curr = curr->next;
+                curr = curr->next; 
             }
             return StrongPtr<Block>();
         }
@@ -122,7 +141,8 @@ namespace impl::ext2 {
     
         uint32_t size = 997;
         Atomic<uint32_t> count{0};
-    
+        uint8_t* image = nullptr;
+        uint32_t image_bytes = 0;
         
     public:
         explicit BufferCache(StrongPtr<Ide> ide): BlockIO(ide->block_size) {
@@ -134,7 +154,18 @@ namespace impl::ext2 {
         };
     
         virtual ~BufferCache() {
-            for(uint32_t i = 0; i < size; i++) {
+            for (uint32_t i = 0; i < size; i++) {
+                auto curr = indices[i]->getFirst();
+                while (curr != nullptr) { 
+                    if (curr->dirty) {
+                        uint32_t numSectors = block_size / 512;
+                        for (uint32_t j = 0; j < numSectors; j++) {
+                            ide->write_block(curr->block_id * numSectors + j,
+                            curr->buffer + j * 512);
+                        }
+                    }
+                    curr = curr->next;
+                }
                 delete indices[i];
             }
             delete[] indices;
@@ -142,6 +173,23 @@ namespace impl::ext2 {
     
         uint32_t size_in_bytes() override {
             return ide->size_in_bytes();
+        }
+        void flush() {
+            for (uint32_t i = 0; i < size; i++) {
+                auto curr = indices[i]->getFirst();
+                while (curr != nullptr) { 
+                    if (curr->dirty) {
+                        uint32_t numSectors = block_size / 512;
+                        for (uint32_t j = 0; j < numSectors; j++) {
+                            ide->write_block(curr->block_id * numSectors + j,
+                            curr->buffer + j * 512);
+                        }
+                    }
+                    curr = curr->next;
+                }
+                delete indices[i];
+            }
+            delete[] indices;
         }
     
         void read_block(uint32_t block_number, char* buffer) override {
@@ -165,6 +213,7 @@ namespace impl::ext2 {
                 ide->read_block(block_number, block->buffer);
                 // - Increment count
                 if(count.add_fetch(1) >= size) { // - If count bigger than size:
+                        // eviction
                         ASSERT(!(global_index_last == nullptr));
                         global_index_lock.lock();
                         StrongPtr<GlobalIndex> oldest = global_index_last;
@@ -174,7 +223,14 @@ namespace impl::ext2 {
                         global_index_last->next = nullptr;
                         ASSERT(!(global_index_first == nullptr));
                         BlockList* oldest_list = indices[oldest->index];
-                        oldest_list->remove();
+                        auto removedBlock = oldest_list->removeBlock();
+                        if (removedBlock != nullptr && removedBlock->dirty) {
+                            uint32_t numSectors = block_size / 512;
+                            for (uint32_t i = 0; i < numSectors; i++) {
+                                ide->write_block(removedBlock->block_id * numSectors + i,
+                                removedBlock->buffer + i * 512);
+                            };        
+                        }
                         count.set(size);
                         global_index_lock.unlock();
                 }
@@ -204,6 +260,54 @@ namespace impl::ext2 {
             global_index_lock.unlock();
     
         }
-    
+        void write_block(uint32_t block_number, const char *src) override {
+            // similar to read block, most of the lines are borrowed
+            uint32_t index = block_number % size;
+            BlockList* list = indices[index];
+            StrongPtr<Block> block = list->extract(block_number);
+            if (block == nullptr) {
+                block = StrongPtr<Block>::make(block_number, block_size);
+                if(count.add_fetch(1) >= size) { // - If count bigger than size:
+                    // eviction
+                    ASSERT(!(global_index_last == nullptr));
+                    global_index_lock.lock();
+                    StrongPtr<GlobalIndex> oldest = global_index_last;
+                    ASSERT(!(global_index_last->prev.promote() == nullptr));
+                    StrongPtr<GlobalIndex> global_index_last_prev = global_index_last->prev.promote();
+                    global_index_last = global_index_last_prev;
+                    global_index_last->next = nullptr;
+                    ASSERT(!(global_index_first == nullptr));
+                    BlockList* oldest_list = indices[oldest->index];
+                    auto removedBlock = oldest_list->removeBlock();
+                    if (removedBlock != nullptr && removedBlock->dirty) {
+                        uint32_t numSectors = block_size / 512;
+                        for (uint32_t i = 0; i < numSectors; i++) {
+                            ide->write_block(removedBlock->block_id * numSectors + i,
+                            removedBlock->buffer + i * 512);
+                        };        
+                    }
+                    count.set(size);
+                    global_index_lock.unlock();
+                }
+            }
+            memcpy(block->buffer, src,  block_size);
+            block->dirty = true;
+            list->add(block);
+            global_index_lock.lock();
+            StrongPtr<GlobalIndex> global_index = list->global_index;
+            if(!(global_index->prev.promote() == nullptr)) {
+                StrongPtr<GlobalIndex> global_index_next = global_index->next;
+                global_index->prev.promote()->next = global_index_next;
+                if(!(global_index->next == nullptr)) {
+                    global_index->next->prev = global_index->prev;
+                }
+            }
+            global_index->next = global_index_first;
+            global_index->prev = StrongPtr<GlobalIndex>();
+            if(!(global_index_first == nullptr)) global_index_first->prev = global_index;
+            global_index_first = global_index;
+            if(global_index_last == nullptr) global_index_last = global_index;
+            global_index_lock.unlock();
+        }
     };
 };

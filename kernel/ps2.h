@@ -16,6 +16,9 @@ namespace PS2 {
 	extern void read_keyboard_data(uint8_t in_byte);
 	extern void read_mouse_data(uint8_t in_byte);
 	extern char scancode_to_ascii(uint8_t scancode);
+
+	bool keyboard_has_char();
+    char keyboard_get_char();
 }
 
 

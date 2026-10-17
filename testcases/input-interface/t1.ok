@@ -1,0 +1,22 @@
+***Quick tests for poll!
+***Keyboard assigned to fd #3
+***Checking return value
+***Expected : 1, Actual : 1
+
+***Mouse assigned to fd #4
+***Checking return value
+***Expected : 2, Actual : 2
+
+***Test 1: testing with several fds!!!
+***Checking return value
+***Expected : 7, Actual : 7
+
+***Test 2: testing timeout!!!
+***Checking return value
+***Expected : 7, Actual : 7
+
+***Test 3: testing errors!!!
+***Checking return value
+***Expected : 8, Actual : 8
+
+***Final Test: testing indefinite timeout!!!
