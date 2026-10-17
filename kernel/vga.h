@@ -8,6 +8,10 @@ typedef unsigned int size_t;
 #define VGA_ADDRESS 0xA0000
 
 extern void vga_init();
+extern void vga_test();
+extern void vga_clear_screen();
+extern void vga_plot_pixel(int x, int y, unsigned short color);
+extern void vga_display_image(const unsigned char* image, size_t width, size_t height);
 
 // VGA mode setting
 extern unsigned char g_320x200x256[];

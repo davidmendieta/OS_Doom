@@ -519,6 +519,11 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     case 102:
         naive_unmap((void*)user_sp[1]);
         return 0;
+    
+    case 103:
+        return (uint32_t) VMM::map_vga();
+
+    
     case 418:
         Debug::printf("*** I'm a teapot\n");
         return -1;

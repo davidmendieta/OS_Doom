@@ -410,6 +410,7 @@ void I_FinishUpdate (void)
   SDL_Flip(screen);
 }
 
+
 //
 // I_ScreenShot - moved to i_sshot.c
 //
