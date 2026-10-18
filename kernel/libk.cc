@@ -1,5 +1,13 @@
 #include "libk.h"
+#include <stddef.h>
 #include "debug.h"
+
+// Freestanding GCC can emit memset for aggregate initialization.
+extern "C" void* memset(void* destination, int value, size_t count) {
+    auto bytes = static_cast<unsigned char*>(destination);
+    for (size_t i = 0; i < count; ++i) bytes[i] = static_cast<unsigned char>(value);
+    return destination;
+}
 
 long K::strlen(const char* str) {
     long n = 0;

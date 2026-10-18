@@ -22,6 +22,30 @@ static constexpr uint32_t GRAPHICS_FILE = 10000;
 #include "poll.h"
 #include "keyboard.h"
 #include "mouse.h"
+#include "input.h"
+#include "pit.h"
+#include "../include/os/runtime.h"
+
+// Graphics buffers must be backed by private process mappings, including
+// demand-paged memory. A numeric address check alone accepts unmapped pointers.
+static bool graphics_buffer_valid(const void* buffer, uint32_t size) {
+    uint32_t address = reinterpret_cast<uint32_t>(buffer);
+    if (address < 0x80000000 || address >= 0xF0000000 || size > 0xF0000000 - address) return false;
+    auto me = impl::threads::state.current();
+    for (uint32_t page = address & ~uint32_t(4095); page < address + size; page += 4096) {
+        if (me->vme->get(page) == nullptr) return false;
+    }
+    return true;
+}
+
+static int set_video_palette(const os_video_color* colors, uint32_t first, uint32_t count) {
+    if (first >= OS_VIDEO_COLORS || count == 0 || count > OS_VIDEO_COLORS - first) return -1;
+    if (!graphics_buffer_valid(colors, count * sizeof(*colors))) return -1;
+    os_video_color copy[OS_VIDEO_COLORS];
+    memcpy(copy, colors, count * sizeof(*colors));
+    vga_set_palette(copy, first, count);
+    return 0;
+}
 
     bool address_valid(uint32_t addr, uint32_t size) {
         return addr >= 0x80000000 && size <= 0xFFFFFFFFu - addr;
@@ -44,8 +68,9 @@ static constexpr uint32_t GRAPHICS_FILE = 10000;
 
     uint32_t write(uint32_t fd, void* buf, int32_t nbyte) {
         if (fd == GRAPHICS_FILE) {
-            if (nbyte < 0 || !address_valid((uint32_t)buf, nbyte)) return -1;
-            if (nbyte > 320 * 200) nbyte = 320 * 200;
+            if (nbyte < 0) return -1;
+            if (nbyte > OS_VIDEO_FRAME_BYTES) nbyte = OS_VIDEO_FRAME_BYTES;
+            if (!graphics_buffer_valid(buf, nbyte)) return -1;
             memcpy((void*)VGA_ADDRESS, buf, nbyte);
             return nbyte;
         }
@@ -505,6 +530,45 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     }
     if (eax >= 200 && eax < 250) return sockets::socket_sys_handler(eax, frame);
     switch (eax) {
+    case OS_SYS_INPUT_READ: {
+        auto out = reinterpret_cast<os_input_frame*>(user_sp[1]);
+        if (!graphics_buffer_valid(out, sizeof(*out))) return -1;
+        os_input_frame frame;
+        Input::read(frame);
+        // Copy after releasing the input lock: user pages can fault/block.
+        *out = frame;
+        return 0;
+    }
+    case OS_SYS_MILLISECONDS:
+        return Pit::milliseconds();
+    case OS_SYS_YIELD:
+        yield();
+        return 0;
+    case OS_SYS_ALLOCATE:
+        if (!user_sp[1] || user_sp[1] > 64 * 1024 * 1024) return -1;
+        return uint32_t(VMM::naive_mmap(user_sp[1], false, {}, 0, true));
+    case OS_SYS_FILE_INFO: {
+        unsigned fd = user_sp[1];
+        auto out = reinterpret_cast<os_file_info*>(user_sp[2]);
+        if (fd >= PCB_ARR_SIZE || !graphics_buffer_valid(out, sizeof(*out))) return -1;
+        auto file = impl::threads::state.current()->pcb->fdt[fd];
+        if (file == nullptr || file->node == nullptr) return -1;
+        auto node = file->node;
+        *out = {node->data.mode, node->size_in_bytes(), node->number,
+                node->data.n_links, node->data.n_sectors, node->block_size};
+        return 0;
+    }
+    case OS_SYS_FILE_SEEK: {
+        unsigned fd = user_sp[1], whence = user_sp[3];
+        if (fd >= PCB_ARR_SIZE || whence > 2) return -1;
+        auto file = impl::threads::state.current()->pcb->fdt[fd];
+        if (file == nullptr || file->node == nullptr) return -1;
+        int64_t offset = int32_t(user_sp[2]);
+        if (whence == 1) offset += file->offset;
+        if (whence == 2) offset += file->node->size_in_bytes();
+        if (offset < 0 || offset > 0x7fffffff) return -1;
+        return file->offset = uint32_t(offset);
+    }
     case 0:
         exit(user_sp[1]);    
         return -1;
@@ -551,9 +615,11 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
     case 91:
         VMM::munmap((void*) user_sp[1], user_sp[2], user_sp[3]);
         return 0;
-    case 103:
+    case OS_SYS_VIDEO_INIT:
         vga_init();
         return 0;
+    case OS_SYS_VIDEO_PALETTE:
+        return set_video_palette((const os_video_color*)user_sp[1], user_sp[2], user_sp[3]);
     case 250:
         return stat((const char*)user_sp[1], (struct stat*)user_sp[2]);
     case 251:
@@ -612,7 +678,7 @@ int stat(const char* path, struct stat* buf) {
     return fill_stat(fs->find(base, path), buf);
 }
 int fstat(int fd, struct stat* buf) {
-    if (fd < 0 || fd >= PCB_ARR_SIZE) return -1;
+    if (fd < 0 || static_cast<uint32_t>(fd) >= PCB_ARR_SIZE) return -1;
     auto file = impl::threads::state.current()->pcb->fdt[fd];
     if (file == nullptr) return -1;
     return fill_stat(file->node, buf);

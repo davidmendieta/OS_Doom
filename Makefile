@@ -1,4 +1,45 @@
 SHELL := $(shell which bash)
+.DEFAULT_GOAL := build
+
+PYTHON ?= python3
+RUN_ARGS ?=
+.PHONY: build run smoke graphics-test graphics-demo
+build:
+	$(MAKE) -C kernel
+
+run: build
+	$(PYTHON) tools/run.py $(RUN_ARGS)
+
+smoke: build
+	$(PYTHON) tools/run.py --check $(RUN_ARGS)
+
+graphics-test: build
+	$(PYTHON) tools/run.py --program graphics-smoke --check --input-stress $(RUN_ARGS)
+
+graphics-demo: build
+	$(PYTHON) tools/run.py --program graphics-smoke $(RUN_ARGS)
+
+.PHONY: runtime-test doom doom-test doom-deps
+doom-deps:
+	$(PYTHON) tools/doom_deps.py
+
+runtime-test: build
+	$(PYTHON) tools/run.py --program runtime-smoke --check $(RUN_ARGS)
+
+doom: build
+	$(PYTHON) tools/run.py --program doom $(RUN_ARGS)
+
+doom-test: build
+	$(PYTHON) tools/run.py --program doom --check $(RUN_ARGS)
+
+.PHONY: doom-input-test
+doom-input-test: build
+	$(PYTHON) tools/run.py --program doom --check --controls-check --timeout 60 $(RUN_ARGS)
+
+.PHONY: input-test
+input-test: build
+	$(PYTHON) tools/run.py --program input-smoke --check $(RUN_ARGS)
+
 TEST_EXTS = .ok .dir
 UTCS_ID ?= $(shell pwd | sed -e 's/.*_//')
 

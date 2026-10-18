@@ -26,7 +26,7 @@ VendorDevice expectedDevices[] = {
     { 0x8086, 0x7010 }, // Intel 82371SB PIIX3 IDE Controller - handles IDE storage devices in the Intel 440FX chipset
     { 0x8086, 0x7113 }, // Intel 82371 PIIX4 ACPI Controller - manages power configuration and ACPI functions
     { 0x1234, 0x1111 }, // Bochs/QEMU Virtual VGA Adapter - emulates a VGA compatible graphics device for basic virtual machine display
-    { 0x8086, 0x100e }, // Intel 82540EM Gigabit Ethernet Controller (e1000) - provides gigabit network connectivity
+    { 0x10ec, 0x8139 }, // Realtek RTL8139, used by the kernel's network driver
     { 0x8086, 0x2415 }, // Intel 82801AA/ICH AC’97 Audio Controller
 };
 

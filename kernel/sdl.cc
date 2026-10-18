@@ -101,7 +101,7 @@ void SDL_Flip(SDL_Surface *surface)
 
     unsigned char *vga_buffer = (unsigned char *)VGA_ADDRESS;
 
-    for (uint32_t i = 0; i < surface->h; i++)
+    for (int i = 0; i < surface->h; i++)
     {
         memcpy(vga_buffer, (unsigned char *)surface->pixels + i * surface->pitch, surface->pitch);
 

@@ -25,11 +25,13 @@ uint32_t* load_args(uint32_t* userEsp, const char** argv) {
         sum += length[i];
     }
 
-    uint32_t next = sizeof(char*) * (argc + 1 + 1); // account for argc, argv
-    userEsp -= ((sum + next + 15) / 16) * 16;
+    // argc, argv, then argc pointers plus the terminating null pointer.
+    uint32_t next = sizeof(uint32_t) * (argc + 3);
+    userEsp = (uint32_t*)(((uint32_t)userEsp - (sum + next)) & ~uint32_t(15));
 
     ((uint32_t*)userEsp)[0] = argc; // adds argc to stack
     ((uint32_t*)userEsp)[1] = (uint32_t)userEsp + 8; // makes argv point to the next slot
+    userEsp[argc + 2] = 0;
     for(uint32_t i = 0; i < argc; i++) {
         ((uint32_t*)userEsp)[1 + 1 + i] = (uint32_t)userEsp + next;
         uint32_t len = length[i];

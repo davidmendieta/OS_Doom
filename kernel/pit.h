@@ -22,6 +22,9 @@ public:
         return jiffies / jiffiesPerSecond;
         return 0;
     }
+    static uint32_t milliseconds() {
+        return uint32_t(uint64_t(jiffies) * 1000 / jiffiesPerSecond);
+    }
 
 };
 

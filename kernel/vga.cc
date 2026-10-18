@@ -15,6 +15,21 @@
 #define COLOR_SONIC_RED   0x4C // red
 #define COLOR_SONIC_GREY  0x08 // grey
 
+static SpinLock palette_lock;
+
+void vga_set_palette(const os_video_color* colors, uint32_t first, uint32_t count) {
+    // Caller supplies a bounded kernel copy, so no user page faults occur
+    // while the DAC's index/data sequence is protected from interruption.
+    LockGuard guard{palette_lock};
+    outb(0x3C6, 0xFF);
+    outb(0x3C8, first);
+    for (uint32_t i = 0; i < count; ++i) {
+        outb(0x3C9, colors[i].r >> 2);
+        outb(0x3C9, colors[i].g >> 2);
+        outb(0x3C9, colors[i].b >> 2);
+    }
+}
+
 void vga_plot_pixel(int x, int y, unsigned short color);
 
 unsigned char g_320x200x256[] =
@@ -216,6 +231,7 @@ static void short_delay() {
     for (int i = 0; i < 10000000; ++i) {
         wait += 1;
     }
+    (void)wait;
 }
 
 // draws "GRAPHICS TEAM" in block letters at (x, y)

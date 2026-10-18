@@ -19,6 +19,9 @@
         cli                  # disable interrupts before we switch the new stack
                              # the interrupt state will be fixed when we do popf
 
+        fnsave 4(%eax)
+        frstor 4(%edx)
+
         mov 0(%edx), %esp    # set new stack pointer
   
 

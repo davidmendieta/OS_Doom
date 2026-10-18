@@ -12,6 +12,7 @@ private:
     uint32_t first;
     uint32_t last;
     uint32_t capacity;
+    mutable SpinLock lock;
 
 
 public:
@@ -25,29 +26,41 @@ public:
 
     // num of things in buffer
     uint32_t getSize() const {
+        LockGuard guard{lock};
         return size;
     }
     
     bool isEmpty() const {
+        LockGuard guard{lock};
         return size == 0;
     }
     
     bool isFull() const {
+        LockGuard guard{lock};
         return size == capacity;
     }
     
     
-    void enqueue(T x) {
-        if (isFull()) {
-            Debug::panic("buffer full\n");
+    // Input producers cannot block in an interrupt. Drop an entire incoming
+    // event when the consumer falls behind, preserving queued event boundaries.
+    bool enqueue(const T* values, uint32_t count) {
+        LockGuard guard{lock};
+        if (count > capacity - size) return false;
+        for (uint32_t i = 0; i < count; ++i) {
+            buffer[last] = values[i];
+            last = (last + 1) % capacity;
         }
-        buffer[last] = x;
-        last = (last + 1) % capacity;
-        size++;
+        size += count;
+        return true;
+    }
+
+    bool enqueue(T x) {
+        return enqueue(&x, 1);
     }
     
     T dequeue() {
-        if (isEmpty()) {
+        LockGuard guard{lock};
+        if (size == 0) {
             Debug::panic("buffer empty\n");}
         T temp = buffer[first];
         first = (first + 1) % capacity;
@@ -56,7 +69,8 @@ public:
     }
     
     T peek() const {
-        if (isEmpty()) {
+        LockGuard guard{lock};
+        if (size == 0) {
             Debug::panic("buffer empty\n");
         }
         return buffer[first];

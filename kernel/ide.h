@@ -21,6 +21,7 @@ class Ide : public BlockIO {  // We are a block device
     uint32_t last = uint32_t(-1);
     BlockingLock lock{};
 public:
+    using BlockIO::write;
     Ide(uint32_t drive, uint32_t latency_ms) : BlockIO(sector_size), drive(drive), latency_ms(latency_ms) {}
 
     virtual ~Ide() {}

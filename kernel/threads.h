@@ -9,7 +9,9 @@
 #include "vmm.h"
 #include "processes.h"
 
-constexpr size_t STACK_BYTES = 8 * 1024;
+// Filesystem allocation/truncation nests block-sized (4 KiB) local buffers.
+// Leave room for those calls and interrupt frames without overwriting the TCB.
+constexpr size_t STACK_BYTES = 32 * 1024;
 constexpr size_t STACK_WORDS = STACK_BYTES / sizeof(uintptr_t);  /* sizeof(word) == size(void*) */
 
 namespace impl::threads {
@@ -21,6 +23,9 @@ namespace impl::threads {
     // is the part that gets saved outside of the stack
     struct SaveArea {
         uintptr_t sp = 0;            // the stack pointer
+        // 32-bit FSAVE image: control, status, tag, pointers, eight x87 registers.
+        // Kept with the thread so floating point survives preemption/migration.
+        uint32_t x87[27] = {0x037f, 0, 0xffff};
     };
 
     extern "C" void context_switch(SaveArea* from, SaveArea* to);
@@ -151,7 +156,7 @@ namespace impl::threads {
     // The threading state of the kernel. Meant to be a singleton
     struct State {
         Request **help_requests = new Request*[kConfig.totalProcs]();    // An array of off-level requests, one per core
-        SaveArea *helpers = new SaveArea[kConfig.totalProcs]();          // The saved state of the helpers, one per core
+        SaveArea *helpers = new SaveArea[MAX_PROCS](); // bounded by the platform CPU limit
         TCB** active_thread = new TCB*[kConfig.totalProcs]();            // active threads, one per core
         SleepQueue *sleep_queues = new SleepQueue[kConfig.totalProcs](); // sleep queues (sorted by wakeup time), one per core
         Queue<TCB, SpinLock> ready_queue{};   // the ready queue, one per system

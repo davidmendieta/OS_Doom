@@ -6,3 +6,7 @@
 *.dts
 *.dtsi
 *.dtso
+/build/
+__pycache__/
+.vscode/
+.github/

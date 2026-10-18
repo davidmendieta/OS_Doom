@@ -1,13 +1,14 @@
 #ifndef __VGA_H
 #define __VGA_H
 
-typedef unsigned char  uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int size_t;
+#include <stdint.h>
+#include <stddef.h>
+#include "../include/os/video.h"
 
 #define VGA_ADDRESS 0xA0000
 
 extern void vga_init();
+extern void vga_set_palette(const os_video_color* colors, uint32_t first, uint32_t count);
 extern void vga_test();
 extern void vga_clear_screen();
 extern void vga_plot_pixel(int x, int y, unsigned short color);

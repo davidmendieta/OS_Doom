@@ -5,69 +5,48 @@
 #include "keyboard.h"
 
 namespace PS2 {
-volatile bool debug_on = true;
+
+static void wait_input_empty() {
+    for (unsigned i = 0; i < 1000000; ++i) if (!(inb(0x64) & 2)) return;
+    Debug::panic("PS/2 command timeout\n");
+}
+static void command(uint8_t value) { wait_input_empty(); outb(0x64, value); }
+static void data(uint8_t value) { wait_input_empty(); outb(0x60, value); }
+static uint8_t reply() {
+    for (unsigned i = 0; i < 1000000; ++i) if (inb(0x64) & 1) return inb(0x60);
+    Debug::panic("PS/2 reply timeout\n");
+}
+static void device_command(bool mouse, uint8_t value) {
+    for (unsigned retry = 0; retry < 3; ++retry) {
+        if (mouse) command(0xd4);
+        data(value);
+        uint8_t response = reply();
+        if (response == 0xfa) return;
+        if (response != 0xfe) break;
+    }
+    Debug::panic("PS/2 command not acknowledged\n");
+}
 
 void init() {
-
-	// checking if ps2 controller is ok
-	outb(0x64, 0xAA);         
-	while (!(inb(0x64) & 1)); 
-	uint8_t result = inb(0x60);
-
-	if(debug_on) Debug::printf("PS2 OK IF 0x55: 0x%x\n", result);
-
-	// disable PS/2 port 1 and 2 so they don't send data while we configure the controller (disable interrupts)
-	if(debug_on) Debug::printf("disable ps2 port interrupts\n");
-	outb(0x64, 0xAD);
-    outb(0x64, 0xA7);
-
-	// if buffer full, we flush it, QEMU doesn't guarntee it isn't full
-	if(debug_on) Debug::printf("flush buffer\n");
-    if (inb(0x64) & 0x01) {
-		inb(0x60);
-	}
-	
-	// get configuration byte then wait until output buffer full to read config from Data Port
-	if(debug_on) Debug::printf("read config\n");
-    outb(0x64, 0x20); 
-	while (!(inb(0x64) & 0x01));
-	uint8_t config = inb(0x60);
-	
-	// clear IRQ1, IRQ12, translation
-	/*
-		Bit 0: IRQ1 (disable keyboard interrupt temporarily)
-		Bit 1: IRQ12 (disable mouse interrupt)
-		Bit 6: Translation (we want raw scancodes, not translated ones)
-	*/
-	if(debug_on) Debug::printf("modify config\n");
-	// config &= ~0x43;
-	config = (config | 0x03) & ~0x40; 
-    
-	// prepares controller for a config byte, then wait for buffer to be empty, then write modified config back to Data Port
-    if(debug_on) Debug::printf("write modified config\n");
-	outb(0x64, 0x60); 
-	while (inb(0x64) & 0x02); 
-	outb(0x60, config);
-
-	// enable port 1 and 2 interrupts
-	if(debug_on) Debug::printf("reenabled ps2 port interrupts\n");
-	outb(0x64, 0xAE); // keyboard
-	outb(0x64, 0xA8); // mouse
-
-    // turn on mouse data reporting
-    outb(0x64, 0xD4); // next byte goes to mouse
-    outb(0x60, 0xF4); // cmd 0xF4 = enable data reporting
-
-    // wait for mouse acknowledgement
-    while (!(inb(0x64) & 1));
-    uint8_t mouse_ack = inb(0x60);
-    Debug::printf("mouse acknowledgement: 0x%x\n", mouse_ack); // should be 0xFA
-
-    // add handlers to idt
-    IDT::trap(32 + 1, (uint32_t)keyboard_handler_, 3);
-    IDT::trap(32 + 12, (uint32_t)mouse_handler_, 3);
-
-    
+    command(0xad);
+    command(0xa7);
+    while (inb(0x64) & 1) inb(0x60);
+    command(0x20);
+    uint8_t config = reply() & ~0x43; // IRQs off, untranslated set 2
+    command(0x60);
+    data(config);
+    command(0xae);
+    command(0xa8);
+    device_command(false, 0xf5); // disable scanning while configuring
+    device_command(false, 0xf0);
+    device_command(false, 2);
+    device_command(false, 0xf4);
+    device_command(true, 0xf6); // defaults: standard three-byte mouse packets
+    device_command(true, 0xf4);
+    IDT::interrupt(33, (uint32_t)keyboard_handler_);
+    IDT::interrupt(44, (uint32_t)mouse_handler_);
+    command(0x60);
+    data((config & ~0x30) | 3); // clocks and IRQs enabled
 
     //PIC stuff "borrowed" from Terence networking interrupts
     #define IOAPIC_REGSEL  0xFEC00000
@@ -207,37 +186,11 @@ char keyboard_get_char() {
 
 uint8_t mouse_cycle = 0;
 uint8_t mouse_bytes[3];
-uint32_t mouse_x_pos = 0;
-uint32_t mouse_y_pos = 0;
-/*
-mouse_bytes[0] = flags from mouse from OSDev ps2 mouse pg
-mouse_bytes[1] = x axis
-mouse_bytes[2] = y axis
-
-use "mouse_move x y" to simulate mouse coordinates
-
-0, 0 is a special case, it 0 outs both within the input packet bits
-(output shows both raw and "displaced" y coordinates)
-
-I think the maxes for single output are <128, since byte size is 8bits, 
-if u try x and y >= 128 u get multiple outputs that add up to ur input
-
-y axis, starts from 256 and decreases when you put it into terminal. 
-ie. running "mouse_move 100 100" gives u x = 100, raw y = 156, actual y = 100,
-because qemu goes from its current position to (100,100) and sends a single 
-X = +100, Y = –100 packet (raw bytes 0x64,0x9C) and the PS/2 device never 
-actaully holds “(100,100)” itself, only those raw delta bytes.
-
-use "mouse_button 0-7" to simulate left, middle, right mouse presses
-*/
-
-
 // change to false for debug mode!!
 // must be true for hangman testcase to work properly
 bool DEMO = false;
 
 
-bool new_code = true;
 bool caps = false;
 char letter = '\0';
 bool release_initiated;
@@ -283,184 +236,38 @@ void demo_mode() {
     
 }
 
-void debug_mode() {
-    uint8_t scancode = inb(0x60);
-    if (scancode == 0xF0) {
-        new_code = true;
-        uint8_t actual_code = inb(0x60);
-        Debug::printf("KEY RELEASE: %c\n", scancode_to_ascii(actual_code));
-    } else if (new_code) {
-        Debug::printf("KEY PRESS: %c\n", scancode_to_ascii(scancode));
-        new_code = false;
+// Both IRQs share the controller data port. Route by AUX status, not by
+// which interrupt happened to arrive, and never read an empty output buffer.
+static void drain_input() {
+    for (unsigned i = 0; i < 64; ++i) {
+        uint8_t status = inb(0x64);
+        if (!(status & 1)) break;
+        uint8_t byte = inb(0x60);
+        if (status & 0xc0) { mouse_cycle = 0; continue; }
+        if (!(status & 0x20)) {
+            keyboardHandler(byte);
+            continue;
+        }
+        if (!mouse_cycle && !(byte & 8)) continue; // packet sync bit
+        mouse_bytes[mouse_cycle++] = byte;
+        if (mouse_cycle == 3) {
+            mouse_cycle = 0;
+            uint8_t flags = mouse_bytes[0];
+            int dx = mouse_bytes[1] - ((flags & 0x10) ? 256 : 0);
+            int dy = mouse_bytes[2] - ((flags & 0x20) ? 256 : 0);
+            // Overflow invalidates motion, but button state remains useful.
+            if (flags & 0xc0) dx = dy = 0;
+            mouseHandler(flags & 7, dx, -dy);
+        }
     }
-    // Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
-    Debug::printf("Scancode: 0x%x\n", scancode);
-    keyboardHandler(scancode);
-    //mouse_cycle = 0;
 }
-
-
 extern "C" void keyboard_handler() {
-    //Debug::printf("*** Keyboard interrupt!\n");
+    if (DEMO) demo_mode();
+    else drain_input();
     SMP::eoi();
-    // reset Lapic_eoi
-    *((volatile uint32_t*)0xFEE000B0) = 0;
-    if (DEMO) {
-        demo_mode();
-    } else {
-        debug_mode();
-    }
-
-    
-
 }
-
-
 extern "C" void mouse_handler() {
-    //Debug::printf("*** Mouse interrupt!\n");
-    // Debug::printf("mouse cycle: %d\n", mouse_cycle);
+    drain_input();
     SMP::eoi();
-    // reset Lapic_eoi
-    *((volatile uint32_t*)0xFEE000B0) = 0;
-
-    uint8_t mouse_byte = inb(0x60);
-    mouse_bytes[mouse_cycle++] = mouse_byte;
-    // Debug::printf("mouse cycle: %d\n", mouse_cycle);
-    if (mouse_cycle == 3)  {
-       // Debug::printf("full mouse input detected\n");
-
-        mouse_cycle = 0;
-        if ((mouse_bytes[2] & 0x01) != 0) {
-            Debug::printf("left button pressed\n");
-        }
-        if ((mouse_bytes[2] & 0x04) != 0) {
-            Debug::printf("middle button pressed\n");
-        }
-        if ((mouse_bytes[2] & 0x02) != 0) {
-            Debug::printf("right button pressed\n");
-        }
-        
-        uint8_t rawX = mouse_bytes[1];
-        int displace_x = rawX;
-        if (mouse_bytes[2] & 16) {
-            //Debug::printf("NEGATIVE X: %d\n", mouse_bytes[1]);
-            displace_x = 256 - rawX;
-            displace_x *= -1;
-        }
-        mouse_x_pos += displace_x;
-
-        uint8_t rawY = mouse_bytes[0];
-        int displace_y = (256 - rawY);
-        if (!(mouse_bytes[2] & 0x20)) {
-            //Debug::printf("NEGATIVE Y: %d\n", mouse_bytes[0]);
-            displace_y = rawY;
-            displace_y *= -1;
-        }
-        mouse_y_pos += displace_y;
-
-        // Detect the special absolute-move case (0,0)
-        //bool origin = (rawX == 0 && rawY == 0);
-
-        // origin maps to full 256
-        //uint16_t y = origin ? 256 : (uint8_t)(256 - rawY);
-
-        // Print raw values directly (0-255), so you see 156 for -100
-        if (DEMO) Debug::printf("left: %d, middle: %d, right: %d, x (raw): %u, y (raw): %u, x (disp): %u, y (disp): %u, abs x: %u, abs y: %u\n",
-            (mouse_bytes[2] & 0x01), (mouse_bytes[2] & 0x04), (mouse_bytes[2] & 0x02), 
-            rawX, rawY, displace_x, displace_y, mouse_x_pos, mouse_y_pos);
-                       
-        // Extract button states from byte 0 (not byte 2!)
-        uint8_t buttons = mouse_bytes[2] & 0x07;  // First 3 bits are button states
-
-
-        // Extract X and Y movement
-        int16_t x_delta = mouse_bytes[1];
-        int16_t y_delta = mouse_bytes[0];
-
-
-        // Handle sign extension for negative movement
-        if (mouse_bytes[2] & 0x10) {
-        x_delta |= 0xFF00;  // X sign bit is set, extend to 16 bits
-        }
-
-
-        if (mouse_bytes[2] & 0x20) {
-        y_delta |= 0xFF00;  // Y sign bit is set, extend to 16 bits
-        }
-
-
-        // Y is inverted in PS/2, so negate it
-        y_delta = -y_delta;
-
-
-// Call the mouseHandler to translate PS/2 data to SDL events
-mouseHandler(buttons, x_delta, y_delta);
-
-
-
-
-
-
-
-
-    }
-
 }
-
 }
-
-// LEGACY STUFF, NOT USED
-// // @diego i moved some of ur code to this function to make names fit better
-// // i'm not sure where the return value should go so I left it as void for now
-// void read_keyboard_data(uint8_t in_byte) {
-//     Debug::printf("inb: %x\n", inb(0x64));
-//     while (inb(0x64) & 1) {
-
-//         uint8_t scancode = inb(0x60);
-//         // if (scancode != 0xF0) {
-//         //     Debug::printf("Scancode: 0x%x\n", scancode);
-//         //     Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
-//         // }
-//         Debug::printf("Char: %c\n", scancode_to_ascii(scancode));
-//     }
-    
-//     mouse_cycle = 0;
-//     // Debug::printf("full keyboard data\n");
-// }
-
-// void read_mouse_data(uint8_t in_byte) {
-//     while (inb(0x64) & 1);
-//     // uint8_t scancode = inb(0x60);
-//     mouse_bytes[mouse_cycle++] = in_byte;
-//     if (mouse_cycle < 3)  {
-//         return; // wait for full packet since mouse packet is 3 bytes
-//     }
-//     mouse_cycle = 0;
-//     // Debug::printf("full mouse input detected\n");
-//     if ((mouse_bytes[0] & 0x01) != 0) {
-//         Debug::printf("left button pressed\n");
-//     }
-//     if ((mouse_bytes[0] & 0x04) != 0) {
-//         Debug::printf("middle button pressed\n");
-//     }
-//     if ((mouse_bytes[0] & 0x02) != 0) {
-//         Debug::printf("right button pressed\n");
-//     }
-//     Debug::printf("left: %d, middle: %d, right: %d, x: %d, y:%d\n", 
-//         (mouse_bytes[0] & 0x01), (mouse_bytes[0] & 0x04), (mouse_bytes[0] & 0x02), mouse_bytes[1], 256 - mouse_bytes[2]);
-
-// }
-// read a byte from data port
-// void read_ps2_data() {
-//     uint8_t status = inb(0x64);
-//     if (status & 1) {
-//         uint8_t in_byte = inb(0x60);
-//         if (status & 0x20) {
-//             // Debug::printf("is mouse data");
-//             read_mouse_data(in_byte);
-//         }
-//         else {
-//             read_keyboard_data(in_byte);
-//         }
-//     }
-// }

@@ -38,9 +38,8 @@ static Atomic<uint32_t> howManyAreHere(0);
 
 bool onHypervisor = true;
 
-static constexpr uint32_t HEAP_START = 1 * 1024 * 1024;
+extern "C" char _kernel_end[];
 static constexpr uint32_t HEAP_SIZE = 5 * 1024 * 1024;
-static constexpr uint32_t VMM_FRAMES = HEAP_START + HEAP_SIZE;
 
 extern "C" void kernelInit(void) {
     U8250 uart;
@@ -92,14 +91,17 @@ extern "C" void kernelInit(void) {
         Debug::printf("| ioAPIC %x\n", kConfig.ioAPIC);
 
         /* initialize the heap */
-        heapInit((void*)HEAP_START, HEAP_SIZE);
+        const uint32_t heap_start = reinterpret_cast<uint32_t>(_kernel_end);
+        const uint32_t frames_start = heap_start + HEAP_SIZE;
+        heapInit((void*)heap_start, HEAP_SIZE);
 
         /* switch to dynamically allocated UART */
         Debug::init(new U8250);
         Debug::printf("| switched to new UART\n");
 
         /* initialize physmem */
-        PhysMem::init(VMM_FRAMES, kConfig.memSize - VMM_FRAMES);
+        ASSERT(frames_start < kConfig.memSize);
+        PhysMem::init(frames_start, kConfig.memSize - frames_start);
 
         /* initialize VMM */
         VMM::global_init();

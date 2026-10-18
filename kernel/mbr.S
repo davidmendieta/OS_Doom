@@ -144,6 +144,11 @@ tss:
     .code32
 
 kk:
+    mov %cr0,%eax
+    and $0xfffffff3,%eax      # clear EM and TS: enable x87 on each CPU
+    or $2,%eax
+    mov %eax,%cr0
+    fninit
     mov $16,%eax
     mov %eax,%ds
     mov %eax,%es
@@ -156,11 +161,27 @@ kk:
     .extern pickKernelStack
     .extern kernelInit
 
+    # The BIOS loads file-backed sections only. Clear BSS on the bootstrap
+    # processor before C++ reads any globals; APs join after initialization.
+    cmpb $0,bssInitialized
+    jne 1f
+    cld
+    mov $_bss_start,%edi
+    mov $_bss_end,%ecx
+    sub %edi,%ecx
+    xor %eax,%eax
+    rep stosb
+    movb $1,bssInitialized
+1:
+
     mov $tempStack,%esp
     call pickKernelStack
     mov %eax,%esp
     call kernelInit
     ud2
+
+bssInitialized:
+    .byte 0
 
 
 /***********/
