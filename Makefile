@@ -40,6 +40,30 @@ doom-input-test: build
 input-test: build
 	$(PYTHON) tools/run.py --program input-smoke --check $(RUN_ARGS)
 
+.PHONY: audio-test doom-audio-test
+audio-test: build
+	$(PYTHON) tools/run.py --program audio-smoke --check $(RUN_ARGS)
+
+doom-audio-test: build
+	$(PYTHON) tools/run.py --program doom --check --controls-check --audio-check --timeout 60 --build-dir build/doom-audio $(RUN_ARGS)
+
+.PHONY: music-test doom-music-test
+music-test:
+	$(PYTHON) tools/music_check.py
+
+doom-music-test: build
+	$(PYTHON) tools/run.py --program doom --check --controls-check --music-check --timeout 90 --build-dir build/doom-music $(RUN_ARGS)
+
+.PHONY: network-test doom-network-test doom-network
+network-test: build
+	$(PYTHON) tools/network_pair.py --program net-smoke --check $(RUN_ARGS)
+
+doom-network-test: build
+	$(PYTHON) tools/network_pair.py --check --timeout 90 --build-dir build/doom-network $(RUN_ARGS)
+
+doom-network: build
+	$(PYTHON) tools/network_pair.py --display cocoa --build-dir build/doom-pair $(RUN_ARGS)
+
 TEST_EXTS = .ok .dir
 UTCS_ID ?= $(shell pwd | sed -e 's/.*_//')
 

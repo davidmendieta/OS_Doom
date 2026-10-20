@@ -23,6 +23,9 @@ static constexpr uint32_t GRAPHICS_FILE = 10000;
 #include "keyboard.h"
 #include "mouse.h"
 #include "input.h"
+#include "ac97.h"
+#include "networking/udp.h"
+#include "../include/os/audio.h"
 #include "pit.h"
 #include "../include/os/runtime.h"
 
@@ -528,8 +531,35 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
         Debug::printf("USER ESP IS INVALID\n");
         exit(-1);
     }
-    if (eax >= 200 && eax < 250) return sockets::socket_sys_handler(eax, frame);
+    // The historical socket ABI is incomplete; use the bounded native UDP ABI.
+    if (eax >= 200 && eax < 220) return -1;
     switch (eax) {
+    case OS_SYS_NET_CONFIGURE: return NativeNet::configure(user_sp[1]);
+    case OS_SYS_UDP_OPEN: return NativeNet::open(user_sp[1]);
+    case OS_SYS_UDP_CLOSE: return NativeNet::close(user_sp[1]);
+    case OS_SYS_UDP_SEND:
+    case OS_SYS_UDP_RECV: {
+        auto packet = reinterpret_cast<os_datagram*>(user_sp[2]);
+        if (!graphics_buffer_valid(packet, sizeof(*packet))) return -1;
+        return eax == OS_SYS_UDP_SEND ? NativeNet::send(user_sp[1], packet) : NativeNet::receive(user_sp[1], packet);
+    }
+    case OS_SYS_NET_STATS: {
+        auto out = reinterpret_cast<os_net_stats*>(user_sp[1]);
+        return graphics_buffer_valid(out, sizeof(*out)) ? NativeNet::stats(out) : -1;
+    }
+    case OS_SYS_AUDIO_OPEN:
+        return Ac97::open();
+    case OS_SYS_AUDIO_WRITE: {
+        uint32_t count = user_sp[2];
+        auto pcm = reinterpret_cast<const int16_t*>(user_sp[1]);
+        if (count == 0 || count > OS_AUDIO_MAX_FRAMES ||
+            !graphics_buffer_valid(pcm, count * OS_AUDIO_CHANNELS * sizeof(int16_t))) return -1;
+        return Ac97::write(pcm, count);
+    }
+    case OS_SYS_AUDIO_QUEUED:
+        return Ac97::queued();
+    case OS_SYS_AUDIO_CLOSE:
+        return Ac97::close();
     case OS_SYS_INPUT_READ: {
         auto out = reinterpret_cast<os_input_frame*>(user_sp[1]);
         if (!graphics_buffer_valid(out, sizeof(*out))) return -1;

@@ -1,8 +1,6 @@
 #include "networking.h"
+#include "udp.h"
 
+// Historical stack remains available as source; native UDP owns the NIC.
 StrongPtr<NetworkInterface> network_interface;
-
-void networkingMain(void) {
-    network_interface = StrongPtr<NetworkInterface>::make(19216810);
-  
-}
+void networkingMain(void) { NativeNet::init(); }

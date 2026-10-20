@@ -68,7 +68,9 @@ static void key_event(unsigned code, int down) {
     event_t event = {down ? ev_keydown : ev_keyup, key, 0, 0};
     D_PostEvent(&event);
 }
+extern void I_PumpSound(void);
 void I_StartTic(void) {
+    I_PumpSound();
     os_input_frame frame;
     if (os_input_read(&frame) < 0) I_Error("Input read failed");
     for (unsigned i = 0; i < frame.count; ++i)
@@ -88,6 +90,14 @@ void I_InputReport(void) {
     static int last_tic = -1;
     if (!os_input_testing || last_tic == gametic) return;
     last_tic = gametic;
+    if (netgame && gamestate == GS_LEVEL) {
+        for (int i = 0; i < 2; ++i) {
+            player_t *p = &players[i];
+            if (p->mo) printf("*** netstate: tic=%d player=%d x=%d y=%d angle=%u health=%d ammo=%d forward=%d buttons=%d\n",
+                gametic, i, p->mo->x, p->mo->y, p->mo->angle, p->health,
+                p->ammo[am_clip], p->cmd.forwardmove, p->cmd.buttons);
+        }
+    }
     player_t *p = &players[consoleplayer];
     printf("*** control: tic=%d menu=%d demo=%d level=%d paused=%d x=%d y=%d angle=%u ammo=%d forward=%d side=%d turn=%d buttons=%d\n",
         gametic, menuactive, demoplayback, gamestate == GS_LEVEL, paused,

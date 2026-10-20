@@ -34,6 +34,13 @@
 #include "config.h"
 #endif
 
+#ifdef OS_NATIVE_NET
+ #define UDP_SOCKET int
+ extern UDP_SOCKET udp_socket;
+ UDP_SOCKET I_Socket(unsigned short port);
+ int I_ConnectToServer(const char *serv);
+#endif
+
 #ifdef USE_SDL_NET
  #include "SDL_net.h"
  #define UDP_SOCKET UDPsocket

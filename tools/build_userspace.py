@@ -9,12 +9,12 @@ from concurrent.futures import ThreadPoolExecutor
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def build_program(program, output):
+def build_program(program, output, build=None):
     cc = os.environ.get("CROSS_COMPILE", "i686-elf-") + "gcc"
     sysroot = ROOT / "build/toolchain/i686-elf"
     if not (sysroot / "lib/libc.a").exists():
         raise RuntimeError("Newlib is missing: run make doom-deps first")
-    build = ROOT / "build" / program / "objects"
+    build = build if build is not None else ROOT / "build" / program / "objects"
     build.mkdir(parents=True, exist_ok=True)
     sources = ["userspace/start.S", "userspace/syscalls.S", "userspace/newlib.c", "userspace/video.S"]
     flags = ["-m32", "-std=gnu99", "-O2", "-g", "-fno-pie", "-fno-stack-protector",
@@ -26,7 +26,7 @@ def build_program(program, output):
         sources += ["prboom-2.5.0/src/" + s for s in re.findall(r"\b\w+\.c\b", common)]
         sources += ["prboom-2.5.0/src/" + s for s in
                     ["d_client.c", "w_memcache.c", "mmus2mid.c", "SDL/i_main.c", "SDL/i_system.c"]]
-        sources += ["ports/prboom/" + s for s in ["platform.c", "i_video.c", "i_sound.c", "i_input.c"]]
+        sources += ["ports/prboom/" + s for s in ["platform.c", "i_video.c", "i_sound.c", "i_input.c", "i_network.c", "i_music.c", "mus_player.c", "third_party/nuked-opl3/opl3.c"]]
         flags += ["-DHAVE_CONFIG_H", "-D_DEBUG", "-Wno-error=incompatible-pointer-types",
                   "-I" + str(ROOT / "ports/prboom"), "-I" + str(src)]
     else:

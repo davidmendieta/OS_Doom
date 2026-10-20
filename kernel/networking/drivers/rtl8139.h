@@ -67,8 +67,8 @@ struct tx_desc_t {
 };
 
 class RTL8139 {
-StrongPtr<PciDevice> device;
-uint32_t current_packet_ptr;
+PciDevice* device = nullptr;
+uint32_t current_packet_ptr = 0;
 
 public:
     uint8_t bar_type;
@@ -81,7 +81,10 @@ public:
     RTL8139();
 
     //END SOCKET STUFF
-    void send_packet(const void* data, uint32_t len);
+    bool ready = false;
+    bool transmit(const void* data, uint32_t len);
+    int receive(void* data, uint32_t capacity);
+    void send_packet(const void* data, uint32_t len) { transmit(data, len); }
     void* get_packet(uint32_t* packet_length);
 
     void read_mac_addr();

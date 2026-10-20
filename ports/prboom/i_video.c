@@ -54,7 +54,9 @@ void I_SetPalette(int palette) {
     W_UnlockLumpNum(lump);
     if (result < 0) I_Error("Palette update failed");
 }
+extern void I_PumpSound(void);
 void I_FinishUpdate(void) {
+    I_PumpSound();
     I_InputReport();
     static int announced;
     static int level_announced;

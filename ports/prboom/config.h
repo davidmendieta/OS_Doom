@@ -1,4 +1,4 @@
-/* OS build: software renderer, no SDL/GL/network dependency. */
+/* OS build: software renderer and native UDP; no SDL/GL dependency. */
 #pragma once
 #define PACKAGE "prboom"
 #define VERSION "2.5.0"
@@ -23,3 +23,5 @@
 #define HAVE_VSNPRINTF 1
 #define HAVE_LIBM 1
 #define HAVE_STRLWR 1
+#define HAVE_NET 1
+#define OS_NATIVE_NET 1

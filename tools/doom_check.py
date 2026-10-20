@@ -55,7 +55,7 @@ def verify_title(path, wad):
     print(f"Doom title test passed: all {width * height} displayed pixels match IWAD TITLEPIC/PLAYPAL.")
 
 
-def check_doom(command, build, timeout, controls_check=False):
+def check_doom(command, build, timeout, controls_check=False, music_check=False):
     serial = build / "serial.log"
     serial.write_text("")
     command = list(command)
@@ -78,6 +78,8 @@ def check_doom(command, build, timeout, controls_check=False):
                 qmp.command("screendump", filename=str(build / "title.png"), format="png")
                 verify_title(build / "title.ppm", build / "root/doom/doom1.wad")
                 qmp.command("cont")
+                if music_check:
+                    time.sleep(1.2) # capture title music before menu SFX begin
                 if controls_check:
                     from input_check import check_controls
                     check_controls(qmp, process, serial, build, deadline)
@@ -108,7 +110,11 @@ def check_doom(command, build, timeout, controls_check=False):
                 if process.poll() is None:
                     process.kill()
                     process.wait()
-                print(serial.read_text(), end="")
+                # Full per-tic observations remain in serial.log for diagnosis.
+                print("\n".join(line for line in serial.read_text().splitlines()
+                                if not line.startswith("*** control:")))
     if not controls_check:
         print("Doom attract demo passed: reached a level and displayed changing frames.")
     print(f"Screenshot: {build / 'title.png'}")
+    if controls_check:
+        print(f"Controls screenshot: {build / 'controls.png'}; observations: {serial}")

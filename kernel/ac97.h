@@ -33,9 +33,17 @@
 // Buffer Descriptor used by AC'97 DMA engine
 struct BufferDescriptor {
     uint32_t buffer_addr;  // Physical address of buffer
-    uint32_t buffer_len;   // Buffer length in bytes
-    uint32_t control;      // Control flags (e.g., interrupt)
+    uint16_t buffer_len;   // Number of 16-bit samples (two per stereo frame)
+    uint16_t control;      // IOC=bit 15, BUP=bit 14; zero means silence on underrun
 } __attribute__((packed));
+static_assert(sizeof(BufferDescriptor) == 8, "AC97 hardware descriptor size");
+
+namespace Ac97 {
+    int open();
+    int write(const int16_t* pcm, uint32_t frames);
+    int queued();
+    int close();
+}
 
 // WAV File Header Struct
 struct WAVHeader {

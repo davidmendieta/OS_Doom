@@ -11,6 +11,7 @@ from graphics_check import check_graphics
 from build_userspace import build_program
 from doom_check import check_doom
 from input_check import check_input_stream
+from audio_check import read_capture, verify_dma, verify_doom
 
 ROOT = Path(__file__).resolve().parent.parent
 PASS = "*** smoke: PASS user mode, arguments, ext2, syscalls"
@@ -28,7 +29,7 @@ def tool(name):
     raise RuntimeError(f"Missing {name}; see README.md for build prerequisites")
 
 
-def build_filesystem(program, build, controls_check=False):
+def build_filesystem(program, build, controls_check=False, no_music=False, network=None):
     prefix = os.environ.get("CROSS_COMPILE")
     if prefix is None:
         prefix = "i686-elf-" if shutil.which("i686-elf-gcc") else ""
@@ -38,12 +39,20 @@ def build_filesystem(program, build, controls_check=False):
     (rootfs / "sbin").mkdir(parents=True, exist_ok=True)
     (rootfs / "etc").mkdir(exist_ok=True)
     (rootfs / "etc/boot-message").write_text("Hello from ext2!\n")
+    if network:
+        (rootfs / "etc/network").write_text(network + "\n")
+    else:
+        (rootfs / "etc/network").unlink(missing_ok=True)
+    if no_music:
+        (rootfs / "etc/no-music").write_text("disable music\n")
+    else:
+        (rootfs / "etc/no-music").unlink(missing_ok=True)
     if controls_check:
         (rootfs / "etc/input-test").write_text("enable engine observations\n")
     else:
         (rootfs / "etc/input-test").unlink(missing_ok=True)
-    if program in ("doom", "runtime-smoke", "input-smoke"):
-        build_program(program, rootfs / "sbin/init")
+    if program in ("doom", "runtime-smoke", "input-smoke", "audio-smoke", "net-smoke"):
+        build_program(program, rootfs / "sbin/init", build / "objects")
     else:
         subprocess.run([
             cc, "-m32", "-std=c99", "-ffreestanding", "-fno-pie", "-fno-stack-protector",
@@ -72,7 +81,16 @@ def build_filesystem(program, build, controls_check=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--program", choices=("smoke", "graphics-smoke", "runtime-smoke", "input-smoke", "doom"), default="smoke")
+    parser.add_argument("--program", choices=("smoke", "graphics-smoke", "runtime-smoke", "input-smoke", "audio-smoke", "doom"), default="smoke")
+    parser.add_argument("--net-role", choices=("host", "join"), help="start/join a two-player Doom game")
+    parser.add_argument("--net-address", default="127.0.0.1", help="QEMU Ethernet tunnel listen/connect address")
+    parser.add_argument("--net-port", type=int, default=12345, help="host TCP port for QEMU's Ethernet tunnel")
+    parser.add_argument("--no-music", action="store_true", help="disable music while keeping sound effects")
+    parser.add_argument("--audio", default=None, help="QEMU audio backend (coreaudio, pa, sdl, none)")
+    parser.add_argument("--audio-capture", type=Path, help="capture emulated audio to a WAV file")
+    parser.add_argument("--audio-check", action="store_true", help="verify Doom sound effects against IWAD waveforms")
+    parser.add_argument("--music-check", action="store_true", help="verify Doom music against native reference PCM")
+    parser.add_argument("--build-dir", type=Path, help="use a separate filesystem/artifact directory for this run")
     parser.add_argument("--check", action="store_true", help="run the program's automated boot/display checks")
     parser.add_argument("--disk", type=Path, help="boot an existing ext2 image instead of the smoke program")
     parser.add_argument("--display", default="none", help="QEMU display backend (none, cocoa, gtk, etc.)")
@@ -81,9 +99,17 @@ def main():
     parser.add_argument("--input-stress", action="store_true", help="exercise mouse input while the graphics demo holds its frame")
     parser.add_argument("--controls-check", action="store_true", help="test Doom menus and player controls through QEMU input")
     args = parser.parse_args()
+    if args.net_role and (args.program != "doom" or args.check or args.disk):
+        parser.error("--net-role requires interactive Doom; use make doom-network-test for automated checks")
+    if not 1 <= args.net_port <= 65535 or any(c in args.net_address for c in ",:\n\r"):
+        parser.error("use an IPv4 address/hostname and a port in 1..65535 for the tunnel")
+    if args.music_check and (args.program != "doom" or not args.check or not args.controls_check or args.no_music or args.audio_check):
+        parser.error("--music-check requires Doom controls checks with music enabled")
+    if args.audio_check and (args.program != "doom" or not args.check or not args.controls_check):
+        parser.error("--audio-check requires --program doom --check --controls-check")
     if args.controls_check and (args.program != "doom" or not args.check):
         parser.error("--controls-check requires --program doom --check")
-    build = ROOT / "build" / args.program
+    build = args.build_dir.resolve() if args.build_dir else ROOT / "build" / (args.program + ("-" + args.net_role if args.net_role else ""))
     if args.input_stress and (not args.check or args.program != "graphics-smoke"):
         parser.error("--input-stress requires --program graphics-smoke --check")
     if args.check and args.disk:
@@ -92,10 +118,36 @@ def main():
         parser.error("--cpus must be 1..16 and --timeout must be positive")
 
     qemu = tool(os.environ.get("QEMU_CMD", "qemu-system-i386"))
+    capture_check = args.audio_check or args.music_check or (args.program == "audio-smoke" and args.check)
+    if args.audio and (args.audio_capture or capture_check):
+        parser.error("--audio cannot be combined with WAV capture checks or --audio-capture")
+    capture = args.audio_capture
+    if capture_check:
+        capture = capture or build / "audio.wav"
+    if capture:
+        capture = capture.resolve()
+        capture.parent.mkdir(parents=True, exist_ok=True)
+        audio_backend = f"wav,id=audio0,path={str(capture).replace(',', ',,')},out.frequency=48000,out.channels=2,out.format=s16"
+    else:
+        default_audio = "coreaudio" if sys.platform == "darwin" else "sdl"
+        backend = args.audio or (default_audio if args.program == "doom" and not args.check else "none")
+        audio_backend = f"{backend},id=audio0"
     kernel = ROOT / "kernel/build/kernel.img"
+    if args.music_check:
+        from music_check import prepare_reference
+        prepare_reference(build / "reference")
     if not kernel.is_file():
         raise RuntimeError("Missing kernel/build/kernel.img; run make build first")
-    disk = args.disk.resolve() if args.disk else build_filesystem(args.program, build, args.controls_check)
+    network = None
+    netdev = "hubport,id=net0,hubid=0"
+    mac = "52:54:00:12:34:56"
+    if args.net_role:
+        index = 1 if args.net_role == "host" else 2
+        network = f"{index} 0a00000{index} 0a000001"
+        operation = "listen" if args.net_role == "host" else "connect"
+        netdev = f"socket,id=net0,{operation}={args.net_address}:{args.net_port}"
+        mac = f"52:54:00:12:34:{index:02x}"
+    disk = args.disk.resolve() if args.disk else build_filesystem(args.program, build, args.controls_check, args.no_music or args.audio_check, network)
     if not disk.is_file():
         raise RuntimeError(f"Missing filesystem image: {disk}")
     command = [
@@ -105,23 +157,38 @@ def main():
         "-drive", f"file={kernel},index=0,media=disk,format=raw",
         "-drive", f"file={disk},index=1,media=disk,format=raw",
         "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04",
-        "-netdev", "hubport,id=net0,hubid=0",
-        "-device", "rtl8139,netdev=net0,mac=52:54:00:12:34:56",
-        "-audiodev", "none,id=audio0", "-device", "AC97,audiodev=audio0",
+        "-netdev", netdev,
+        "-device", f"rtl8139,netdev=net0,mac={mac}",
+        "-audiodev", audio_backend, "-device", "AC97,audiodev=audio0",
     ]
     if not args.check:
-        result = subprocess.run(command)
+        try:
+            result = subprocess.run(command)
+        finally:
+            if capture and capture.exists():
+                read_capture(capture)
         return 0 if result.returncode == 1 else result.returncode
 
     build.mkdir(parents=True, exist_ok=True)
     if args.program == "graphics-smoke":
         check_graphics(command, build, args.timeout, args.input_stress)
+        if capture:
+            read_capture(capture)
         return 0
     if args.program == "doom":
-        check_doom(command, build, args.timeout, args.controls_check)
+        check_doom(command, build, args.timeout, args.controls_check, args.music_check)
+        if args.music_check:
+            from music_check import verify_music
+            verify_music(capture, build / "reference", (build / "serial.log").read_text())
+        elif args.audio_check:
+            verify_doom(capture, build / "root/doom/doom1.wad", (build / "serial.log").read_text())
+        elif capture:
+            read_capture(capture)
         return 0
     if args.program == "input-smoke":
         check_input_stream(command, build, args.timeout)
+        if capture:
+            read_capture(capture)
         return 0
     log = build / "serial.log"
     with log.open("w") as output:
@@ -135,8 +202,14 @@ def main():
     # isa-debug-exit returns (value << 1) | 1. A panic uses it too, so
     # the exit status alone can never establish success.
     marker = "*** runtime: PASS allocation, files, seeking, clock, x87, libc" if args.program == "runtime-smoke" else PASS
+    if args.program == "audio-smoke":
+        marker = "*** audio: PASS bounds, DMA wrap, backpressure, drain, restart, close"
     if result.returncode != 1 or marker not in serial or "shutdown\n" not in serial or "FAIL" in serial or "halting" in serial:
         raise RuntimeError(f"Smoke test failed (QEMU exit {result.returncode}); log: {log}")
+    if args.program == "audio-smoke":
+        verify_dma(capture)
+    elif capture:
+        read_capture(capture)
     print(f"Boot smoke test passed on {args.cpus} CPU(s). Log: {log}")
     return 0
 
